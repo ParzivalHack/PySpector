@@ -11,11 +11,11 @@
             --bg-dark: #000000;
             --bg-card: #0a0a0a;
             --bg-surface: #111111;
-            --text-primary: #ffffff;
-            --text-secondary: #888888;
-            --text-muted: #666666;
-            --accent: #ffffff;
-            --accent-dim: #cccccc;
+            --text-primary: #9b3d82;
+            --text-secondary: #78105e;
+            --text-muted: #5a244d;
+            --accent: #9b3d82;
+            --accent-dim: #7a3067;
             --border: #222222;
             --border-light: #333333;
         }
@@ -700,6 +700,27 @@
             border: 1px solid var(--border);
             opacity: 0.2;
         }
+
+        /* New cyberpunk subtitle style */
+        .logo-sub {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: -5px;
+            margin-left: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .logo-sub .logo-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+        .logo-sub .logo-link:hover {
+            color: var(--text-primary);
+            text-shadow: 0 0 5px var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -712,6 +733,7 @@
             <div class="nav-container">
                 <div class="logo-container">
                     <div class="logo-text">PySpector</div>
+                        <div class="logo-sub">Powered By <a href="https://www.securitycert.it" target="_blank" class="logo-link">SecurityCert</a></div>
                 </div>
                 <ul class="nav-links">
                     <li><a href="#features">Features</a></li>
@@ -765,7 +787,7 @@
                     </div>
                     <div class="stat">
                         <span class="stat-number">45+</span>
-                        <span class="stat-label">AI/LLM-specific Rules</span>
+                        <span class="stat-label">AI/LLM Rules</span>
                     </div>
                     <div class="stat">
                         <span class="stat-number">95</span>
