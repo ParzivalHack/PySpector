@@ -3,6 +3,10 @@
 # An High-Performance Python and Rust SAST Framework
 
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.1--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.1-beta)
+[![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
+[![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+
 
 PySpector is a static analysis security testing (SAST) Framework engineered for modern Python development workflows. It leverages a powerful Rust core to deliver high-speed, accurate vulnerability scanning, wrapped in a developer-friendly Python CLI. By compiling the analysis engine to a native binary, PySpector avoids the performance overhead of traditional Python-based tools, making it an ideal choice for integration into CI/CD pipelines and local development environments where speed is critical.
 
@@ -15,29 +19,26 @@ The tool is designed to be both comprehensive and intuitive, offering a multi-la
 ### Prerequisites
 
 -   **Python**: Version 3.12 or lower (Python 3.9+ required).
--   **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can verify your installation by running `cargo --version`.
+-   **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can easily install the **Rust toolchain** via [rustup](https://rustup.rs/) and verify your installation by running `cargo --version`.
 
 ### Installation
 
-1.  **Create a Virtual Environment**: It is highly recommended to install PySpector in a dedicated virtual environment.
+1.  **Create a Virtual Environment**: It is highly recommended to install PySpector in a dedicated Python3.12 venv.
     ```bash
     python3.12 -m venv venv
     source venv/bin/activate
     ```
-* In Windows, just download Python 3.12 (suggested) from the Microsoft Store and run:
+* In Windows, just download Python 3.12 from the Microsoft Store and run:
 ```powershell
     python3.12 -m venv venv
     .\venv\Scripts\Activate.ps1
 ```
 
-2.  **Install Build Dependencies**: PySpector uses `maturin` to build its Rust core.
-    ```bash
-    pip install maturin setuptools-rust
-    ```
-3.  **Install PySpector**: From the root of the project repository, install the package. This will compile the Rust core and install the Python wrapper.
-    ```bash
-    pip install .
-    ```
+With PySpector now officially on PyPI(🎉), installation is as simple as running:
+
+```bash
+pip install pyspector
+```
 
 ## Key Features
 
