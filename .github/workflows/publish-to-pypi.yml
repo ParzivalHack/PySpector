@@ -2,10 +2,11 @@
 
 name: Publish Python Package to PyPI
 
-# This action runs on every new release published
+# This action runs on every new release published and has also a manual trigger
 on:
+  workflow_dispatch:
   release:
-    types: [published]
+    types: [published, prereleased]
 
 permissions:
   contents: read
