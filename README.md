@@ -49,7 +49,7 @@ The tool is designed to be both comprehensive and intuitive, offering a multi-la
 
 * * **Inter-procedural Taint Analysis:** The engine builds a comprehensive call graph of the entire application to perform taint analysis. It tracks the flow of data from input sources (like web requests) to dangerous sinks (like command execution functions), allowing it to identify complex injection vulnerabilities with high accuracy.
 
-* **Comprehensive and Customizable Ruleset:** PySpector comes with 238 built-in rules that cover common vulnerabilities, including those from the OWASP Top 10. The rules are defined in a simple TOML format, making them easy to understand and extend.
+* **Comprehensive and Customizable Ruleset:** PySpector comes with 241 built-in rules that cover common vulnerabilities, including those from the OWASP Top 10. The rules are defined in a simple TOML format, making them easy to understand and extend.
 
 * **Versatile Reporting:** Generates clear and actionable reports in multiple formats, including a developer-friendly console output, JSON, HTML, and SARIF for seamless integration with other security tools and platforms.
 
