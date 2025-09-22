@@ -1,45 +1,39 @@
-# .github/workflows/publish-to-pypi.yml
+name: Publish PySpector to PyPI
 
-name: Publish Python Package to PyPI
-
-# This action runs on every new release published and has also a manual trigger
 on:
   workflow_dispatch:
   release:
     types: [published, prereleased]
 
+permissions:
+  id-token: write
+
 jobs:
-  deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyspector
     steps:
-      # Check out the repository's code  
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # Set up Python 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
-      # Set up the Rust toolchain
-      - name: Set up Rust
+      - name: Set up Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      
-      # Install the Python build tool 
-      - name: Install Python build dependencies
+
+      - name: Install build dependencies
         run: pip install build
 
-      # Build the package (sdist and platform-specific wheel)
       - name: Build package
         run: python -m build
 
-      # Publish the package to PyPI
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
