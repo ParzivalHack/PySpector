@@ -32,6 +32,7 @@ The tool is designed to be both comprehensive and intuitive, offering a multi-la
 ```powershell
     python3.12 -m venv venv
     .\venv\Scripts\Activate.ps1
+    # or, depending on the Python3.12 installation source **.\venv\bin\Activate.ps1**
 ```
 
 With PySpector now officially on PyPI(🎉), installation is as simple as running:
