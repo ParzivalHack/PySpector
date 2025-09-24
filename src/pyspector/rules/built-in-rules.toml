@@ -84,6 +84,14 @@ remediation = "Avoid shell=True with subprocess.run. Pass commands as a list ins
 ast_match = "Call(func.value.id=subprocess, func.attr=run)"
 file_pattern = "*.py"
 
+[[rule]]
+id = "PY107"
+description = "Unsafe deserialization with 'yaml.load'."
+severity = "High"
+remediation = "Use 'yaml.safe_load()' instead of 'yaml.load()'."
+ast_match = "Call(func.value.id=yaml, func.attr=load)"
+file_pattern = "*.py"
+
 # -------------------------------------------
 # SECTION: Cryptographic Failures (OWASP A02:2021)
 # -------------------------------------------
