@@ -2,6 +2,7 @@
 
 # An High-Performance Python and Rust SAST Framework
 #### POWERED BY [SecurityCert](https://www.securitycert.it/)
+[![POWERED BY](https://img.shields.io/badge/SecurityCert-purple)](https://www.securitycert.it/
 
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.1--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.1-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
