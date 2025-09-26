@@ -34,7 +34,7 @@ To get the project running on your local machine, you'll need to set up a few th
 
 1.  **Fork Pyspector and Clone your Repository**:
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/PySpector.git](https://github.com/YOUR_USERNAME/PySpector.git)
+    git clone https://github.com/YOURUSERNAME/PySpector.git
     cd PySpector
     ```
 
@@ -48,7 +48,7 @@ Then:
     ```
 or, if on Windows:
     ```powershell
-    .\venvname\Scripts\Activate.ps1
+    .\venvname\Bin\Activate.ps1
     ```
 
 3.  **Install the Project in Editable Mode**: This is the most important step. This command will compile the Rust engine and install the Python package in a way that lets you make changes without reinstalling.
