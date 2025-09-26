@@ -43,11 +43,11 @@ To get the project running on your local machine, you'll need to set up a few th
     python3.12 -m venv venvname
     ```
 Then:
-    ```bash
+    ```
     source venvname/bin/activate
     ```
 or, if on Windows:
-    ```powershell
+    ```
     .\venvname\Bin\Activate.ps1
     ```
 
