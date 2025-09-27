@@ -94,3 +94,4 @@ Ready to submit your changes? Just follow these steps:
 4.  [**Open a Pull Request**](https://github.com/ParzivalHack/PySpector/pulls) on the main PySpector repository. Please provide a clear description of what you've done.
 
 We'll review your contribution as soon as we can. Thank you again for considering helping to improve PySpector!
+
