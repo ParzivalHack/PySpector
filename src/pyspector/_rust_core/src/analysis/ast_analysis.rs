@@ -86,15 +86,17 @@ fn node_has_property(node: &AstNode, path: &[&str], expected_value: &str) -> boo
     }
 
     if let Some(child_list) = node.children.get(current_part) {
-        if remaining_path[0] == "*" {
+        if !remaining_path.is_empty() && remaining_path[0] == "*" {
             let path_after_wildcard = &remaining_path[1..];
             for child in child_list {
                 if node_has_property(child, path_after_wildcard, expected_value) {
                     return true;
                 }
             }
-        } else if let Some(child) = child_list.get(0) {
-            return node_has_property(child, remaining_path, expected_value);
+        } else if !remaining_path.is_empty() {
+            if let Some(child) = child_list.first() {
+                return node_has_property(child, remaining_path, expected_value);
+            }
         }
     }
     

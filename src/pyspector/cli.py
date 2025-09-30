@@ -99,7 +99,7 @@ def cli():
              __/>                       / \                                                                   
 """
     click.echo(click.style(banner))
-    click.echo("Version: 0.1.1-beta\n")
+    click.echo("Version: 0.1.2-beta\n")
     click.echo("Made with <3 by github.com/ParzivalHack\n")
 
 cli = cast(click.Group, cli)
