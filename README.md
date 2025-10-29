@@ -142,7 +142,7 @@ pyspector scan /path/to/your/project -o report.html -f html
 pyspector scan --url https://github.com/username/repo.git
 ```
 
-### Scan for AI and LLM Vulnerabilities (NEW FEATURE🚀)
+### Scan for AI and LLM Vulnerabilities
 
 <img width="970" height="1096" alt="image" src="https://github.com/user-attachments/assets/14bac1c0-eae2-4dab-ab40-8047b46bbac8" />
 
@@ -153,7 +153,7 @@ pyspector scan --url https://github.com/username/repo.git
 pyspector scan /path/to/your/project --ai
 ```
 
-## Plugin System
+## Plugin System (NEW FEATURE🚀)
 
 PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
 
