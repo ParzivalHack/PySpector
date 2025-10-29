@@ -154,7 +154,7 @@ pyspector scan /path/to/your/project --ai
 ```
 
 ## Plugin System (NEW FEATURE🚀)
-
+<img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
 PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
 
 ### Lifecycle Overview
