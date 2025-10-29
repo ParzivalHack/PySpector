@@ -172,7 +172,7 @@ The CLI exposes helper commands for maintaining your local catalogue:
 pyspector plugin list               # Show discovered plugins, trust status, version, author
 pyspector plugin trust aipocgen     # Validate, checksum, and mark a plugin as trusted
 pyspector plugin info my_plugin     # Display stored metadata and checksum verification
-pyspector plugin install path/to/custom.py --trust
+pyspector plugin install path/to/plugin.py --trust
 pyspector plugin remove legacy_plugin
 ```
 
@@ -183,13 +183,10 @@ Only trusted plugins are executed automatically. When you trust a plugin PySpect
 Use one or more `--plugin` flags during `pyspector scan` and provide a JSON configuration file if the plugin expects custom settings:
 
 ```bash
-pyspector scan vulnerable_app.py \
-  --plugin aipocgen \
-  --plugin report_exporter \
-  --plugin-config plugin-settings.json
+pyspector scan vulnerable_app.py --plugin aipocgen --plugin report_exporter --plugin-config plugin-settings.json
 ```
 
-The configuration file must be a JSON object whose keys match plugin names:
+The configuration file must be a JSON object whose keys match plugin names, for example:
 
 ```json
 {
@@ -227,7 +224,7 @@ class MyPlugin(PySpectorPlugin):
         return PluginMetadata(
             name="my_plugin",
             version="0.1.0",
-            author="Your Team",
+            author="Your Name",
             description="Summarises HIGH severity findings",
             category="reporting",
         )
@@ -275,7 +272,7 @@ Tip: Plugins are plain Python modules, so you can run `python my_plugin.py` whil
 - Store API keys or long-lived secrets in environment variables and read them during `initialize`. Provide helpful error messages when credentials are missing.  
 - Keep side-effects inside the scan directory. When PySpector scans a single file `scan_path` is that file, so the reference plugins switch to `scan_path.parent` before writing outputs.  
 - Validate configuration early using `validate_config`; PySpector surfaces the error message in the CLI without executing the plugin.  
-- Return meaningful `message` values and populate `output_files` so automation can pick up generated artefacts.  
+- Return meaningful `message` values and populate `output_files` so automation can pick up generated artifacts.  
 - Document optional switches such as `dry_run` (see the bundled `aipocgen` plugin for an example) to support air-gapped testing.
 
 ### Security Model
