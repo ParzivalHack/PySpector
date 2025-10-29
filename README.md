@@ -3,7 +3,7 @@
 # An High-Performance Python and Rust SAST Framework
 
 [![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
-[![latest release](https://img.shields.io/badge/latest%20release-v0.1.1--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.1-beta)
+[![latest release](https://img.shields.io/badge/latest%20release-v0.1.3--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.3-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
@@ -153,6 +153,143 @@ pyspector scan --url https://github.com/username/repo.git
 pyspector scan /path/to/your/project --ai
 ```
 
+## Plugin System
+
+PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
+
+### Lifecycle Overview
+
+1. **Discovery** - Plugin files live in the repository's `plugins` directory (`PySpector/plugins`) and are discovered automatically.  
+2. **Registration** - Trusted plugins are recorded in `PySpector/plugins/plugin_registry.json` together with their checksum and metadata.  
+3. **Validation** - Before execution PySpector validates plugin configuration, statically inspects the source for dangerous APIs, and checks the on-disk checksum.  
+4. **Execution** - The plugin is initialized, receives the full findings list, and can emit additional files or data. `cleanup()` is always called at the end.
+
+### Managing Plugins from the CLI
+
+The CLI exposes helper commands for maintaining your local catalogue:
+
+```bash
+pyspector plugin list               # Show discovered plugins, trust status, version, author
+pyspector plugin trust aipocgen     # Validate, checksum, and mark a plugin as trusted
+pyspector plugin info my_plugin     # Display stored metadata and checksum verification
+pyspector plugin install path/to/custom.py --trust
+pyspector plugin remove legacy_plugin
+```
+
+Only trusted plugins are executed automatically. When you trust a plugin PySpector calculates its SHA256 checksum and stores the version, author, and description that the plugin declares via `PluginMetadata`. If the file is modified later you will be warned before it runs again.
+
+### Running Plugins During a Scan
+
+Use one or more `--plugin` flags during `pyspector scan` and provide a JSON configuration file if the plugin expects custom settings:
+
+```bash
+pyspector scan vulnerable_app.py \
+  --plugin aipocgen \
+  --plugin report_exporter \
+  --plugin-config plugin-settings.json
+```
+
+The configuration file must be a JSON object whose keys match plugin names:
+
+```json
+{
+  "aipocgen": {
+    "api_key": "YOUR-GROQ-KEY",
+    "model": "llama-3.3-70b",
+    "severity_filter": ["HIGH", "CRITICAL"],
+    "max_pocs": 5,
+    "output_dir": "pocs",
+    "dry_run": false
+  },
+  "report_exporter": {
+    "format": "markdown",
+    "destination": "./security_notes"
+  }
+}
+```
+
+Each plugin receives only its own configuration block. Results are printed in the CLI, and any paths returned in the `output_files` list are shown under “Generated files”.
+
+### Authoring a Plugin
+
+Create a new Python file in `~/.pyspector/plugins/<name>.py` and subclass `PySpectorPlugin`:
+
+```python
+from pathlib import Path
+from typing import Any, Dict, List
+
+from pyspector.plugin_system import PySpectorPlugin, PluginMetadata
+
+
+class MyPlugin(PySpectorPlugin):
+    @property
+    def metadata(self) -> PluginMetadata:
+        return PluginMetadata(
+            name="my_plugin",
+            version="0.1.0",
+            author="Your Team",
+            description="Summarises HIGH severity findings",
+            category="reporting",
+        )
+
+    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, str]:
+        if "output_file" not in config:
+            return False, "output_file is required"
+        return True, ""
+
+    def initialize(self, config: Dict[str, Any]) -> bool:
+        self.output = Path(config["output_file"]).resolve()
+        return True
+
+    def process_findings(
+        self,
+        findings: List[Dict[str, Any]],
+        scan_path: Path,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        highs = [f for f in findings if f.get("severity") == "HIGH"]
+        self.output.write_text(f"{len(highs)} HIGH findings\n", encoding="utf-8")
+        return {
+            "success": True,
+            "message": f"Summarised {len(highs)} HIGH findings",
+            "output_files": [str(self.output)],
+        }
+```
+
+Your plugin must implement the following:
+
+- **`metadata`** – Return a `PluginMetadata` instance describing the plugin.  
+- **`validate_config(config)`** *(optional but recommended)* – Abort gracefully when required settings are missing by returning `(False, "reason")`.  
+- **`initialize(config)`** – Prepare state or dependencies; return `False` to skip execution.  
+- **`process_findings(findings, scan_path, **kwargs)`** – Receive every finding as a dictionary and return a result object containing:
+  - `success`: boolean status
+  - `message`: short summary for the CLI
+  - `data`: optional serializable payload
+  - `output_files`: optional list of generated file paths
+- **`cleanup()`** *(optional)* – Release resources; called even if an exception occurs.
+
+Tip: Plugins are plain Python modules, so you can run `python my_plugin.py` while developing to perform quick checks before trusting them through the CLI.
+
+### Configuration Tips and Best Practices
+
+- Store API keys or long-lived secrets in environment variables and read them during `initialize`. Provide helpful error messages when credentials are missing.  
+- Keep side-effects inside the scan directory. When PySpector scans a single file `scan_path` is that file, so the reference plugins switch to `scan_path.parent` before writing outputs.  
+- Validate configuration early using `validate_config`; PySpector surfaces the error message in the CLI without executing the plugin.  
+- Return meaningful `message` values and populate `output_files` so automation can pick up generated artefacts.  
+- Document optional switches such as `dry_run` (see the bundled `aipocgen` plugin for an example) to support air-gapped testing.
+
+### Security Model
+
+The plugin manager enforces several safeguards:
+
+- **AST-based static inspection** blocks dangerous constructs (`eval`, `exec`, `subprocess.*`, etc.) and prints warnings when sensitive but acceptable calls (e.g., `open`) are used.  
+- **Trust workflow** – you must explicitly trust a plugin before it can run; the CLI informs you about any warnings produced during validation.  
+- **Checksum verification** – each trusted plugin has a stored SHA256 hash; changes are flagged before execution.  
+- **Argument isolation** – the runner resets `sys.argv` to a minimal value so Click-based plugins cannot consume the parent CLI arguments accidentally.  
+- **Structured error handling** – exceptions are caught, traced, and reported without aborting the main scan, and `cleanup()` still runs.
+
+Together these measures let you extend PySpector confidently while maintaining a secure supply chain for third-party automation.
+
 ## Triaging and Baselining Findings
 
 <img width="871" height="950" alt="image" src="https://github.com/user-attachments/assets/8ad8e8b9-528a-426f-96e3-c0a66c2c683d" />
@@ -195,4 +332,3 @@ For continuous monitoring, you can schedule regular scans of your projects using
 ./scripts/setup_cron.sh
 ```
 The script will prompt you for the project path, desired scan frequency (daily, weekly, monthly), and a location to store the JSON reports. It will then output the command to add to your crontab, automating your security scanning and reporting process.
-
