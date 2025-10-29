@@ -170,8 +170,8 @@ The CLI exposes helper commands for maintaining your local catalogue:
 
 ```bash
 pyspector plugin list               # Show discovered plugins, trust status, version, author
-pyspector plugin trust aipocgen     # Validate, checksum, and mark a plugin as trusted
-pyspector plugin info my_plugin     # Display stored metadata and checksum verification
+pyspector plugin trust plugin_name     # Validate, checksum, and mark a plugin as trusted
+pyspector plugin info plugin_name     # Display stored metadata and checksum verification
 pyspector plugin install path/to/plugin.py --trust
 pyspector plugin remove legacy_plugin
 ```
