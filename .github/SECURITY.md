@@ -66,7 +66,7 @@ Violations involving data exfiltration, destructive testing, or public disclosur
 
 ## 💬 Contact
 Questions or clarifications?  
-You can [Contact](mailto:pyspector@protonmail. com) maintainers directly.
+You can [![Contact](mailto:pyspector@protonmail.com) maintainers directly.
 
 All reports and communications will be handled confidentially.
 
