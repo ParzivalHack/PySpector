@@ -1,9 +1,7 @@
-# Security Policy — PySpector Vulnerability Disclosure Program (VDP)
+## Security Policy: PySpector Vulnerability Disclosure Program (VDP)
 
 Thank you for helping to keep **PySpector** secure.  
 We encourage responsible disclosure of all security vulnerabilities in our codebase.
-
----
 
 ## 🧭 How to Report
 All security issues must be reported **privately** through our official form:  
@@ -22,8 +20,6 @@ This form collects all details we need for efficient triage, including:
 
 We aim to **acknowledge within 48 hours** and provide a **status update within 7 days**.
 
----
-
 ## 🧩 In-Scope Vulnerabilities
 We consider valid reports for:
 - Remote or local code execution within PySpector or its components (Python CLI, Rust backend).
@@ -32,8 +28,6 @@ We consider valid reports for:
 - Sensitive information exposure (e.g., reading system paths, credentials, or code fragments unexpectedly).
 - Supply-chain or packaging flaws (e.g., tampered distributions, missing signatures/checksums).
 - Insecure default configurations that expose users to risks when used as documented.
-
----
 
 ## 🚫 Out-of-Scope
 The following are **not eligible** under this program:
@@ -44,8 +38,6 @@ The following are **not eligible** under this program:
 - Vulnerabilities requiring root/admin privileges or access to developer secrets.
 - Attacks on PySpector’s infrastructure (e.g., GitHub Actions, website, form hosting).
 
----
-
 ## 🕒 Disclosure & Fix Timeline
 We follow a **responsible disclosure process**:
 
@@ -55,16 +47,12 @@ We follow a **responsible disclosure process**:
 4. **Advisory Publication** — A GitHub Security Advisory (GHSA) is released with technical details and credit.
 5. **Credit** — Reporter is listed under acknowledgements unless anonymity was requested.
 
----
-
 ## 🏅 Recognition & Credit Policy
 We do not currently offer monetary rewards.  
 However:
 - Valid reporters will be **publicly credited** in the advisory and release notes.
 - Anonymous submissions (using “N/A”) will be processed equally and respected.
 - Duplicate or low-impact findings may receive private acknowledgement only.
-
----
 
 ## 🛡️ Safe-Harbor Statement
 We support **good-faith security research**.  
@@ -76,15 +64,11 @@ You will **not face legal action** if:
 
 Violations involving data exfiltration, destructive testing, or public disclosure prior to coordination, void this protection.
 
----
-
 ## 💬 Contact
 Questions or clarifications?  
 You can [Contact](mailto:pyspector@protonmail. com) maintainers directly.
 
 All reports and communications will be handled confidentially.
-
----
 
 Thank you for helping improve the security and reliability of **PySpector**.  
 — *The PySpector Team*
