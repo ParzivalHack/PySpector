@@ -5,6 +5,7 @@ import ast
 import subprocess
 import tempfile
 import sys
+import warnings
 from pathlib import Path
 from typing import Optional, Dict, Any, List, cast
 
@@ -66,24 +67,71 @@ class AstEncoder(json.JSONEncoder):
             return str(node)
         return super().default(node)
 
+
+def should_skip_file(file_path: Path) -> bool:
+    """
+    Determine if a file should be skipped during AST parsing.
+    Excludes test fixtures and other files with intentionally malformed syntax.
+    """
+    path_str = str(file_path)
+    
+    # Skip test fixture directories
+    skip_patterns = [
+        '/tests/fixtures/',
+        '/test/fixtures/',
+        '/testdata/',
+        '/_fixtures/',
+        '/fixtures/',
+    ]
+    
+    for pattern in skip_patterns:
+        if pattern in path_str.replace('\\', '/'):
+            return True
+    
+    # Skip common test file patterns
+    filename = file_path.name
+    if filename.startswith('test_') or filename.endswith('_test.py'):
+        # Only skip if in a tests directory
+        if '/tests/' in path_str.replace('\\', '/') or '/test/' in path_str.replace('\\', '/'):
+            return True
+    
+    return False
+
+
 def get_python_file_asts(path: Path) -> List[Dict[str, Any]]:
     """Recursively finds Python files and returns their content and AST."""
     results = []
     files_to_scan = list(path.glob('**/*.py')) if path.is_dir() else [path]
 
-    for py_file in files_to_scan:
-        if py_file.is_file():
-            try:
-                content = py_file.read_text(encoding='utf-8')
-                parsed_ast = ast.parse(content, filename=str(py_file))
-                ast_json = json.dumps(parsed_ast, cls=AstEncoder)
-                results.append({
-                    "file_path": str(py_file),
-                    "content": content,
-                    "ast_json": ast_json
-                })
-            except (SyntaxError, UnicodeDecodeError) as e:
-                click.echo(click.style(f"Warning: Could not parse {py_file}: {e}", fg="yellow"))
+    # Suppress Python's SyntaxWarning during AST parsing
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=SyntaxWarning)
+        
+        for py_file in files_to_scan:
+            if py_file.is_file():
+                # Skip test fixtures
+                if should_skip_file(py_file):
+                    continue
+                
+                try:
+                    content = py_file.read_text(encoding='utf-8')
+                    parsed_ast = ast.parse(content, filename=str(py_file))
+                    ast_json = json.dumps(parsed_ast, cls=AstEncoder)
+                    results.append({
+                        "file_path": str(py_file),
+                        "content": content,
+                        "ast_json": ast_json
+                    })
+                except SyntaxError as e:
+                    # Only warn about syntax errors in non-test files
+                    if not should_skip_file(py_file):
+                        click.echo(click.style(
+                            f"Warning: Could not parse {py_file.relative_to(path) if path.is_dir() else py_file.name}: {e.msg} ({py_file.name}, line {e.lineno})",
+                            fg="yellow"
+                        ))
+                except UnicodeDecodeError as e:
+                    click.echo(click.style(f"Warning: Could not read {py_file}: {e}", fg="yellow"))
+    
     return results
 
 
@@ -323,6 +371,7 @@ def _execute_scan(
     
     # --- AST Generation for Python files ---
     python_files_data = get_python_file_asts(scan_path)
+    click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files")
     
     # --- Run Scan ---
     try:
