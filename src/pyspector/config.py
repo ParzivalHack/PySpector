@@ -11,6 +11,14 @@ except ImportError:
 DEFAULT_CONFIG = {
     "exclude": [
         ".venv", "venv", ".git", "__pycache__", "build", "dist", "*.egg-info",
+        # Add test fixture exclusions
+        "*/tests/fixtures/*",
+        "*/test/fixtures/*",
+        "*_fixtures/*",
+        "*/testdata/*",
+        # Common test file patterns with intentionally bad syntax
+        "**/test_*.py",
+        "**/*_test.py",
     ],
     "severity": "LOW",
 }
