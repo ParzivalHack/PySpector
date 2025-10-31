@@ -25,24 +25,32 @@ pub fn run_analysis(context: AnalysisContext) -> Vec<Issue> {
     let root_path = Path::new(&context.root_path);
     let mut files_to_scan: Vec<String> = Vec::new();
     
+    // Add common test fixture patterns to exclusions
+    let mut enhanced_exclusions = context.exclusions.clone();
+    enhanced_exclusions.extend(vec![
+        "*/tests/fixtures/*".to_string(),
+        "*/test/fixtures/*".to_string(),
+        "*_test.py".to_string(),
+        "*/test_*.py".to_string(),
+    ]);
+    
     for entry in WalkDir::new(root_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        // FIXED: Changed logic to include .py files, not exclude them
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "py") && !is_excluded(path, &context.exclusions) {
+        // Collect all files (not just .py) for regex scanning
+        if path.is_file() && !is_excluded(path, &enhanced_exclusions) {
             files_to_scan.push(path.to_str().unwrap().to_string());
         }
     }
     
-    println!("[+] Found {} Python files to scan", files_to_scan.len());
+    println!("[+] Found {} files to scan", files_to_scan.len());
     
+    // Scan all files with regex patterns
     let mut issues: Vec<Issue> = files_to_scan
         .par_iter()
         .flat_map(|file_path| {
-            println!("[*] Scanning file: {}", file_path);
             if let Ok(content) = fs::read_to_string(file_path) {
                 config_analysis::scan_file(file_path, &content, &context.ruleset)
             } else { 
-                println!("[!] Failed to read file: {}", file_path);
                 Vec::new() 
             }
         })
@@ -50,25 +58,20 @@ pub fn run_analysis(context: AnalysisContext) -> Vec<Issue> {
 
     println!("[+] Found {} issues from config analysis", issues.len());
 
+    // Process Python files with AST analysis
     let python_issues: Vec<Issue> = context.py_files
         .par_iter()
         .flat_map(|py_file| {
-            println!("[*] Processing Python file: {}", py_file.file_path);
             let mut findings = Vec::new();
-            if is_excluded(Path::new(&py_file.file_path), &context.exclusions) { 
-                println!("[!] File excluded: {}", py_file.file_path);
+            if is_excluded(Path::new(&py_file.file_path), &enhanced_exclusions) { 
                 return findings; 
             }
             
-            findings.extend(config_analysis::scan_file(&py_file.file_path, &py_file.content, &context.ruleset));
-            println!("[+] Config analysis found {} issues in {}", findings.len(), py_file.file_path);
+            // Skip regex scan for Python files (already done above)
             
             if let Some(ast) = &py_file.ast {
                 let ast_findings = ast_analysis::scan_ast(ast, &py_file.file_path, &py_file.content, &context.ruleset);
-                println!("[+] AST analysis found {} issues in {}", ast_findings.len(), py_file.file_path);
                 findings.extend(ast_findings);
-            } else {
-                println!("[!] No AST available for {}", py_file.file_path);
             }
             findings
         })
@@ -94,5 +97,15 @@ pub fn run_analysis(context: AnalysisContext) -> Vec<Issue> {
 fn is_excluded(path: &Path, exclusions: &[String]) -> bool {
     let path_str = path.to_str().unwrap_or_default();
     let path_filename = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
-    exclusions.iter().any(|ex| path_str.contains(ex) || wildmatch::WildMatch::new(ex).matches(path_filename))
+    
+    exclusions.iter().any(|ex| {
+        // Handle glob patterns
+        if ex.contains('*') {
+            wildmatch::WildMatch::new(ex).matches(path_str) || 
+            wildmatch::WildMatch::new(ex).matches(path_filename)
+        } else {
+            // Handle simple substring matching
+            path_str.contains(ex) || path_filename.contains(ex)
+        }
+    })
 }
