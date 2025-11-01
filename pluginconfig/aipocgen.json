@@ -1,0 +1,10 @@
+{
+    "aipocgen": {
+        "api_key": "Your-Groq-API-KEY",
+        "model": "llama-3.3-70b",
+        "severity_filter": ["HIGH", "CRITICAL"],
+        "max_pocs": 5,
+        "output_dir": "pocs",
+        "dry_run": false
+    }
+}
