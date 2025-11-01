@@ -176,14 +176,18 @@ pyspector plugin install path/to/plugin.py --trust
 pyspector plugin remove legacy_plugin
 ```
 
-Only trusted plugins are executed automatically. When you trust a plugin PySpector calculates its SHA256 checksum and stores the version, author, and description that the plugin declares via `PluginMetadata`. If the file is modified later you will be warned before it runs again.
+Only trusted plugins are executed automatically. When you trust a plugin PySpector calculates its SHA256 checksum and stores the version, author, and description that the plugin declares via `PluginMetadata`. If the file is modified later you will be warned before it runs again. To trust a plugin:
+
+```bash
+pyspector plugin install ./PySpector/plugins/aipocgen.py --trust
+```
 
 ### Running Plugins During a Scan
 
 Use one or more `--plugin` flags during `pyspector scan` and provide a JSON configuration file if the plugin expects custom settings:
 
 ```bash
-pyspector scan vulnerable_app.py --plugin aipocgen --plugin-config pluginconfig/aipocgen.json
+pyspector scan vulnerableapp.py --plugin aipocgen --plugin-config ./PySpector/pluginconfig/aipocgen.json
 ```
 
 The configuration file must be a JSON object whose keys match plugin names, for example:
