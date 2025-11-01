@@ -183,7 +183,7 @@ Only trusted plugins are executed automatically. When you trust a plugin PySpect
 Use one or more `--plugin` flags during `pyspector scan` and provide a JSON configuration file if the plugin expects custom settings:
 
 ```bash
-pyspector scan vulnerable_app.py --plugin aipocgen --plugin report_exporter --plugin-config plugin-settings.json
+pyspector scan vulnerable_app.py --plugin aipocgen --plugin-config pluginconfig/aipocgen.json
 ```
 
 The configuration file must be a JSON object whose keys match plugin names, for example:
@@ -197,10 +197,6 @@ The configuration file must be a JSON object whose keys match plugin names, for 
     "max_pocs": 5,
     "output_dir": "pocs",
     "dry_run": false
-  },
-  "report_exporter": {
-    "format": "markdown",
-    "destination": "./security_notes"
   }
 }
 ```
