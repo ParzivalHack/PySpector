@@ -74,7 +74,9 @@ This architecture combines the best of both worlds: a flexible, user-friendly in
 
 ## Performance Benchmarks
 
-Independent performance testing demonstrates PySpector's competitive advantages in SAST scanning speed while maintaining comprehensive security analysis.
+Performance benchmarks demonstrate PySpector's competitive advantages in SAST scanning speed while maintaining comprehensive security analysis.
+
+> Performance benchmarks were executed in a deterministic and controlled environment using automated stress-testing scripts, ensuring repeatable and unbiased measurements
 
 ### Benchmark Results
 
