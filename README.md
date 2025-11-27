@@ -1,6 +1,7 @@
-<img width="893" height="230" alt="image" src="https://github.com/user-attachments/assets/761a74bc-4d11-44b2-aa5c-64c4e999fcfa" />
+<img width="2048" height="2048" alt="Gemini_Generated_Image_lift0blift0blift" src="https://github.com/user-attachments/assets/7e9997fa-326d-4385-9824-3bff88a9330e" />
 
-# An High-Performance Python and Rust SAST Framework
+
+# High-Performance Python and Rust SAST Framework
 
 [![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.3--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.3-beta)
