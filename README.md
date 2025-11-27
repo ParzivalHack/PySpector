@@ -1,4 +1,5 @@
-<img width="2048" height="2048" alt="Gemini_Generated_Image_lift0blift0blift" src="https://github.com/user-attachments/assets/7e9997fa-326d-4385-9824-3bff88a9330e" />
+<img width="2048" height="681" alt="image" src="https://github.com/user-attachments/assets/0093a5d2-d1c9-45dd-b129-2de196f3be1f" />
+
 
 
 # High-Performance Python and Rust SAST Framework
