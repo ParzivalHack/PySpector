@@ -1,3 +1,5 @@
+<img width="1338" height="429" alt="image" src="https://github.com/user-attachments/assets/abf1349e-87c8-43ab-900a-6011792ec9fe" />
+
 # PySpector Community Hackathon  
 **20/12/2025 → 18/01/2026**
 
@@ -5,13 +7,9 @@ Benvenuto al primo hackathon ufficiale dedicato a **PySpector**, il SAST open-so
 
 Questo evento è pensato per portare nuovi contributors, far crescere l’ecosistema dei plugin, migliorare le regole AST e premiare chi aiuta a far evolvere il progetto.
 
----
-
 ## 🎯 Obiettivi dell’Hackathon
 Durante il periodo dell’evento potrai contribuire a PySpector in qualunque forma, seguendo le linee guida del nostro **CONTRIBUTING.md**.  
 Ogni contributo valido genera punti: alla fine i partecipanti verranno classificati e **i primi 10 classificati, riceveranno dei premi speciali**.
-
----
 
 # 🏆 Premi per i Top Contributors
 
@@ -31,8 +29,6 @@ Ogni contributo valido genera punti: alla fine i partecipanti verranno classific
 
 ## 🏅 **4° → 10° posto**
 - **1 mese di SatoriCI Pro**
-
----
 
 # 📊 Sistema di Punteggio
 
@@ -60,8 +56,6 @@ Il punteggio viene assegnato come segue:
 ### 🧩 **Nuovi Plugin (creati dalla community)**
 - In base all’utilità, complessità e impatto: **da 15 a 40 punti**
 
----
-
 # 🚀 Come Partecipare
 
 Per partecipare ufficialmente servono **due requisiti obbligatori**:
@@ -73,8 +67,6 @@ Per partecipare ufficialmente servono **due requisiti obbligatori**:
    → https://discord.gg/securitycert-783304196072931329
 
 Una volta completati questi due passaggi, potrai iniziare subito a contribuire :)
-
----
 
 # 🛠 Come contribuire correttamente
 
@@ -90,8 +82,6 @@ Questo include:
 - struttura dei plugin  
 - linee guida per reportare vulnerabilità interne
 
----
-
 # 📡 Tracking dei Punti + Leaderboard
 
 Durante l’evento:
@@ -101,14 +91,10 @@ Durante l’evento:
 - Alla fine dell’evento verrà pubblicata la classifica definitiva
 - Entro 7 giorni verranno consegnati tutti i premi
 
----
-
 # 🤝 Sponsor Ufficiale
 
 [**SatoriCI** – Automated Testing](https://satori.ci)  
 Sponsor ufficiale del PySpector Hackathon 2025/2026.
-
----
 
 # 🎉 Unisciti a noi!
 
@@ -117,8 +103,6 @@ Non serve essere esperti del progetto: basta voglia di imparare, contribuire e c
 
 **Ti aspettiamo sul nostro server Discord!**  
 → https://discord.gg/securitycert-783304196072931329
-
----
 
 # 📅 Date Ufficiali
 - **Inizio:** 20 dicembre 2025  
