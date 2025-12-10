@@ -64,7 +64,7 @@ Per partecipare ufficialmente servono **due requisiti obbligatori**:
    → https://github.com/ParzivalHack/PySpector
 
 3. 💬 **Essere presenti nel server Discord di SecurityCert** (dove avverrà il tracking dei contributi, la leaderboard e il supporto)
-   → https://discord.gg/securitycert-783304196072931329
+   → https://discord.gg/KWzx6FCucF
 
 Una volta completati questi due passaggi, potrai iniziare subito a contribuire :)
 
@@ -102,7 +102,7 @@ L’hackathon è gratuito ed aperto a tutti: sviluppatori Python, Rust, security
 Non serve essere esperti del progetto: basta voglia di imparare, contribuire e costruire il futuro di PySpector insieme alla community.
 
 **Ti aspettiamo sul nostro server Discord!**  
-→ https://discord.gg/securitycert-783304196072931329
+→ https://discord.gg/KWzx6FCucF
 
 # 📅 Date Ufficiali
 - **Inizio:** 20 dicembre 2025  
