@@ -60,10 +60,10 @@ Il punteggio viene assegnato come segue:
 
 Per partecipare ufficialmente servono **due requisiti obbligatori**:
 
-1. ⭐ **Lasciare una stella al repo di PySpector**  
+1. ⭐ **Lasciare una stella al repo di PySpector**
    → https://github.com/ParzivalHack/PySpector
 
-2. 💬 **Essere presenti nel server Discord di SecurityCert** (dove avverrà il tracking dei contributi, la leaderboard e il supporto)
+3. 💬 **Essere presenti nel server Discord di SecurityCert** (dove avverrà il tracking dei contributi, la leaderboard e il supporto)
    → https://discord.gg/securitycert-783304196072931329
 
 Una volta completati questi due passaggi, potrai iniziare subito a contribuire :)
