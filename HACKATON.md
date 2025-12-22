@@ -30,6 +30,8 @@ Ogni contributo valido genera punti: alla fine i partecipanti verranno classific
 ## 🏅 **4° → 10° posto**
 - **1 mese di SatoriCI Pro**
 
+⚠️Il numero minimo di partecipanti all'evento, per ritenerlo valido, è di **10 partecipanti singoli con contributions valide**
+
 # 📊 Sistema di Punteggio
 
 I punti si accumulano da tutti i contributi validi fatti tramite GitHub (issue, PR, plugin, vulnerability research, docs, etc...).  
@@ -67,6 +69,7 @@ Per partecipare ufficialmente servono **due requisiti obbligatori**:
    → https://discord.gg/KWzx6FCucF
 
 Una volta completati questi due passaggi, potrai iniziare subito a contribuire :)
+
 
 # 🛠 Come contribuire correttamente
 
