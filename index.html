@@ -1,758 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PySpector - Next-Gen Python Security Scanner</title>
-    <meta name="description" content="PySpector is a high-performance SAST framework powered by Rust, designed for modern Python development workflows with advanced AI/LLM security scanning.">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #000000;
-            --bg-card: #0a0a0a;
-            --bg-surface: #111111;
-            --text-primary: #9b3d82;
-            --text-secondary: #78105e;
-            --text-muted: #5a244d;
-            --accent: #9b3d82;
-            --accent-dim: #7a3067;
-            --border: #222222;
-            --border-light: #333333;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Geometric Background Elements */
-        .geo-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0.03;
-        }
-
-        .geo-shape {
-            position: absolute;
-            border: 1px solid var(--text-primary);
-        }
-
-        .geo-triangle {
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 25px solid transparent;
-            border-bottom-color: var(--text-primary);
-        }
-
-        .geo-diamond {
-            width: 20px;
-            height: 20px;
-            transform: rotate(45deg);
-            border: 1px solid var(--text-primary);
-        }
-
-        .geo-circle {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 1px solid var(--text-primary);
-        }
-
-        .geo-line {
-            height: 1px;
-            background: var(--text-primary);
-        }
-
-        /* Navigation */
-        .nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.98);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            z-index: 1000;
-            transition: all 0.3s ease;
-        }
-
-        .nav-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .logo-ascii {
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-            line-height: 1;
-            color: var(--text-primary);
-            white-space: pre;
-        }
-
-        .logo-text {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color 0.3s ease;
-            font-weight: 500;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
-        .cta-button {
-            background: var(--text-primary);
-            color: var(--bg-dark);
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: 1px solid var(--text-primary);
-        }
-
-        .cta-button:hover {
-            background: transparent;
-            color: var(--text-primary);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 140px 0 100px;
-            text-align: center;
-            position: relative;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 800px;
-            height: 800px;
-            transform: translate(-50%, -50%);
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .hero-logo {
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            line-height: 1.2;
-            color: var(--text-primary);
-            margin-bottom: 2rem;
-            white-space: pre;
-            opacity: 0.8;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        .hero h1 {
-            font-size: 4rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            color: var(--text-primary);
-            line-height: 1.1;
-            letter-spacing: -2px;
-        }
-
-        .hero-tagline {
-            font-size: 1.3rem;
-            color: var(--text-secondary);
-            margin-bottom: 3rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-            font-weight: 300;
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 4rem;
-        }
-
-        .btn {
-            padding: 1rem 2rem;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .btn-primary {
-            background: var(--text-primary);
-            color: var(--bg-dark);
-            border: 1px solid var(--text-primary);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border-light);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn-primary:hover {
-            background: transparent;
-            color: var(--text-primary);
-            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--text-primary);
-            background: var(--text-primary);
-            color: var(--bg-dark);
-        }
-
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 4rem;
-            flex-wrap: wrap;
-        }
-
-        .stat {
-            text-align: center;
-            position: relative;
-        }
-
-        .stat::before {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 4px;
-            background: var(--text-primary);
-            border-radius: 50%;
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            display: block;
-            font-family: 'Courier New', monospace;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Features Section */
-        .features {
-            padding: 100px 0;
-            background: var(--bg-card);
-            position: relative;
-        }
-
-        .features::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-light), transparent);
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 4rem;
-            color: var(--text-primary);
-            position: relative;
-        }
-
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 1px;
-            background: var(--text-primary);
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: var(--bg-surface);
-            padding: 3rem 2rem;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .feature-card:hover::before {
-            left: 100%;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--border-light);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-        }
-
-        .feature-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-
-        .feature-description {
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* Architecture Section */
-        .architecture {
-            padding: 100px 0;
-            background: var(--bg-dark);
-        }
-
-        .arch-diagram {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 4rem;
-            text-align: center;
-            margin-top: 3rem;
-            position: relative;
-        }
-
-        .arch-diagram::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
-            border: 1px solid var(--border);
-            pointer-events: none;
-        }
-
-        .arch-steps {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .arch-step {
-            flex: 1;
-            min-width: 200px;
-            padding: 2rem 1.5rem;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            position: relative;
-        }
-
-        .arch-step::before {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            border: 1px solid var(--border);
-            opacity: 0.3;
-        }
-
-        .arch-step h4 {
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-            font-family: 'Courier New', monospace;
-        }
-
-        .arch-arrow {
-            color: var(--text-primary);
-            font-size: 1.5rem;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* Code Example */
-        .code-example {
-            padding: 100px 0;
-            background: var(--bg-card);
-        }
-
-        .code-block {
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            padding: 3rem;
-            font-family: 'Courier New', monospace;
-            overflow-x: auto;
-            margin-top: 3rem;
-            position: relative;
-        }
-
-        .code-block::before {
-            content: '';
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            right: 15px;
-            bottom: 15px;
-            border: 1px solid var(--border);
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        .code-block pre {
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            position: relative;
-            z-index: 2;
-        }
-
-        .code-comment {
-            color: var(--text-muted);
-        }
-
-        .code-command {
-            color: var(--text-primary);
-            font-weight: bold;
-        }
-
-        /* CTA Section */
-        .cta-section {
-            padding: 100px 0;
-            text-align: center;
-            background: var(--bg-dark);
-            position: relative;
-        }
-
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .cta-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: var(--text-primary);
-        }
-
-        .cta-description {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            margin-bottom: 3rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Footer */
-        .footer {
-            background: var(--bg-card);
-            padding: 4rem 0 2rem;
-            border-top: 1px solid var(--border);
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 3rem;
-            margin-bottom: 2rem;
-        }
-
-        .footer-section h3 {
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-
-        .footer-section a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            display: block;
-            margin-bottom: 0.8rem;
-            transition: color 0.3s ease;
-            font-size: 0.95rem;
-        }
-
-        .footer-section a:hover {
-            color: var(--text-primary);
-        }
-
-        .footer-bottom {
-            text-align: center;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .logo-ascii {
-                display: none;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .hero-tagline {
-                font-size: 1.1rem;
-            }
-
-            .hero-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .stats {
-                gap: 2rem;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .arch-steps {
-                flex-direction: column;
-            }
-
-            .arch-arrow {
-                transform: rotate(90deg);
-            }
-        }
-
-        /* Smooth scrolling and animations */
-        html {
-            scroll-behavior: smooth;
-        }
-
-        .fade-in {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s ease;
-        }
-
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Geometric decorations */
-        .section-decorator {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin: 2rem 0;
-            opacity: 0.4;
-        }
-
-        .decorator-shape {
-            width: 10px;
-            height: 10px;
-            border: 1px solid var(--text-primary);
-        }
-
-        .decorator-diamond {
-            transform: rotate(45deg);
-        }
-
-        .decorator-circle {
-            border-radius: 50%;
-        }
-
-        .decorator-line {
-            width: 30px;
-            height: 1px;
-            background: var(--text-primary);
-        }
-
-        .decorator-triangle {
-            width: 0;
-            height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 8px solid var(--text-primary);
-        }
-
-        /* Additional geometric elements */
-        .geometric-border {
-            position: relative;
-        }
-
-        .geometric-border::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border: 1px solid var(--border);
-            opacity: 0.3;
-        }
-
-        .geometric-border::after {
-            content: '';
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            right: 5px;
-            bottom: 5px;
-            border: 1px solid var(--border);
-            opacity: 0.2;
-        }
-
-        /* New cyberpunk subtitle style */
-        .logo-sub {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: -5px;
-            margin-left: 3px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .logo-sub .logo-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-        }
-        .logo-sub .logo-link:hover {
-            color: var(--text-primary);
-            text-shadow: 0 0 5px var(--text-primary);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>PySpector - High-Performance Python SAST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="PySpector is a high-performance Python SAST framework with a Rust core, deep taint analysis, and AI/LLM security rules." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #0d0d0d;
+      --border: #1a1a1a;
+      --text: #ffffff;
+      --muted: #b3b3b3;
+      --accent: #ffffff;
+      --accent-soft: rgba(255,255,255,.08);
+    }
+
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+
+    code, pre { font-family: "JetBrains Mono", monospace; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11,13,18,.9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 1.2rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+    }
+
+    .ascii-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+
+    .ascii-art {
+      font-family: "Courier New", Courier, monospace;
+      white-space: pre;
+      line-height: 1;
+      font-size: 14px;
+      letter-spacing: 0;
+      color: var(--text);
+    }
+
+
+    /* Large screens */
+    @media (min-width: 1200px) {
+      .ascii-art {
+        transform: scale(1);
+      }
+    }
+
+    /* Laptops */
+    @media (max-width: 1199px) {
+      .ascii-art {
+        transform: scale(0.9);
+      }
+    }
+
+    /* Tablets */
+    @media (max-width: 900px) {
+      .ascii-art {
+        transform: scale(0.8);
+      }
+    }
+
+    /* Phones */
+    @media (max-width: 600px) {
+      .ascii-art {
+        transform: scale(0.7);
+      }
+    }
+
+
+
+
+    header.hero {
+      padding: 96px 0 80px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 560px;
+      font-size: 1.05rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    /* Center hero text content */
+    .hero {
+      text-align: center;
+    }
+
+    .hero p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-actions {
+      justify-content: center;
+    }
+
+
+    .btn {
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+    }
+
+    .stats-wrapper {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin-top: 56px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+
+    .stat {
+      background: linear-gradient(
+        180deg,
+        rgba(255,255,255,.06),
+        rgba(255,255,255,.02)
+      );
+      border: 1px solid var(--border);
+      padding: 28px;
+      border-radius: 16px;
+      position: relative;
+    }
+
+
+    .stat::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: radial-gradient(
+        circle at top left,
+        rgba(255,255,255,.18),
+        transparent 60%
+      );
+
+      opacity: .35;
+      pointer-events: none;
+    }
+
+    .stat strong {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+
+    section {
+      padding: 96px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    section h2 {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+    }
+
+    section .lead {
+      color: var(--muted);
+      max-width: 720px;
+      font-size: 1.05rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .feature {
+      background: linear-gradient(
+        180deg,
+        rgba(255,255,255,.02),
+        rgba(255,255,255,.01)
+      );
+      border: 1px solid var(--border);
+      padding: 26px;
+      border-radius: 16px;
+    }
+
+    .feature h3 {
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .feature p {
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+    .arch {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+
+    .arch-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      border-radius: 14px;
+    }
+
+    pre {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      padding: 24px;
+      border-radius: 14px;
+      overflow-x: auto;
+      margin-top: 32px;
+      font-size: .9rem;
+      color: #ffffff;
+    }
+
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 56px;
+      border-radius: 20px;
+      margin-top: 48px;
+      text-align: center;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    footer {
+      padding: 56px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 32px;
+    }
+
+    /* Desktop only layout fix for stats */
+    @media (min-width: 900px) {
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      /* Move SARIF to second row */
+      .stats .stat:nth-child(4) {
+        grid-column: 1;
+      }
+    }
+
+  </style>
 </head>
+
 <body>
-    <!-- Geometric Background -->
-    <div class="geo-bg" id="geoBg"></div>
 
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-container">
-                <div class="logo-container">
-                    <div class="logo-text">PySpector</div>
-                        <div class="logo-sub">Powered By <a href="https://www.securitycert.it" target="_blank" class="logo-link">SecurityCert</a></div>
-                </div>
-                <ul class="nav-links">
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#architecture">Architecture</a></li>
-                    <li><a href="#usage">Usage</a></li>
-                    <li><a href="#contribute">Contribute</a></li>
-                </ul>
-                <a href="https://github.com/ParzivalHack/PySpector" class="cta-button" target="_blank">
-                    <i class="fab fa-github"></i> GitHub
-                </a>
-            </div>
-        </div>
-    </nav>
+<nav>
+  <div class="container nav-inner">
+    <div class="logo">PySpector</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#usage">Usage</a>
+      <a href="#contribute">Contribute</a>
+      <a href="https://github.com/ParzivalHack/PySpector" target="_blank">GitHub</a>
+    </div>
+  </div>
+</nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-logo">    ╔══════════════════════════════════════════════════╗
+<header class="hero">
+  <div class="container">
+
+    <div class="ascii-wrapper">
+      <pre class="ascii-art">    ╔══════════════════════════════════════════════════╗
     ║                    PYSPECTOR                     ║
     ║              Next-Gen Security Scanner           ║
     ╚══════════════════════════════════════════════════╝
@@ -767,410 +386,133 @@
     │ PYTHON  │                               │  JSON   │
     │   CLI   │                               │  HTML   │
     │ HANDLER │                               │  SARIF  │
-    └─────────┘                               └─────────┘</div>
-                <h1>Next-Gen Python Security Scanner</h1>
-                <p class="hero-tagline">
-                    High-performance SAST framework powered by Rust, engineered for modern Python development workflows with advanced AI/LLM security scanning capabilities.
-                </p>
-                <div class="hero-buttons">
-                    <a href="https://github.com/ParzivalHack/PySpector" class="btn btn-primary" target="_blank">
-                        <i class="fab fa-github"></i> Star on GitHub
-                    </a>
-                    <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" class="btn btn-secondary" target="_blank">
-                        <i class="fas fa-code-branch"></i> Contribute
-                    </a>
-                </div>
-                <div class="stats">
-                    <div class="stat">
-                        <span class="stat-number">240+</span>
-                        <span class="stat-label">Security Rules</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">45+</span>
-                        <span class="stat-label">AI/LLM Rules</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">108</span>
-                        <span class="stat-label">GitHub Stars</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number">3</span>
-                        <span class="stat-label">Stable Beta Release</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    └─────────┘                               └─────────┘</pre>
 
-    <!-- Performance Benchmark Section -->
-    <section class="benchmark" style="padding: 100px 0; background: var(--bg-surface);">
-        <div class="container">
-            <h2 class="section-title fade-in">Performance Benchmarks</h2>
-            <div class="section-decorator">
-                <div class="decorator-shape"></div>
-                <div class="decorator-shape decorator-diamond"></div>
-                <div class="decorator-shape"></div>
-                <div class="decorator-shape decorator-circle"></div>
-                <div class="decorator-shape"></div>
-            </div>
-            
-            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 3rem; font-size: 1.1rem;">
-                Independent performance testing demonstrates PySpector's competitive advantages in SAST scanning speed while maintaining comprehensive security analysis.
-            </p>
+    </div>
 
-            <div class="benchmark-image fade-in" style="background: var(--bg-dark); border: 1px solid var(--border); padding: 2rem; margin: 2rem 0; text-align: center; position: relative;">
-                <div style="position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; border: 1px solid var(--border); opacity: 0.3; pointer-events: none;"></div>
-                <div style="position: relative; z-index: 2;">
-                    <h3 style="margin-bottom: 2rem; color: var(--text-primary); font-family: 'Courier New', monospace;">PERFORMANCE BENCHMARK CHARTS</h3>
-                    <img src="https://github.com/user-attachments/assets/9ca0cd7a-82eb-4365-b5c3-94a60eb6d3d9" alt="PySpector Performance Benchmarks" style="max-width: 70%; height: auto; border: 1px solid var(--border); border-radius: 4px;">
-                </div>
-            </div>
+    <h1>The first hybrid SAST<br>for Real-World Python Codebases</h1>
 
-            <div class="benchmark-details fade-in">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem;">
-                    <div style="background: var(--bg-dark); padding: 2rem; border: 1px solid var(--border); position: relative;">
-                        <div style="position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px solid var(--border); opacity: 0.2;"></div>
-                        <div style="position: relative; z-index: 2;">
-                            <h4 style="color: var(--text-primary); margin-bottom: 1rem; font-family: 'Courier New', monospace;">[SPEED ADVANTAGE]</h4>
-                            <p style="color: var(--text-secondary);">71% faster scanning than traditional tools through Rust-powered parallel analysis</p>
-                        </div>
-                    </div>
-                    <div style="background: var(--bg-dark); padding: 2rem; border: 1px solid var(--border); position: relative;">
-                        <div style="position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px solid var(--border); opacity: 0.2;"></div>
-                        <div style="position: relative; z-index: 2;">
-                            <h4 style="color: var(--text-primary); margin-bottom: 1rem; font-family: 'Courier New', monospace;">[SCALABILITY]</h4>
-                            <p style="color: var(--text-secondary);">Maintains high throughput on large codebases (500k+ lines of code)</p>
-                        </div>
-                    </div>
-                    <div style="background: var(--bg-dark); padding: 2rem; border: 1px solid var(--border); position: relative;">
-                        <div style="position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px solid var(--border); opacity: 0.2;"></div>
-                        <div style="position: relative; z-index: 2;">
-                            <h4 style="color: var(--text-primary); margin-bottom: 1rem; font-family: 'Courier New', monospace;">[RESOURCE PROFILE]</h4>
-                            <p style="color: var(--text-secondary);">Optimized for modern multi-core environments with adequate memory allocation</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <p>
+      PySpector is a static analysis security testing framework for Python,
+      combining a Rust-powered analysis core with AST parsing,
+      inter-procedural taint tracking, and first-class AI and LLM security rules.
+    </p>
 
-            <div class="benchmark-methodology fade-in" style="margin-top: 3rem; text-align: center;">
-                <div class="section-decorator">
-                    <div class="decorator-shape decorator-diamond"></div>
-                    <div class="decorator-shape decorator-circle"></div>
-                    <div class="decorator-shape decorator-diamond"></div>
-                </div>
-                <h4 style="color: var(--text-primary); margin-bottom: 1rem;">Benchmark Methodology</h4>
-                <p style="color: var(--text-secondary); max-width: 800px; margin: 0 auto;">
-                    Performance testing conducted on Debian-based Linux VM (2 cores, 4GB RAM) across 5 major Python repositories (13k-530k lines of code). 
-                    Average of multiple runs with CPU settling periods. Head-to-head comparison against Bandit and Semgrep using identical configurations.
-                </p>
-            </div>
-        </div>
-    </section>
+    <div class="hero-actions">
+      <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank">View on GitHub</a>
+      <a class="btn" href="#usage">Quick Start</a>
+    </div>
+<div class="stats-wrapper">
+    <div class="stats">
+      <div class="stat"><strong>240+</strong><span>Security Rules</span></div>
+      <div class="stat"><strong>45+</strong><span>AI and LLM Rules</span></div>
+      <div class="stat"><strong>19,000+</strong><span>PyPI Downloads</span></div>
+      <div class="stat"><strong>SARIF</strong><span>CI and CD Ready</span></div>
+      <div class="stat"><strong>Open</strong><span>Community Driven</span></div>
+      <div class="stat"><strong>Rust</strong><span>Parallel Engine</span></div>
+    </div>
+    </div>
+  </div>
+</header>
 
-    <!-- Features Section -->
-    <section id="features" class="features">
-        <div class="container">
-            <h2 class="section-title fade-in">Core Capabilities</h2>
-            <div class="section-decorator">
-                <div class="decorator-shape decorator-triangle"></div>
-                <div class="decorator-shape decorator-diamond"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape decorator-circle"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape decorator-diamond"></div>
-                <div class="decorator-shape decorator-triangle"></div>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3 class="feature-title">Rust-Powered Performance</h3>
-                    <p class="feature-description">
-                        Leverages a high-performance Rust core for lightning-fast analysis, avoiding the performance overhead of traditional Python-based tools.
-                    </p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h3 class="feature-title">AI/LLM Security</h3>
-                    <p class="feature-description">
-                        Specialized ruleset with 100+ checks for AI applications, including prompt injection, insecure model loading, and dangerous agent tool usage.
-                    </p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-layer-group"></i>
-                    </div>
-                    <h3 class="feature-title">Multi-Layered Analysis</h3>
-                    <p class="feature-description">
-                        Combines regex pattern matching, AST analysis, and inter-procedural taint analysis for comprehensive vulnerability detection.
-                    </p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <h3 class="feature-title">CI/CD Integration</h3>
-                    <p class="feature-description">
-                        Git hooks, cron scripts, and multiple output formats (JSON, HTML, SARIF) for seamless integration into development workflows.
-                    </p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="feature-title">OWASP Coverage</h3>
-                    <p class="feature-description">
-                        Built-in rules covering OWASP Top 10 vulnerabilities and beyond, with customizable TOML-based rule definitions.
-                    </p>
-                </div>
-                <div class="feature-card fade-in">
-                    <div class="feature-icon">
-                        <i class="fas fa-filter"></i>
-                    </div>
-                    <h3 class="feature-title">Smart Baseline</h3>
-                    <p class="feature-description">
-                        Interactive triage mode with baselining capabilities to focus on new and relevant security findings in each scan.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
+<section id="features">
+  <div class="container">
+    <h2>Core Capabilities</h2>
+    <p class="lead">
+      Designed for security engineers and developers who need speed,
+      transparency, and extensibility.
+    </p>
 
-    <!-- Architecture Section -->
-    <section id="architecture" class="architecture">
-        <div class="container">
-            <h2 class="section-title fade-in">Hybrid Architecture</h2>
-            <div class="section-decorator">
-                <div class="decorator-shape decorator-triangle"></div>
-                <div class="decorator-shape"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape decorator-circle"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape"></div>
-                <div class="decorator-shape decorator-triangle"></div>
-            </div>
-            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 2rem;">
-                PySpector combines Python's flexibility with Rust's performance for optimal results.
-            </p>
-            <div class="arch-diagram fade-in">
-                <div class="arch-steps">
-                    <div class="arch-step">
-                        <h4>[ Python CLI ]</h4>
-                        <p>Handles arguments, config, and AST generation</p>
-                    </div>
-                    <div class="arch-arrow">&gt;&gt;</div>
-                    <div class="arch-step">
-                        <h4>[ Rust Core ]</h4>
-                        <p>Parallel analysis with call graph construction</p>
-                    </div>
-                    <div class="arch-arrow">&gt;&gt;</div>
-                    <div class="arch-step">
-                        <h4>[ Results ]</h4>
-                        <p>Structured findings with multiple output formats</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div class="features">
+      <div class="feature"><h3>Rust-Powered Analysis</h3><p>Parallel execution for large Python repositories.</p></div>
+      <div class="feature"><h3>Inter-Procedural Taint Tracking</h3><p>Tracks data flows across call graphs.</p></div>
+      <div class="feature"><h3>AI and LLM Security</h3><p>Rules for prompt injection and unsafe agents.</p></div>
+      <div class="feature"><h3>Multi-Layered Detection</h3><p>Regex, AST, and semantic checks combined.</p></div>
+      <div class="feature"><h3>CI and CD Integration</h3><p>JSON, HTML, and SARIF outputs.</p></div>
+      <div class="feature"><h3>Extensible Rules</h3><p>TOML-based rule definitions.</p></div>
+      <div class="feature"><h3>Plugin System</h3><p>Post-processing and custom workflows.</p></div>
+      <div class="feature"><h3>Interactive Triage</h3><p>TUI-based triage and baseline management.</p></div>
+    </div>
+  </div>
+</section>
 
-    <!-- Usage Section -->
-    <section id="usage" class="code-example">
-        <div class="container">
-            <h2 class="section-title fade-in">Quick Start</h2>
-            <div class="section-decorator">
-                <div class="decorator-shape decorator-diamond"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape decorator-triangle"></div>
-                <div class="decorator-line"></div>
-                <div class="decorator-shape decorator-diamond"></div>
-            </div>
-            <div class="code-block fade-in">
-                <pre><code><span class="code-comment"># Install PySpector</span>
-<span class="code-command">pip install .</span>
+<section id="architecture">
+  <div class="container">
+    <h2>Hybrid Architecture</h2>
+    <p class="lead">
+      A clean separation between orchestration and analysis keeps PySpector fast and maintainable.
+    </p>
 
-<span class="code-comment"># Scan a Python project</span>
-<span class="code-command">pyspector scan /path/to/your/project</span>
+    <div class="arch">
+      <div class="arch-box"><h4>Python CLI</h4><p>Configuration, AST generation, rule loading.</p></div>
+      <div class="arch-box"><h4>Rust Core</h4><p>Parallel analysis engine with taint propagation.</p></div>
+      <div class="arch-box"><h4>Results Layer</h4><p>Console, JSON, HTML, SARIF, and interactive TUI.</p></div>
+    </div>
+  </div>
+</section>
 
-<span class="code-comment"># Enable AI/LLM security rules</span>
-<span class="code-command">pyspector scan /path/to/your/project --ai</span>
+<section id="usage">
+  <div class="container">
+    <h2>Quick Start</h2>
 
-<span class="code-comment"># Generate HTML report</span>
-<span class="code-command">pyspector scan /path/to/your/project -o report.html -f html</span>
+    <pre><code># Install from PyPI
+pip install pyspector
 
-<span class="code-comment"># Scan remote repository</span>
-<span class="code-command">pyspector scan --url https://github.com/username/repo.git</span>
+# Scan a project
+pyspector scan ./project
 
-<span class="code-comment"># Interactive triage mode</span>
-<span class="code-command">pyspector triage report.json</span></code></pre>
-            </div>
-        </div>
-    </section>
+# Enable AI and LLM rules
+pyspector scan ./project --ai
 
-    <!-- CTA Section -->
-    <section id="contribute" class="cta-section">
-        <div class="container">
-            <h2 class="cta-title fade-in">Join the Mission</h2>
-            <p class="cta-description fade-in">
-                Help build the future of Python security scanning. Contribute to our growing ecosystem of security researchers and developers.
-            </p>
-            <div class="hero-buttons fade-in">
-                <a href="https://github.com/ParzivalHack/PySpector" class="btn btn-primary" target="_blank">
-                    <i class="fab fa-github"></i> Star on GitHub
-                </a>
-                <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" class="btn btn-secondary" target="_blank">
-                    <i class="fas fa-code-branch"></i> Contribute
-                </a>
-                <a href="https://github.com/ParzivalHack/PySpector/issues" class="btn btn-secondary" target="_blank">
-                    <i class="fas fa-bug"></i> Report Issues
-                </a>
-            </div>
-        </div>
-    </section>
+# Generate HTML report
+pyspector scan ./project -f html -o report.html
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>Project</h3>
-                    <a href="https://github.com/ParzivalHack/PySpector" target="_blank">Repository</a>
-                    <a href="https://github.com/ParzivalHack/PySpector/releases" target="_blank">Releases</a>
-                    <a href="https://github.com/ParzivalHack/PySpector/issues" target="_blank">Issues</a>
-                    <a href="https://github.com/ParzivalHack/PySpector/blob/main/README.md" target="_blank">Documentation</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Community</h3>
-                    <a href="https://github.com/ParzivalHack/PySpector/discussions" target="_blank">Discussions</a>
-                    <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Resources</h3>
-                    <a href="#features">Features</a>
-                    <a href="#architecture">Architecture</a>
-                    <a href="#usage">Quick Start</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Developer</h3>
-                    <a href="https://github.com/ParzivalHack" target="_blank">
-                        <i class="fab fa-github"></i> ParzivalHack
-                    </a>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 The PySpector Project.</p>
-            </div>
-        </div>
-    </footer>
+# Scan remote repository
+pyspector scan --url https://github.com/user/repo.git
 
-    <script>
-        // Generate geometric background
-        function createGeoBackground() {
-            const geoBg = document.getElementById('geoBg');
-            const shapes = ['triangle', 'diamond', 'circle', 'line'];
-            
-            for (let i = 0; i < 50; i++) {
-                const shape = shapes[Math.floor(Math.random() * shapes.length)];
-                const element = document.createElement('div');
-                
-                if (shape === 'line') {
-                    element.className = 'geo-shape geo-line';
-                    element.style.width = Math.random() * 100 + 20 + 'px';
-                } else {
-                    element.className = `geo-shape geo-${shape}`;
-                }
-                
-                element.style.left = Math.random() * 100 + '%';
-                element.style.top = Math.random() * 100 + '%';
-                element.style.animationDelay = Math.random() * 10 + 's';
-                
-                geoBg.appendChild(element);
-            }
-        }
+# Interactive triage
+pyspector triage report.json</code></pre>
+  </div>
+</section>
 
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
+<section id="contribute">
+  <div class="container">
+    <div class="cta-box">
+      <h2>Contribute to PySpector</h2>
+      <p>
+        PySpector is an open source security project built by practitioners.
+        Contributions are welcome in rule development, Rust and Python core improvements,
+        documentation, testing, and security research.
+      </p>
 
-        // Fade in animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+      <div class="cta-actions">
+        <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank">Star on GitHub</a>
+        <a class="btn" href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide</a>
+        <a class="btn" href="https://github.com/ParzivalHack/PySpector/issues" target="_blank">Good First Issues</a>
+      </div>
+    </div>
+  </div>
+</section>
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, observerOptions);
+<footer>
+  <div class="container footer-grid">
+    <div style="text-align:center">
+      <strong>PySpector</strong><br>
+      High-performance Python SAST
+    </div>
 
-        document.querySelectorAll('.fade-in').forEach(el => {
-            observer.observe(el);
-        });
+    <div style="text-align:center">
+      <a href="https://github.com/ParzivalHack/PySpector">Repository</a>
+      <a href="https://github.com/ParzivalHack/PySpector/releases">Releases</a>
+      <a href="https://github.com/ParzivalHack/PySpector/issues">Issues</a>
+    </div>
 
-        // Navigation background on scroll
-        window.addEventListener('scroll', () => {
-            const nav = document.querySelector('.nav');
-            if (window.scrollY > 100) {
-                nav.style.background = 'rgba(0, 0, 0, 0.99)';
-            } else {
-                nav.style.background = 'rgba(0, 0, 0, 0.98)';
-            }
-        });
+    <div style="text-align:center">
+      <a href="https://github.com/ParzivalHack/PySpector/blob/main/README.md">Documentation</a>
+      <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md">Contributing</a>
+    </div>
+  </div>
+</footer>
 
-        // Dynamic stats counter
-        function animateStats() {
-            const stats = document.querySelectorAll('.stat-number');
-            stats.forEach(stat => {
-                const target = parseInt(stat.textContent.replace(/\D/g, ''));
-                let current = 0;
-                const increment = target / 50;
-                const timer = setInterval(() => {
-                    current += increment;
-                    if (current >= target) {
-                        stat.textContent = stat.textContent.replace(/\d+/, target);
-                        clearInterval(timer);
-                    } else {
-                        stat.textContent = stat.textContent.replace(/\d+/, Math.floor(current));
-                    }
-                }, 40);
-            });
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            createGeoBackground();
-            
-            // Trigger stats animation when hero section is visible
-            const heroObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        setTimeout(animateStats, 1000);
-                        heroObserver.disconnect();
-                    }
-                });
-            }, { threshold: 0.5 });
-
-            heroObserver.observe(document.querySelector('.hero'));
-        });
-
-        // Add subtle parallax effect to geometric shapes
-        window.addEventListener('scroll', () => {
-            const scrolled = window.pageYOffset;
-            const rate = scrolled * -0.5;
-            const geoBg = document.getElementById('geoBg');
-            geoBg.style.transform = `translateY(${rate}px)`;
-        });
-    </script>
 </body>
 </html>
