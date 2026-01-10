@@ -11,6 +11,9 @@ with open(cargo_toml_path, "r") as f:
             break
     else:
         raise RuntimeError("Could not find version in Cargo.toml")
+    
+with open("README.md", encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="pyspector",
@@ -18,7 +21,8 @@ setup(
     author="ParzivalHack",
     keywords="static analysis security python rust",
     description="A high-performance, security-focused static analysis tool for Python, powered by Rust.",
-    readme="README.md",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     license="MIT",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
