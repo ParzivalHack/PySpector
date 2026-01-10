@@ -16,7 +16,10 @@ setup(
     name="pyspector",
     version=version,
     author="ParzivalHack",
+    keywords="static analysis security python rust",
     description="A high-performance, security-focused static analysis tool for Python, powered by Rust.",
+    readme="README.md",
+    license="MIT",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     rust_extensions=[
