@@ -293,6 +293,35 @@ The plugin manager enforces several safeguards:
 
 Together these measures let you extend PySpector confidently while maintaining a secure supply chain for third-party automation.
 
+## Writing Custom Rules
+
+PySpector rules define *what* the engine looks for during analysis. Each rule describes a pattern or behavior that represents a potential security issue.
+
+A rule typically consists of:
+- Metadata (name, severity, description)
+- A matcher or condition
+- A message explaining the issue
+
+Rules are loaded at runtime and applied uniformly across the scanned codebase.
+
+### Minimal Example
+
+Below is a minimal conceptual example of a rule:
+
+```python
+from pyspector.rules import Rule
+
+class NoEvalRule(Rule):
+    name = "no-eval"
+    severity = "HIGH"
+    description = "Detect usage of eval()"
+
+    def check(self, node, context):
+        if node.type == "Call" and node.name == "eval":
+            self.report(node, "Avoid using eval()")
+
+
+
 ## Triaging and Baselining Findings
 
 <img width="871" height="950" alt="image" src="https://github.com/user-attachments/assets/8ad8e8b9-528a-426f-96e3-c0a66c2c683d" />
