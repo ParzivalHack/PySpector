@@ -1,5 +1,8 @@
 import json
-from sarif_om import SarifLog, Tool, Run, ReportingDescriptor, Result, ArtifactLocation, Location, PhysicalLocation
+# Added 'Region' to imports for better SARIF compliance
+from sarif_om import SarifLog, Tool, Run, ReportingDescriptor, Result, ArtifactLocation, Location, PhysicalLocation, Region
+# Removed 'asdict' from imports as it is not needed for sarif_om
+from dataclasses import asdict, is_dataclass
 
 class Reporter:
     def __init__(self, issues: list, report_format: str):
@@ -20,6 +23,7 @@ class Reporter:
             return "\nNo issues found."
 
         output = []
+        # Sort by file path and then line number
         sorted_issues = sorted(self.issues, key=lambda i: (i.file_path, i.line_number))
         
         for issue in sorted_issues:
@@ -50,7 +54,7 @@ class Reporter:
         return json.dumps(report, indent=2)
 
     def to_sarif(self) -> str:
-        tool = Tool(driver=ReportingDescriptor(name="PySpector"))
+        tool = Tool(driver=ReportingDescriptor(id="pyspector", name="PySpector"))
         rules = []
         results = []
         
@@ -59,21 +63,27 @@ class Reporter:
         for issue in self.issues:
             if issue.rule_id not in rule_map:
                 rule_map[issue.rule_id] = ReportingDescriptor(id=issue.rule_id, name=issue.description)
-        rules = list(rule_map.values())
-        tool.driver.rules = rules
+        
+        # sarif_om expects lists, not values view
+        tool.driver.rules = list(rule_map.values())
 
         for issue in self.issues:
+            # FIX: Use the Region object from sarif_om instead of a raw dict
+            region = Region(start_line=issue.line_number)
+            
             location = Location(
                 physical_location=PhysicalLocation(
                     artifact_location=ArtifactLocation(uri=issue.file_path),
-                    region={"startLine": issue.line_number}
+                    region=region
                 )
             )
             results.append(Result(rule_id=issue.rule_id, message={"text": issue.description}, locations=[location]))
         
         run = Run(tool=tool, results=results)
         log = SarifLog(version="2.1.0", schema_uri="https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json", runs=[run])
-        return log.to_json(indent=2)
+        
+        # FIX: Remove asdict(). Use default lambda to serialize non-dataclass objects.
+        return json.dumps(log, default=lambda o: o.__dict__, indent=2)
         
     def to_html(self) -> str:
         # A simple HTML report

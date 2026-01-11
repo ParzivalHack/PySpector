@@ -13,6 +13,7 @@ from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
 from .plugin_system import get_plugin_manager, PluginSecurity
+import requests
 
 # Import the Rust core from its new location
 try:
@@ -20,6 +21,28 @@ try:
 except ImportError:
     click.echo(click.style("Error: PySpector's core engine module not found.", fg="red"))
     exit(1)
+
+import random
+
+def get_startup_note():
+    """Fetches a tech joke or returns a fallback if offline."""
+    fallbacks = [
+        "💡 'To err is human, to complain is even more human.'",
+        "💡 There are 10 types of people: those who understand binary and those who don't.",
+        "💡 A SQL query walks into a bar, walks up to two tables, and asks... 'Can I join you?'",
+        "💡 Cybersecurity is the only industry where the 'bad guys' have a better R&D budget.",
+        "💡 Hardware: The parts of a computer system that can be kicked."
+    ]
+    try:
+        # Programming category, safe mode on, single line only
+        url = "https://v2.jokeapi.dev/joke/Programming?safe-mode&type=single"
+        # 1.5s timeout so the tool doesn't feel slow if the user is offline
+        response = requests.get(url, timeout=1.5)
+        if response.status_code == 200:
+            return f"💡 {response.json()['joke']}"
+    except Exception:
+        pass 
+    return random.choice(fallbacks)
 
 _list = list
 _tuple = tuple
@@ -243,8 +266,10 @@ def cli():
              __/>                       / \                                                                   
 """
     click.echo(click.style(banner))
-    click.echo("Version: 0.1.4-beta\n")
+    click.echo("Version: 0.1.4-beta-hotfix\n")
     click.echo("Made with <3 by github.com/ParzivalHack\n")
+    note = get_startup_note()
+    click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
 
 
 
