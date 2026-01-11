@@ -99,7 +99,7 @@ description = "Use of 'eval' detected."
 severity = "High"
 remediation = "Avoid using eval(). Use safer alternatives like ast.literal_eval or explicit parsing."
 ast_match = "Call(func.id=eval)"
-
+```
 
 
 ## ✅ Submitting Your Contribution
