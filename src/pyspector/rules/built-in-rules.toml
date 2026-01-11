@@ -2143,3 +2143,11 @@ confidence = "Low"
 remediation = "Validate format strings and use safe formatting methods."
 ast_match = "Call(func.id=format)"
 file_pattern = "*.py"
+
+[[rule]]
+id = "AI002"
+description = "Hardcoded Anthropic (Claude) API key detected."
+severity = "High"
+remediation = "Remove hardcoded API keys and load them from environment variables or a secure secrets manager."
+pattern = "(?i)sk-ant-api[0-9]*-[A-Za-z0-9_-]{20,}"
+file_pattern = ".*\\.py"
