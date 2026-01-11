@@ -75,6 +75,33 @@ When adding a new rule, please include a clear `description`, a `severity` level
 
 ---
 
+## Writing Custom Rules
+
+PySpector rules define *what* the engine looks for during analysis. Each rule describes a pattern or behavior that represents a potential security issue.
+
+A rule typically consists of:
+- Metadata (name, severity, description)
+- A matcher or condition
+- A message explaining the issue
+
+Rules are loaded at runtime and applied uniformly across the scanned codebase.
+
+### Minimal Example
+
+Below is a minimal conceptual example of a rule:
+
+```toml
+file_pattern = "*.py"
+
+[[rule]]
+id = "PY200"
+description = "Use of 'eval' detected."
+severity = "High"
+remediation = "Avoid using eval(). Use safer alternatives like ast.literal_eval or explicit parsing."
+ast_match = "Call(func.id=eval)"
+
+
+
 ## ✅ Submitting Your Contribution
 
 Ready to submit your changes? Just follow these steps:
