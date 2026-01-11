@@ -243,7 +243,7 @@ def cli():
              __/>                       / \                                                                   
 """
     click.echo(click.style(banner))
-    click.echo("Version: 0.1.3-beta\n")
+    click.echo("Version: 0.1.4-beta\n")
     click.echo("Made with <3 by github.com/ParzivalHack\n")
 
 
