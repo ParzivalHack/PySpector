@@ -50,7 +50,7 @@ class Reporter:
         return json.dumps(report, indent=2)
 
     def to_sarif(self) -> str:
-        tool = Tool(driver=ReportingDescriptor(name="PySpector"))
+        tool = Tool(driver=ReportingDescriptor(id="pyspector", name="PySpector"))
         rules = []
         results = []
         
