@@ -36,6 +36,7 @@ setup(
     install_requires=[
         "click>=8.0",
         "toml>=0.10",
+        "requests>=2.25",
         "sarif-om>=1.0",
         "jinja2>=3.0",
         "textual>=0.60",
