@@ -23,17 +23,40 @@ class Reporter:
             return "\nNo issues found."
 
         output = []
-        # Sort by file path and then line number
-        sorted_issues = sorted(self.issues, key=lambda i: (i.file_path, i.line_number))
-        
-        for issue in sorted_issues:
-            output.append(
-                f"\n[+] Rule ID: {issue.rule_id}\n"
-                f"    Description: {issue.description}\n"
-                f"    Severity: {str(issue.severity).split('.')[-1].upper()}\n"
-                f"    File: {issue.file_path}:{issue.line_number}\n"
-                f"    Code: `{issue.code.strip()}`"
-            )
+
+        # Define severity order (highest to lowest priority)
+        severity_order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
+
+        # Group issues by severity
+        issues_by_severity = {}
+        for issue in self.issues:
+            severity = str(issue.severity).split('.')[-1].upper()
+            if severity not in issues_by_severity:
+                issues_by_severity[severity] = []
+            issues_by_severity[severity].append(issue)
+
+        # Output grouped by severity (in priority order)
+        for severity in severity_order:
+            if severity not in issues_by_severity:
+                continue
+
+            issues = issues_by_severity[severity]
+            # Sort issues within each severity group by file path and line number
+            sorted_issues = sorted(issues, key=lambda i: (i.file_path, i.line_number))
+
+            # Add severity header
+            output.append(f"\n{'='*60}")
+            output.append(f"  {severity} ({len(sorted_issues)} issue{'s' if len(sorted_issues) != 1 else ''})")
+            output.append(f"{'='*60}")
+
+            for issue in sorted_issues:
+                output.append(
+                    f"\n[+] Rule ID: {issue.rule_id}\n"
+                    f"    Description: {issue.description}\n"
+                    f"    File: {issue.file_path}:{issue.line_number}\n"
+                    f"    Code: `{issue.code.strip()}`"
+                )
+
         return "\n".join(output)
 
     def to_json(self) -> str:
