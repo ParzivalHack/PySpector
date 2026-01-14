@@ -73,6 +73,13 @@ With PySpector now officially on PyPI 🎉, installation is as simple as running
 pip install pyspector
 ```
 
+Right after installation:
+
+```md
+To deactivate the virtual environment when you're done:
+```bash
+deactivate
+
 ## Key Features
 
 * **Multi-Layered Analysis Engine:** PySpector employs a sophisticated, multi-layered approach to detect a broad spectrum of vulnerabilities:
