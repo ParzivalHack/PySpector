@@ -5,7 +5,7 @@
 # High-Performance Python and Rust SAST Framework
 
 [![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
-[![Total PyPI Downloads](https://static.pepy.tech/badge/your-package-name)](https://pepy.tech/project/pyspector)
+[![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.4--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.4-beta-hotfix)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
@@ -13,35 +13,53 @@
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 
 
-PySpector is a static analysis security testing (SAST) Framework engineered for modern Python development workflows. It leverages a powerful Rust core to deliver high-speed, accurate vulnerability scanning, wrapped in a developer-friendly Python CLI. By compiling the analysis engine to a native binary, PySpector avoids the performance overhead of traditional Python-based tools, making it an ideal choice for integration into CI/CD pipelines and local development environments where speed is critical.
+PySpector is a Static Application Security Testing (SAST) framework for modern Python projects.
+It combines a high-performance Rust analysis engine with a developer-friendly Python CLI to deliver fast and accurate vulnerability scanning.
+
+By compiling the core analysis engine to a native binary, PySpector avoids the performance limitations of traditional Python-only tools. This makes it well-suited for CI/CD pipelines and local development environments where speed and scalability matter.
 
 The tool is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your application.
 
+## Table of Contents
+- [Getting Started](#getting-started)
+- [Key Features](#key-features)
+- [How It Works](#how-it-works)
+- [Performance Benchmarks](#performance-benchmarks)
+- [Usage](#usage)
+- [Plugin System](#plugin-system-new-feature)
+- [Triaging and Baselining](#triaging-and-baselining-findings)
+- [Automation and Integration](#automation-and-integration)
 
 
 ## Getting Started
 
 ### Prerequisites
 
--   **Python**: Version 3.12 or lower (Python 3.9+ required).
--   **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can easily install the **Rust toolchain** via [rustup](https://rustup.rs/) and verify your installation by running `cargo --version`.
+- **Python**: Python 3.9 – 3.12 supported (Python 3.9 or newer, up to 3.12).
+- **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can easily install the **Rust toolchain** via [rustup](https://rustup.rs/) and verify your installation by running `cargo --version`.
 
 ### Installation
 
-1.  **Create a Virtual Environment**: It is highly recommended to install PySpector in a dedicated Python3.12 venv.
+It is **highly recommended** to install PySpector in a dedicated Python 3.12 venv.
+
+#### Create a Virtual Environment: 
+
+- **Linux (Bash)**:
     ```bash
     python3.12 -m venv venv
     source venv/bin/activate
     ```
-* In Windows, just download Python 3.12 from the Microsoft Store and run:
-```powershell
+
+- **Windows (PowerShell)**:
+    ```powershell
+    # Download Python 3.12 from the Microsoft Store and run:
     python3.12 -m venv venv
     .\venv\Scripts\Activate.ps1
-    # or, depending on the Python3.12 installation source: .\venv\bin\Activate.ps1
-```
+    # or, depending on the Python 3.12 installation source:
+    .\venv\bin\Activate.ps1
+    ```
 
-With PySpector now officially on PyPI(🎉), installation is as simple as running:
-
+With PySpector now officially on PyPI🎉, installation is as simple as running:
 ```bash
 pip install pyspector
 ```
@@ -50,11 +68,11 @@ pip install pyspector
 
 * **Multi-Layered Analysis Engine:** PySpector employs a sophisticated, multi-layered approach to detect a broad spectrum of vulnerabilities:
 
-* * **Regex-Based Pattern Matching:** Scans all files for specific patterns, ideal for identifying hardcoded secrets, insecure configurations in Dockerfiles, and weak settings in framework files.
+- **Regex-Based Pattern Matching:** Scans all files for specific patterns, ideal for identifying hardcoded secrets, insecure configurations in Dockerfiles, and weak settings in framework files.
 
-* * **Abstract Syntax Tree (AST) Analysis:** For Python files, the tool parses the code into an AST to analyze its structure. This enables precise detection of vulnerabilities tied to code constructs, such as the use of eval(), insecure deserialization with pickle, or weak hashing algorithms.
+- **Abstract Syntax Tree (AST) Analysis:** For Python files, the tool parses the code into an AST to analyze its structure. This enables precise detection of vulnerabilities tied to code constructs, such as the use of eval(), insecure deserialization with pickle, or weak hashing algorithms.
 
-* * **Inter-procedural Taint Analysis:** The engine builds a comprehensive call graph of the entire application to perform taint analysis. It tracks the flow of data from input sources (like web requests) to dangerous sinks (like command execution functions), allowing it to identify complex injection vulnerabilities with high accuracy.
+- **Inter-procedural Taint Analysis:** The engine builds a comprehensive call graph of the entire application to perform taint analysis. It tracks the flow of data from input sources (like web requests) to dangerous sinks (like command execution functions), allowing it to identify complex injection vulnerabilities with high accuracy.
 
 * **Comprehensive and Customizable Ruleset:** PySpector comes with 241 built-in rules that cover common vulnerabilities, including those from the OWASP Top 10. The rules are defined in a simple TOML format, making them easy to understand and extend.
 
@@ -160,6 +178,7 @@ pyspector scan /path/to/your/project --ai
 ```
 
 ## Plugin System (NEW FEATURE🚀)
+
 <img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
 PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
 
