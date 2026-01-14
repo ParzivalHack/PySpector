@@ -149,33 +149,281 @@ The primary command is `scan`, which can target a local file, a directory, or ev
 pyspector scan [PATH or --url REPO_URL] [OPTIONS]
 ```
 
-### Examples:
+### Examples
 
-* **Scan a single file**
+#### Scan a single file
+
+##### Command
 ```bash
 pyspector scan project/main.py
 ```
+##### Sample Output
+```
+[*] Starting PySpector scan on 'project/main.py'...
+[*] Successfully parsed 1 Python files
+[*] Starting analysis with 240 rules
+[+] Found 1 files to scan
+[+] Found 0 issues from config analysis
+[+] 1 issues from Python AST analysis
+[*] Building call graph from 1 files
+[*] Processing file: main.py
+[+] Found 0 total functions
+[*] Starting taint analysis with 0 functions
+[+] Taint sources: 1, sinks: 1
+[+] Found 0 tainted variables
+[+] Found 0 issues from taint analysis
+[*] Total issues after deduplication: 1
 
-* **Scan a local directory and save the report as HTML:**
+[+] Rule ID: PY001
+    Description: Use of 'eval()' is highly dangerous.
+    Severity: HIGH
+    File: project/main.py:1
+    Code: `eval("a=5 print(a)")`
+
+[*] Scan finished in 0.07 seconds. Found 1 issues.
+```
+
+#### Scan a local directory and save the report as HTML
+
+##### Command
 ```bash
 pyspector scan /path/to/your/project -o report.html -f html
 ```
 
-* **Scan a public GitHub repository:**
+##### Sample HTML report
+```html
+<html>
+<head><title>PySpector Scan Report</title></head>
+<body>
+<h1>PySpector Scan Report</h1>
+<h2>Found 1 issues.</h2>
+<table border='1' style='border-collapse: collapse; width: 100%;'>
+<tr style='background-color: #f2f2f2;'>
+    <th style='padding: 8px; text-align: left;'>File</th>
+    <th style='padding: 8px; text-align: left;'>Line</th>
+    <th style='padding: 8px; text-align: left;'>Severity</th>
+    <th style='padding: 8px; text-align: left;'>Description</th>
+    <th style='padding: 8px; text-align: left;'>Code</th>
+</tr>
+<tr>
+    <td style='padding: 8px;'>/path/to/your/project/file.py</td>
+    <td style='padding: 8px;'>1</td>
+    <td style='padding: 8px;'>Severity.High</td>
+    <td style='padding: 8px;'>Use of 'eval()' is highly dangerous.</td>
+    <td style='padding: 8px;'><pre><code>eval("a=5 print(a)")</code></pre></td>
+</tr>
+</table>
+</body>
+</html>
+```
+
+#### Scan a local directory and save the report as JSON
+
+##### Command
+```bash
+pyspector scan /path/to/your/project -o report.json -f json
+```
+
+##### Sample JSON report
+```json
+{
+  "summary": {
+    "issue_count": 1
+  },
+  "issues": [
+    {
+      "rule_id": "PY001",
+      "description": "Use of 'eval()' is highly dangerous.",
+      "file_path": "/path/to/your/project/file.py",
+      "line_number": 1,
+      "code": "eval(\"a=5 print(a)\")",
+      "severity": "High",
+      "remediation": "Avoid 'eval()'. Use safer alternatives like 'ast.literal_eval' for data parsing."
+    }
+  ]
+}
+```
+
+#### Scan a local directory and save the report as SARIF (Static Analysis Results Interchange Format)
+
+PySpector currently supports exporting analysis results in SARIF version 2.1.0.<br>
+The official JSON schema for this version is available at this [link](https://www.schemastore.org/schemas/json/sarif-2.1.0-rtm.5.json)
+
+##### Command
+```bash
+pyspector scan /path/to/your/project -o report.sarif -f sarif
+```
+
+##### Sample SARIF report
+```json
+{
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "id": "pyspector",
+          "default_configuration": null,
+          "deprecated_guids": null,
+          "deprecated_ids": null,
+          "deprecated_names": null,
+          "full_description": null,
+          "guid": null,
+          "help": null,
+          "help_uri": null,
+          "message_strings": null,
+          "name": "PySpector",
+          "properties": null,
+          "relationships": null,
+          "short_description": null,
+          "rules": [
+            {
+              "id": "PY001",
+              "default_configuration": null,
+              "deprecated_guids": null,
+              "deprecated_ids": null,
+              "deprecated_names": null,
+              "full_description": null,
+              "guid": null,
+              "help": null,
+              "help_uri": null,
+              "message_strings": null,
+              "name": "Use of 'eval()' is highly dangerous.",
+              "properties": null,
+              "relationships": null,
+              "short_description": null
+            }
+          ]
+        },
+        "extensions": null,
+        "properties": null
+      },
+      "addresses": null,
+      "artifacts": null,
+      "automation_details": null,
+      "baseline_guid": null,
+      "column_kind": null,
+      "conversion": null,
+      "default_encoding": null,
+      "default_source_language": null,
+      "external_property_file_references": null,
+      "graphs": null,
+      "invocations": null,
+      "language": "en-US",
+      "logical_locations": null,
+      "newline_sequences": [
+        "\r\n",
+        "\n"
+      ],
+      "original_uri_base_ids": null,
+      "policies": null,
+      "properties": null,
+      "redaction_tokens": null,
+      "results": [
+        {
+          "message": {
+            "text": "Use of 'eval()' is highly dangerous."
+          },
+          "analysis_target": null,
+          "attachments": null,
+          "baseline_state": null,
+          "code_flows": null,
+          "correlation_guid": null,
+          "fingerprints": null,
+          "fixes": null,
+          "graph_traversals": null,
+          "graphs": null,
+          "guid": null,
+          "hosted_viewer_uri": null,
+          "kind": "fail",
+          "level": "warning",
+          "locations": [
+            {
+              "annotations": null,
+              "id": -1,
+              "logical_locations": null,
+              "message": null,
+              "physical_location": {
+                "address": null,
+                "artifact_location": {
+                  "description": null,
+                  "index": -1,
+                  "properties": null,
+                  "uri": "/path/to/your/project/file.py",
+                  "uri_base_id": null
+                },
+                "context_region": null,
+                "properties": null,
+                "region": {
+                  "byte_length": null,
+                  "byte_offset": -1,
+                  "char_length": null,
+                  "char_offset": -1,
+                  "end_column": null,
+                  "end_line": null,
+                  "message": null,
+                  "properties": null,
+                  "snippet": null,
+                  "source_language": null,
+                  "start_column": null,
+                  "start_line": 1
+                }
+              },
+              "properties": null,
+              "relationships": null
+            }
+          ],
+          "occurrence_count": null,
+          "partial_fingerprints": null,
+          "properties": null,
+          "provenance": null,
+          "rank": -1.0,
+          "related_locations": null,
+          "rule": null,
+          "rule_id": "PY001",
+          "rule_index": -1,
+          "stacks": null,
+          "suppressions": null,
+          "taxa": null,
+          "web_request": null,
+          "web_response": null,
+          "work_item_uris": null
+        }
+      ],
+      "run_aggregates": null,
+      "special_locations": null,
+      "taxonomies": null,
+      "thread_flow_locations": null,
+      "translations": null,
+      "version_control_provenance": null,
+      "web_requests": null,
+      "web_responses": null
+    }
+  ],
+  "version": "2.1.0",
+  "schema_uri": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "inline_external_properties": null,
+  "properties": null
+}
+```
+
+#### Scan a public GitHub repository
+##### Command
 ```bash
 pyspector scan --url https://github.com/username/repo.git
 ```
 
-### Scan for AI and LLM Vulnerabilities
+#### Scan for AI and LLM Vulnerabilities
 
-<img width="970" height="1096" alt="image" src="https://github.com/user-attachments/assets/14bac1c0-eae2-4dab-ab40-8047b46bbac8" />
+Use the `--ai` flag to enable a specialized ruleset, for projects using Large Language Models.
 
-
-* **Use the `--ai` flag to enable a specialized ruleset, for projects using Large Language Models:**
-
+##### Command
 ```bash
 pyspector scan /path/to/your/project --ai
 ```
+
+##### Sample output
+<img width="970" height="1096" alt="image" src="https://github.com/user-attachments/assets/14bac1c0-eae2-4dab-ab40-8047b46bbac8" />
+
 
 ## Plugin System (NEW FEATURE🚀)
 
