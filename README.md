@@ -21,7 +21,6 @@ By compiling the core analysis engine to a native binary, PySpector avoids the p
 The tool is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your application.
 
 ## Table of Contents
-- [Quick Start](#quick-start)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [How It Works](#how-it-works)
@@ -30,17 +29,6 @@ The tool is designed to be both comprehensive and intuitive, offering a multi-la
 - [Plugin System](#plugin-system-new-feature)
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
-
-
-## Quick Start
-
-Install PySpector and scan your project in under a minute:
-
-```bash
-pip install pyspector
-pyspector scan .
-```
-> `.` refers to the current directory.
 
 
 ## Getting Started
@@ -52,33 +40,29 @@ pyspector scan .
 
 ### Installation
 
-1.  **Create a Virtual Environment**: It is highly recommended to install PySpector in a dedicated Python 3.12 venv.
+It is **highly recommended** to install PySpector in a dedicated Python 3.12 venv.
+
+#### Create a Virtual Environment: 
+
+- **Linux (Bash)**:
     ```bash
     python3.12 -m venv venv
     source venv/bin/activate
     ```
 
-2. **Windows (PowerShell)**  
-Download Python 3.12 from the Microsoft Store and run:
+- **Windows (PowerShell)**:
+    ```powershell
+    # Download Python 3.12 from the Microsoft Store and run:
+    python3.12 -m venv venv
+    .\venv\Scripts\Activate.ps1
+    # or, depending on the Python 3.12 installation source:
+    .\venv\bin\Activate.ps1
+    ```
 
-```powershell
-python3.12 -m venv venv
-.\venv\Scripts\Activate.ps1
-# or, depending on the Python 3.12 installation source:
-# .\venv\bin\Activate.ps1
-
-With PySpector now officially on PyPI 🎉, installation is as simple as running:
-
+With PySpector now officially on PyPI🎉, installation is as simple as running:
 ```bash
 pip install pyspector
 ```
-
-Right after installation:
-
-```md
-To deactivate the virtual environment when you're done:
-```bash
-deactivate
 
 ## Key Features
 
@@ -193,7 +177,7 @@ pyspector scan --url https://github.com/username/repo.git
 pyspector scan /path/to/your/project --ai
 ```
 
-## Plugin System (NEW FEATURE 🚀)
+## Plugin System (NEW FEATURE🚀)
 
 <img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
 PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
