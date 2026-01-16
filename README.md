@@ -153,7 +153,7 @@ pyspector scan [PATH or --url REPO_URL] [OPTIONS]
 
 * **Scan a single file**
 ```bash
-pyspector scan project/main.py
+pyspector scan /path/to/your/project
 ```
 
 * **Scan a local directory and save the report as HTML:**
@@ -165,11 +165,19 @@ pyspector scan /path/to/your/project -o report.html -f html
 ```bash
 pyspector scan --url https://github.com/username/repo.git
 ```
+### Wizard Mode for Beginners
+
+<img width="462" height="920" alt="pyspector wizard screenshot" src="https://github.com/user-attachments/assets/c43cd5ba-9d5b-4420-a33a-7aa999a399cc" />
+
+* **Use the `--wizard` flag to enter the guided scan mode, perfect for 1st time users and beginners or students:**
+
+```bash
+pyspector scan --wizard
+```
 
 ### Scan for AI and LLM Vulnerabilities
 
 <img width="970" height="1096" alt="image" src="https://github.com/user-attachments/assets/14bac1c0-eae2-4dab-ab40-8047b46bbac8" />
-
 
 * **Use the `--ai` flag to enable a specialized ruleset, for projects using Large Language Models:**
 
