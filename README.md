@@ -165,9 +165,9 @@ pyspector scan /path/to/your/project -o report.html -f html
 ```bash
 pyspector scan --url https://github.com/username/repo.git
 ```
-### Wizard Mode for Beginners
+### Wizard Mode for Beginners (NEW FEATURE🚀)
 
-<img width="462" height="920" alt="pyspector wizard screenshot" src="https://github.com/user-attachments/assets/c43cd5ba-9d5b-4420-a33a-7aa999a399cc" />
+<img width="864" height="1098" alt="image" src="https://github.com/user-attachments/assets/5094fef9-73d1-4d34-b530-9498d923a514" />
 
 * **Use the `--wizard` flag to enter the guided scan mode, perfect for 1st time users and beginners or students:**
 
@@ -185,7 +185,7 @@ pyspector scan --wizard
 pyspector scan /path/to/your/project --ai
 ```
 
-## Plugin System (NEW FEATURE🚀)
+## Plugin System
 
 <img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
 PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
