@@ -271,6 +271,54 @@ def cli():
     note = get_startup_note()
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
 
+def run_wizard():
+    click.echo("\n🧙 PySpector Scan Wizard\n")
+
+    mode = click.prompt(
+        "What do you want to scan?",
+        type=click.Choice(["local", "repo"]),
+        default="local"
+    )
+
+    scan_path = None
+    repo_url = None
+
+    if mode == "local":
+        scan_path = Path(click.prompt("Path to file or directory", type=str))
+    else:
+        repo_url = click.prompt("GitHub/GitLab repository URL", type=str)
+
+    ai_scan = click.confirm("Enable AI / LLM vulnerability scanning?", default=False)
+
+    severity_level = click.prompt(
+        "Minimum severity level",
+        type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+        default="LOW"
+    )
+
+    report_format = click.prompt(
+        "Report format",
+        type=click.Choice(["console", "json", "sarif", "html"]),
+        default="console"
+    )
+
+    output_file = None
+    if report_format != "console":
+        output_file = Path(
+            click.prompt("Output file path", type=str)
+        )
+
+    click.echo("\n[*] Wizard completed. Starting scan...\n")
+
+    return {
+        "scan_path": scan_path,
+        "repo_url": repo_url,
+        "ai_scan": ai_scan,
+        "severity_level": severity_level,
+        "report_format": report_format,
+        "output_file": output_file,
+    }
+
 
 
 @click.command(help="Scan a directory, file, or remote Git repository for vulnerabilities.")
@@ -284,6 +332,7 @@ def cli():
 @click.option('--plugin', 'plugins', multiple=True, help="Load and execute a plugin (can be specified multiple times)")
 @click.option('--plugin-config', 'plugin_config_file', type=click.Path(exists=True, path_type=Path), help="Path to plugin configuration JSON file")
 @click.option('--list-plugins', 'list_plugins', is_flag=True, help="List available plugins and exit")
+@click.option('--wizard', is_flag=True, help="Interactive guided scan for first-time users")
 def run_scan_command(
     path: Optional[Path], 
     repo_url: Optional[str], 
@@ -294,10 +343,47 @@ def run_scan_command(
     ai_scan: bool,
     plugins: tuple,
     plugin_config_file: Optional[Path],
-    list_plugins: bool
+    list_plugins: bool,
+    wizard: bool
 ):
     """The main scan command with plugin support."""
-    
+    # --- Wizard Mode ---
+    if wizard:
+        params = run_wizard()
+
+        # Repo scan
+        if params["repo_url"]:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                click.echo(f"[*] Cloning '{params['repo_url']}' into temporary directory...")
+                subprocess.run(
+                    ['git', 'clone', '--depth', '1', params["repo_url"], temp_dir],
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+                _execute_scan(
+                    Path(temp_dir),
+                    config_path,
+                    params["output_file"],
+                    params["report_format"],
+                    params["severity_level"],
+                    params["ai_scan"],
+                    plugins=(),
+                    plugin_config={}
+                )
+        else:
+            _execute_scan(
+                params["scan_path"],
+                config_path,
+                params["output_file"],
+                params["report_format"],
+                params["severity_level"],
+                params["ai_scan"],
+                plugins=(),
+                plugin_config={}
+            )
+        return
+
     # Handle --list-plugins
     if list_plugins:
         plugin_manager = get_plugin_manager()
