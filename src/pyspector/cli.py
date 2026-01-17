@@ -499,7 +499,7 @@ def _execute_scan(
         return
     
     except Exception as e:
-        click.echo(click.style(f"A critical Exception error occurred during the scan process.", fg="red"))
+        click.echo(click.style(f"A critical Exception was raised during the scan process: {e}", fg="red"))
         return
 
     # --- Filter by Severity and Baseline ---
