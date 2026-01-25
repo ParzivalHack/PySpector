@@ -2,23 +2,22 @@
 
 
 
-# High-Performance Python and Rust SAST Framework
+# High-Performance Python/Rust Graph-Based SAST Framework
 
 [![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
-[![latest release](https://img.shields.io/badge/latest%20release-v0.1.4--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.4-beta-hotfix)
+[![latest release](https://img.shields.io/badge/latest%20release-v0.1.5--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.4-beta-hotfix)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 
 
-PySpector is a Static Application Security Testing (SAST) framework for modern Python projects.
-It combines a high-performance Rust analysis engine with a developer-friendly Python CLI to deliver fast and accurate vulnerability scanning.
+PySpector is a State-of-the-Art Static Analysis Security Testing (SAST) framework, built in Rust for next-gen performances, made for modern Python projects and large codebases. Unlike traditional linters, PySpector utilizes a **Flow-Sensitive, Inter-Procedural Taint Engine** to track untrusted data across complex function boundaries and control flow structures.
 
 By compiling the core analysis engine to a native binary, PySpector avoids the performance limitations of traditional Python-only tools. This makes it well-suited for CI/CD pipelines and local development environments where speed and scalability matter.
 
-The tool is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your application.
+PySpector is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your Python application.
 
 ## Table of Contents
 - [Getting Started](#getting-started)
@@ -46,6 +45,7 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.12 ven
 
 - **Linux (Bash)**:
     ```bash
+    # Download Python 3.12
     python3.12 -m venv venv
     source venv/bin/activate
     ```
@@ -66,19 +66,32 @@ pip install pyspector
 
 ## Key Features
 
-* **Multi-Layered Analysis Engine:** PySpector employs a sophisticated, multi-layered approach to detect a broad spectrum of vulnerabilities:
+* **Flow-Sensitive Analysis:** Utilizes a Control Flow Graph (CFG) to track variable states sequentially, accurately distinguishing between safe and vulnerable code paths.
 
-- **Regex-Based Pattern Matching:** Scans all files for specific patterns, ideal for identifying hardcoded secrets, insecure configurations in Dockerfiles, and weak settings in framework files.
+* **Inter-Procedural Taint Tracking:** Propagates untrusted data across function boundaries using global fixed-point iteration and function summaries.
 
-- **Abstract Syntax Tree (AST) Analysis:** For Python files, the tool parses the code into an AST to analyze its structure. This enables precise detection of vulnerabilities tied to code constructs, such as the use of eval(), insecure deserialization with pickle, or weak hashing algorithms.
+* **Context-Aware Summaries:** Sophisticated mapping of which function parameters flow to return values, allowing for high-precision tracking through complex utility functions.
 
-- **Inter-procedural Taint Analysis:** The engine builds a comprehensive call graph of the entire application to perform taint analysis. It tracks the flow of data from input sources (like web requests) to dangerous sinks (like command execution functions), allowing it to identify complex injection vulnerabilities with high accuracy.
+* **Multi-Engine Hybrid Scanning:**
+    
+    * **Regex Engine:** High-speed scanning for secrets, hardcoded credentials, and configuration errors.
 
-* **Comprehensive and Customizable Ruleset:** PySpector comes with 241 built-in rules that cover common vulnerabilities, including those from the OWASP Top 10. The rules are defined in a simple TOML format, making them easy to understand and extend.
+    * **AST Engine:** Deep structural pattern matching to find Python-specific anti-patterns.
 
-* **Versatile Reporting:** Generates clear and actionable reports in multiple formats, including a developer-friendly console output, JSON, HTML, and SARIF for seamless integration with other security tools and platforms.
+    * **Graph Engine:** Advanced CFG and Call-Graph-based data flow analysis for complex vulnerability chains.
 
-* **Efficient Baselining:** The interactive triage mode simplifies the process of establishing a security baseline, allowing teams to focus on new and relevant findings in each scan.
+* **Fastest Market Performances:** Core analysis engine implemented in Rust with `Rayon` for multi-threaded parallelization (allowing PySpector to scan 71% faster than Bandit, and 16.6x faster than Semgrep).
+
+* **AI-Agent Security:** Specialized rulesets designed to identify prompt injection, insecure tool use, and data leakage in LLM-integrated Python applications.
+
+## Core Engine Architecture
+
+PySpector v0.1.5 represents a shift from partially-static pattern matching, to a full graph-based analysis engine:
+
+1. **AST Parsing:** Python source is converted into a structured JSON AST, for semantic analysis.
+2. **Call Graph Construction:** PySpector builds a project-wide map of function definitions, and call sites to enable cross-file analysis.
+3. **CFG Generation:** Each function is decomposed into a Control Flow Graph (CFG), allowing the engine to understand the order of operations and conditional Python logic.
+4. **Fixed-Point Taint Propagation:** Using a Worklist Algorithm, the engine propagates "taint" from defined **Sources** to **Sinks**, while respecting **Sanitizers** that clean the data along the way.
 
 ## How It Works
 

@@ -266,7 +266,7 @@ def cli():
              __/>                       / \                                                                   
 """
     click.echo(click.style(banner))
-    click.echo("Version: 0.1.4.1\n")
+    click.echo("Version: 0.1.5\n")
     click.echo("Made with <3 by github.com/ParzivalHack\n")
     note = get_startup_note()
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))

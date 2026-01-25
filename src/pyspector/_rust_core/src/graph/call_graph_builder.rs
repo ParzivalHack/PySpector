@@ -48,7 +48,6 @@ pub fn build_call_graph(py_files: &[PythonFile]) -> CallGraph {
         
         for call_node in call_sites {
             let callee_name = get_full_call_name(call_node);
-            // This is a simplified resolution. A real tool would handle imports, aliasing, etc.
             for (potential_target_id, _) in &call_graph.functions {
                 if potential_target_id.ends_with(&format!("::{}", callee_name)) {
                     calls.insert(potential_target_id.clone());
@@ -86,7 +85,12 @@ fn find_call_sites<'a>(node: &'a AstNode, sites: &mut Vec<&'a AstNode>) {
 }
 
 fn get_name_from_node(node: &AstNode) -> Option<String> {
-    node.fields.get("id").and_then(|v| v.as_ref()).and_then(|v| v.as_str().map(String::from))
+    // For FunctionDef/AsyncFunctionDef nodes, the function name is in 'name' field
+    // For Name nodes, the identifier is in 'id' field
+    node.fields.get("name")
+        .or_else(|| node.fields.get("id"))
+        .and_then(|v| v.as_ref())
+        .and_then(|v| v.as_str().map(String::from))
 }
 
 fn get_full_call_name(call_node: &AstNode) -> String {
