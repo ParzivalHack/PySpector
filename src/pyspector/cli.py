@@ -487,8 +487,19 @@ def _execute_scan(
     # --- Run Scan ---
     try:
         raw_issues = run_scan(str(scan_path.resolve()), rules_toml_str, config, python_files_data)
+    except ValueError as e:
+        click.echo(click.style(f"Configuration error: {e}\n"
+        "Invalid configuration detected. Please verify your settings and retry.",fg = "red"))
+        return
+    
+    except RuntimeError as e:
+        click.echo(click.style(f"Runtime error during execution: {e}\n"
+        "The scan engine encountered an operational error. Please retry or open an Issue, if the problem persists.",
+        fg="red"))
+        return
+    
     except Exception as e:
-        click.echo(click.style(f"Fatal error in scan engine: {e}", fg="red"))
+        click.echo(click.style(f"A critical Exception was raised during the scan process: {e}", fg="red"))
         return
 
     # --- Filter by Severity and Baseline ---

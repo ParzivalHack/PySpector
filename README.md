@@ -46,6 +46,7 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.12 ven
 - **Linux (Bash)**:
     ```bash
     # Download Python 3.12
+    # Download Python 3.12
     python3.12 -m venv venv
     source venv/bin/activate
     ```
