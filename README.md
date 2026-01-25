@@ -22,6 +22,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 ## Table of Contents
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
+- [Core Engine Architecture](#core-engine-architecture)
 - [How It Works](#how-it-works)
 - [Performance Benchmarks](#performance-benchmarks)
 - [Usage](#usage)
