@@ -7,7 +7,7 @@
 [![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
-[![latest release](https://img.shields.io/badge/latest%20release-v0.1.5--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.4-beta-hotfix)
+[![latest release](https://img.shields.io/badge/latest%20release-v0.1.5--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.5-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
