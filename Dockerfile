@@ -1,13 +1,23 @@
-# Build the Rust binary
-FROM rust:1.75-slim-bookworm as builder
-RUN apt-get update && apt-get install -y python3-dev pkg-config libpython3-dev
+# STAGE 1: BUILDER
+FROM python:3.12-slim-bookworm as builder
+
+# Install Rust and build dependencies
+RUN apt-get update && apt-get install -y \
+    curl build-essential pkg-config libssl-dev
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 WORKDIR /app
 COPY . .
+
+# Build the workspace binary
 RUN cargo build --release
 
-# Lightweight image
+# STAGE 2: RUNNER
 FROM python:3.12-slim-bookworm
-# Simply copy the Rust binary into an image that has Python 3.12
+
+# Copy the binary from the builder stage
 COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
+
 EXPOSE 10000
 CMD ["pyspector-api"]
