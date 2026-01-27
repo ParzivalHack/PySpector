@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
 
 # Install PySpector as a package
-COPY setup.py setup.cfg pyproject.toml MANIFEST.in ./
+COPY setup.py setup.cfg pyproject.toml MANIFEST.in README.md ./
 COPY src ./src
 
 # Install PySpector properly so it's importable
