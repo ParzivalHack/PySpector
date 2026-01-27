@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    ".",                       
-    "src/pyspector/_rust_core" 
-]
+members = [".", "src/pyspector/_rust_core"]
 
 [package]
 name = "pyspector-api"
