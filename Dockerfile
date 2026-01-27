@@ -9,6 +9,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
 COPY . .
+ENV PYO3_PYTHON=/usr/local/bin/python3.12
 
 # Build the workspace binary 1 by 1 to avoid OOM issues
 RUN cargo build --release -j 1

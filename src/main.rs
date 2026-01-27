@@ -3,7 +3,7 @@ use actix_governor::{Governor, GovernorConfigBuilder};
 use pyo3::prelude::*;
 
 #[post("/analyze")]
-async fn analyze_code(body: String) -> impl Responder {
+async fn analyze_code(_body: String) -> impl Responder {
     let result = Python::with_gil(|py| {
         Ok::<String, PyErr>("PySpector API: Request received".to_string())
     });
