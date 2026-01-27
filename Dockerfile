@@ -17,6 +17,16 @@ FROM python:3.12-slim-bookworm
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
+# Install git for cloning repositories
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the binary
 COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
+
+# Copy the python source code so PyO3 can import it
+COPY src /app/src
+
 EXPOSE 10000
 CMD ["pyspector-api"]
