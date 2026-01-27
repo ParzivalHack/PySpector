@@ -11,11 +11,12 @@ COPY . .
 
 ENV PYO3_PYTHON=/usr/local/bin/python3.12
 
-
 RUN cargo build --release -j 1 --config 'target.x86_64-unknown-linux-gnu.rustflags=["-C", "link-arg=-L/usr/local/lib", "-C", "link-arg=-lpython3.12"]'
 
 FROM python:3.12-slim-bookworm
-RUN apt-get update && apt-get install -y libpython3.12 && rm -rf /var/lib/apt/lists/*
+
+ENV LD_LIBRARY_PATH=/usr/local/lib
+
 COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
 EXPOSE 10000
 CMD ["pyspector-api"]
