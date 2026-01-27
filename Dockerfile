@@ -22,11 +22,18 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy the binary
 COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
 
 # Copy the python source code so PyO3 can import it
 COPY src /app/src
+
+# Verify critical dependencies are importable
+RUN python3 -c "import click; import requests; import toml; import sarif_om; import jinja2; import textual"
 
 EXPOSE 10000
 CMD ["pyspector-api"]
