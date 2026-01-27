@@ -13,7 +13,7 @@ use analysis::{run_analysis, AnalysisContext};
 use ast_parser::PythonFile;
 
 #[pymodule]
-fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> { // <-- RENAMED TO MATCH Cargo.toml
+fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> { 
     m.add_class::<Issue>()?;
     m.add_class::<Severity>()?;
 
