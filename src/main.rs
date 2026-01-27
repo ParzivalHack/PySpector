@@ -1,6 +1,7 @@
 use actix_web::{post, web, App, HttpServer, HttpResponse, Responder};
 use actix_governor::{Governor, GovernorConfigBuilder};
 use pyo3::prelude::*;
+use actix_cors::Cors;
 use pyo3::types::PyDict;
 use serde::Deserialize;
 use std::process::Command;
@@ -160,7 +161,10 @@ async fn main() -> std::io::Result<()> {
     println!("PySpector API started on port 10000!");
 
     HttpServer::new(move || {
+        let cors = Cors::permissive();
+        
         App::new()
+            .wrap(cors)
             .wrap(Governor::new(&gov_conf))
             .service(scan)
     })
