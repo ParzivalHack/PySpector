@@ -10,8 +10,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /app
 COPY . .
 
-# Build the workspace binary
-RUN cargo build --release
+# Build the workspace binary 1 by 1 to avoid OOM issues
+RUN cargo build --release -j 1
 
 # STAGE 2: RUNNER
 FROM python:3.12-slim-bookworm
