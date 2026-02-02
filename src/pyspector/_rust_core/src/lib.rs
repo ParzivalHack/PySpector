@@ -6,6 +6,8 @@ mod graph;
 mod issues;
 mod rules;
 mod analysis;
+mod supply_chain;
+
 
 use issues::{Issue, Severity};
 use rules::RuleSet;
@@ -58,6 +60,34 @@ fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         }
         
         Ok(py_issues.to_object(py))
+    }
+
+
+
+    #[pyfn(m)]
+    #[pyo3(name = "scan_supply_chain")]
+    fn scan_supply_chain_py(
+        py: Python,
+        project_path: String,
+    ) -> PyResult<PyObject> {
+        let vulnerabilities = py.allow_threads(|| {
+            supply_chain::scan_dependencies(&project_path)
+        });
+
+        let py_list = PyList::empty(py);
+        for vuln in vulnerabilities {
+            let dict = PyDict::new(py);
+            dict.set_item("dependency", vuln.dependency)?;
+            dict.set_item("version", vuln.version)?;
+            dict.set_item("vulnerability_id", vuln.vulnerability_id)?;
+            dict.set_item("severity", vuln.severity)?;
+            dict.set_item("summary", vuln.summary)?;
+            dict.set_item("file", vuln.file)?;
+            dict.set_item("fixed_version", vuln.fixed_version)?;
+            py_list.append(dict)?;
+        }
+
+        Ok(py_list.to_object(py))
     }
 
     Ok(())

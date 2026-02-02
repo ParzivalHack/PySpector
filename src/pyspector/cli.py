@@ -302,6 +302,9 @@ def run_wizard():
         default="console"
     )
 
+    supply_chain = click.confirm("Check dependencies for CVE vulnerabilities?", default=False)
+
+
     output_file = None
     if report_format != "console":
         output_file = Path(
@@ -317,7 +320,9 @@ def run_wizard():
         "severity_level": severity_level,
         "report_format": report_format,
         "output_file": output_file,
+        "supply_chain_scan": supply_chain,
     }
+
 
 
 
@@ -332,6 +337,7 @@ def run_wizard():
 @click.option('--plugin', 'plugins', multiple=True, help="Load and execute a plugin (can be specified multiple times)")
 @click.option('--plugin-config', 'plugin_config_file', type=click.Path(exists=True, path_type=Path), help="Path to plugin configuration JSON file")
 @click.option('--list-plugins', 'list_plugins', is_flag=True, help="List available plugins and exit")
+@click.option('--supply-chain', 'supply_chain_scan', is_flag=True, default=False, help="Scan dependencies for known CVE vulnerabilities.")
 @click.option('--wizard', is_flag=True, help="Interactive guided scan for first-time users")
 def run_scan_command(
     path: Optional[Path], 
@@ -344,6 +350,7 @@ def run_scan_command(
     plugins: tuple,
     plugin_config_file: Optional[Path],
     list_plugins: bool,
+    supply_chain_scan: bool,
     wizard: bool
 ):
     """The main scan command with plugin support."""
@@ -369,7 +376,8 @@ def run_scan_command(
                     params["severity_level"],
                     params["ai_scan"],
                     plugins=(),
-                    plugin_config={}
+                    plugin_config={},
+                    supply_chain_scan=params["supply_chain_scan"]
                 )
         else:
             _execute_scan(
@@ -378,9 +386,11 @@ def run_scan_command(
                 params["output_file"],
                 params["report_format"],
                 params["severity_level"],
+                params["severity_level"],
                 params["ai_scan"],
                 plugins=(),
-                plugin_config={}
+                plugin_config={},
+                supply_chain_scan=params["supply_chain_scan"]
             )
         return
 
@@ -436,7 +446,8 @@ def run_scan_command(
                     text=True
                 )
                 scan_path = Path(temp_dir)
-                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config)
+                scan_path = Path(temp_dir)
+                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain_scan)
             except subprocess.CalledProcessError as e:
                 click.echo(click.style(f"Error: Failed to clone repository.\n{e.stderr}", fg="red"))
                 sys.exit(1)
@@ -446,7 +457,8 @@ def run_scan_command(
     else:
         # Handle local path scan
         scan_path = path
-        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config)
+        scan_path = path
+        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain_scan)
     return
 
 
@@ -458,7 +470,8 @@ def _execute_scan(
     severity_level: str, 
     ai_scan: bool,
     plugins: tuple,
-    plugin_config: dict
+    plugin_config: dict,
+    supply_chain_scan: bool = False
 ):
     """Helper function to run the actual scan and reporting."""
     start_time = time.time()
@@ -484,6 +497,42 @@ def _execute_scan(
     python_files_data = get_python_file_asts(scan_path)
     click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files")
     
+    # --- Supply Chain Scanning ---
+    if supply_chain_scan:
+        try:
+            from pyspector._rust_core import scan_supply_chain
+            click.echo("\n[*] Scanning dependencies for known vulnerabilities...")
+            dep_vulns = scan_supply_chain(str(scan_path.resolve()))
+            
+            if dep_vulns:
+                click.echo(f"\n{'='*60}")
+                click.echo(f"  SUPPLY CHAIN VULNERABILITIES ({len(dep_vulns)} found)")
+                click.echo(f"{'='*60}")
+                
+                for vuln in dep_vulns:
+                    sev_color = {
+                        'CRITICAL': 'bright_red',
+                        'HIGH': 'red',
+                        'MEDIUM': 'yellow',
+                        'LOW': 'blue',
+                        'UNKNOWN': 'white'
+                    }.get(vuln['severity'], 'white')
+                    
+                    click.echo(f"\n[{click.style(vuln['severity'], fg=sev_color)}] "
+                              f"{vuln['dependency']} @ {vuln['version']}")
+                    click.echo(f"    Vulnerability: {vuln['vulnerability_id']}")
+                    click.echo(f"    File: {vuln['file']}")
+                    click.echo(f"    Summary: {vuln['summary'][:100]}...")
+                    if vuln.get('fixed_version'):
+                        click.echo(f"    Fixed in: {vuln['fixed_version']}")
+                click.echo()
+            else:
+                click.echo("[+] No known vulnerabilities found in dependencies")
+        except ImportError:
+            click.echo(click.style("Error: Supply chain scanner not available. Reinstall PySpector.", fg="red"))
+        except Exception as e:
+            click.echo(click.style(f"Error during supply chain scan: {e}", fg="red"))
+
     # --- Run Scan ---
     try:
         raw_issues = run_scan(str(scan_path.resolve()), rules_toml_str, config, python_files_data)
