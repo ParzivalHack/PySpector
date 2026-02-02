@@ -20,6 +20,7 @@ By compiling the core analysis engine to a native binary, PySpector avoids the p
 PySpector is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your Python application.
 
 ## Table of Contents
+- [Getting Demo](#quick-demo)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Core Engine Architecture](#core-engine-architecture)
@@ -31,10 +32,11 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [Automation and Integration](#automation-and-integration)
 
 
+## Quick Demo
+
+https://github.com/user-attachments/assets/0fe03961-0b62-4964-83ba-849f2357efba
+
 ## Getting Started
-
-https://github.com/user-attachments/assets/29ca5e3b-ebc5-45d6-ba12-6a6af32ed02b
-
 ### Prerequisites
 
 - **Python**: Python 3.9 – 3.12 supported (Python 3.9 or newer, up to 3.12).
