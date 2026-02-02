@@ -33,6 +33,8 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 
 ## Getting Started
 
+https://github.com/user-attachments/assets/29ca5e3b-ebc5-45d6-ba12-6a6af32ed02b
+
 ### Prerequisites
 
 - **Python**: Python 3.9 – 3.12 supported (Python 3.9 or newer, up to 3.12).
