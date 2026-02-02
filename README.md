@@ -203,6 +203,16 @@ pyspector scan --wizard
 pyspector scan /path/to/your/project --ai
 ```
 
+### Scan for Supply-Chain CVEs in Dependencies
+
+<img width="954" height="962" alt="image" src="https://github.com/user-attachments/assets/f2ce535f-84d6-4a8a-8399-0666b7806da3" />
+
+* **Use the `--supply-chain` flag to check your project dependencies for known CVEs:**
+
+```bash
+pyspector scan /path/to/your/project --supply-chain
+```
+
 ## Plugin System
 
 <img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
