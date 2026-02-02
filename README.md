@@ -20,7 +20,7 @@ By compiling the core analysis engine to a native binary, PySpector avoids the p
 PySpector is designed to be both comprehensive and intuitive, offering a multi-layered analysis approach that goes beyond simple pattern matching to understand the structure and data flow of your Python application.
 
 ## Table of Contents
-- [Getting Demo](#quick-demo)
+- [Quick Demo](#quick-demo)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Core Engine Architecture](#core-engine-architecture)
