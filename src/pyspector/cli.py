@@ -141,7 +141,7 @@ def get_python_file_asts(path: Path) -> List[Dict[str, Any]]:
                     parsed_ast = ast.parse(content, filename=str(py_file))
                     ast_json = json.dumps(parsed_ast, cls=AstEncoder)
                     results.append({
-                        "file_path": str(py_file),
+                        "file_path": str(py_file.relative_to(path)) if path.is_dir() else py_file.name,
                         "content": content,
                         "ast_json": ast_json
                     })

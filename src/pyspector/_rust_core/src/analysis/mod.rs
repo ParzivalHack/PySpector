@@ -38,7 +38,8 @@ pub fn run_analysis(context: AnalysisContext) -> Vec<Issue> {
         let path = entry.path();
         // Collect all files (not just .py) for regex scanning
         if path.is_file() && !is_excluded(path, &enhanced_exclusions) {
-            files_to_scan.push(path.to_str().unwrap().to_string());
+            let rel = path.strip_prefix(root_path).unwrap_or(path);
+            files_to_scan.push(rel.to_str().unwrap().to_string());
         }
     }
     
