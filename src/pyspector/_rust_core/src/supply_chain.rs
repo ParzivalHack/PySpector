@@ -201,14 +201,16 @@ fn find_dependency_files(root: &str) -> Vec<String> {
     let mut files = Vec::new();
     let walker = WalkDir::new(root).max_depth(5);
     
+    let root_path = Path::new(root);
     for entry in walker.into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             if let Some(name) = entry.file_name().to_str() {
-                if name == "requirements.txt" || 
-                   name == "pyproject.toml" || 
-                   name == "Pipfile" || 
+                if name == "requirements.txt" ||
+                   name == "pyproject.toml" ||
+                   name == "Pipfile" ||
                    name == "Cargo.toml" {
-                    if let Some(path) = entry.path().to_str() {
+                    let rel = entry.path().strip_prefix(root_path).unwrap_or(entry.path());
+                    if let Some(path) = rel.to_str() {
                         files.push(path.to_string());
                     }
                 }
