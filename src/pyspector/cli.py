@@ -74,6 +74,8 @@ class AstEncoder(json.JSONEncoder):
                     # Handle non-JSON serializable types
                     if isinstance(value, bytes):
                         simple_fields[field] = value.decode('utf-8', errors='replace')
+                    elif isinstance(value, int) and value.bit_length() > 14000:
+                        simple_fields[field] = 0
                     elif isinstance(value, (int, float, str, bool)) or value is None:
                         simple_fields[field] = value
                     else:
