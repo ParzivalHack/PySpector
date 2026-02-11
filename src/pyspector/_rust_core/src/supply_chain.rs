@@ -200,11 +200,7 @@ struct OsvEvent {
 fn find_dependency_files(root: &str) -> Vec<String> {
     let mut files = Vec::new();
     let walker = WalkDir::new(root).max_depth(5);
-<<<<<<< HEAD
     
-=======
-
->>>>>>> a584d48 (Branch should be already up to date with remote, tho i'm committing the newly introduced changes (again) to make sure local coincides with remote)
     let root_path = Path::new(root);
     for entry in walker.into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
