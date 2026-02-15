@@ -1,5 +1,4 @@
 # PySpector AI/LLM Security Ruleset
-# Version 1.0 - Contains 110 specialized rules for AI security.
 
 # -------------------------------------------
 # SECTION: Taint Analysis Engine Upgrade for AI
