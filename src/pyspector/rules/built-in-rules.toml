@@ -1,5 +1,4 @@
 # PySpector Built-in Security Rules
-# This is a curated, high-quality ruleset focusing on high-impact vulnerabilities.
 
 # -------------------------------------------
 # SECTION: Taint Analysis Rules
