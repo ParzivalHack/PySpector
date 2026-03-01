@@ -390,3 +390,25 @@ For continuous monitoring, you can schedule regular scans of your projects using
 ./scripts/setup_cron.sh
 ```
 The script will prompt you for the project path, desired scan frequency (daily, weekly, monthly), and a location to store the JSON reports. It will then output the command to add to your crontab, automating your security scanning and reporting process.
+
+## SARIF Output Integration
+
+PySpector supports exporting results in **SARIF (Static Analysis Results Interchange Format)** — a standardized JSON format used by modern security tools and CI/CD platforms.
+
+### What is SARIF?
+
+SARIF is a machine-readable format that allows static analysis tools to share findings across platforms like:
+
+- GitHub Code Scanning
+- Azure DevOps
+- VS Code SARIF Viewer
+- Security dashboards in CI/CD pipelines
+
+---
+
+### Generate a SARIF Report
+
+To export results in SARIF format:
+
+```bash
+pyspector scan /path/to/project -o report.sarif -f sarif
