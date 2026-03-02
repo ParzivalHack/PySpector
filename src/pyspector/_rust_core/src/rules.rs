@@ -1,6 +1,6 @@
-use serde::Deserialize;
 use crate::issues::Severity;
 use regex::Regex;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Rule {
@@ -19,7 +19,9 @@ pub struct Rule {
     pub file_pattern: Option<String>,
 }
 
-fn default_confidence() -> String { "Medium".to_string() }
+fn default_confidence() -> String {
+    "Medium".to_string()
+}
 
 #[derive(Debug, Deserialize)]
 pub struct TaintSourceRule {

@@ -4,3 +4,56 @@ requires = [
     "setuptools-rust>=1.0"
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyspector"
+# Version is automatically read from Cargo.toml [package].version
+dynamic = ["version"]
+authors = [{name = "ParzivalHack"}]
+description = "A high-performance, security-focused static analysis tool for Python, powered by Rust."
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["static analysis", "security", "python", "rust"]
+license = {text = "MIT"}
+dependencies = [
+    "click>=8.0",
+    "toml>=0.10",
+    "requests>=2.25",
+    "sarif-om>=1.0",
+    "jinja2>=3.0",
+    "textual>=0.60",
+    'importlib_resources; python_version < "3.9"',
+]
+
+# Add development dependencies under [project.optional-dependencies]
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pytest",
+    "flake8",
+    "sphinx",                    # Sphinx for generating documentation
+    "sphinx-autodoc-typehints",  # To automatically include type hints in docs
+    "sphinx-rtd-theme"           # For a nice ReadTheDocs theme
+    "bs4"                        # Test dependency
+]
+
+[project.scripts]
+pyspector = "pyspector.cli:cli"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+pyspector = ["rules/*.toml"]
+
+# Rust extension module configuration
+[[tool.setuptools-rust.ext-modules]]
+target = "pyspector._rust_core"
+path = "src/pyspector/_rust_core/Cargo.toml"
