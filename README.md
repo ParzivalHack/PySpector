@@ -4,14 +4,14 @@
 
 # High-Performance Python/Rust Graph-Based SAST Framework
 
-[![POWERED BY](https://img.shields.io/badge/POWERED%20BY-SecurityCert-purple)](https://www.securitycert.it/)
+[![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.6--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.6-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Trusted By](https://img.shields.io/badge/Trusted_By-SatoriCU-green)](https://satori.ci/)
+[![Trusted By](https://img.shields.io/badge/Trusted_By-SatoriCI-green)](https://satori.ci/)
 
 
 PySpector is a State-of-the-Art Static Analysis Security Testing (SAST) framework, built in Rust for next-gen performances, made for modern Python projects and large codebases. Unlike traditional linters, PySpector utilizes a **Flow-Sensitive, Inter-Procedural Taint Engine** to track untrusted data across complex function boundaries and control flow structures.
