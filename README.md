@@ -11,6 +11,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Trusted By](https://img.shields.io/badge/Trusted_By-SatoriCU-green)](https://satori.ci/)
 
 
 PySpector is a State-of-the-Art Static Analysis Security Testing (SAST) framework, built in Rust for next-gen performances, made for modern Python projects and large codebases. Unlike traditional linters, PySpector utilizes a **Flow-Sensitive, Inter-Procedural Taint Engine** to track untrusted data across complex function boundaries and control flow structures.
