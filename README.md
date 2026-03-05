@@ -57,6 +57,7 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.12 ven
   ```
 
 - **Windows (PowerShell)**:
+
   ```powershell
   # Download Python 3.12 from the Microsoft Store and run:
   python3.12 -m venv venv
@@ -125,12 +126,12 @@ Performance benchmarks demonstrate PySpector's competitive advantages in SAST sc
 
 #### Comparative analysis across major Python codebases (Django, Flask, Pandas, Scikit-learn, Requests) shows:
 
-| Metric                    | PySpector                  | Bandit             | Semgrep         |
-| ------------------------- | -------------------------- | ------------------ | --------------- |
-| **Throughput**            | 25,607 lines/sec           | 14,927 lines/sec   | 1,538 lines/sec |
-| **Performance Advantage** | **71% faster** than Bandit | Baseline           | 16.6x slower    |
-| **Memory Usage**          | 1.4 GB average             | 111 MB average     | 277 MB average  |
-| **CPU Utilization**       | 120% (multi-core)          | 100% (single-core) | 40%             |
+| Metric | PySpector | Bandit | Semgrep |
+|--------|-----------|---------|---------|
+| **Throughput** | 25,607 lines/sec | 14,927 lines/sec | 1,538 lines/sec |
+| **Performance Advantage** | **71% faster** than Bandit | Baseline | 16.6x slower |
+| **Memory Usage** | 1.4 GB average | 111 MB average | 277 MB average |
+| **CPU Utilization** | 120% (multi-core) | 100% (single-core) | 40% |
 
 ### Key Performance Characteristics
 
