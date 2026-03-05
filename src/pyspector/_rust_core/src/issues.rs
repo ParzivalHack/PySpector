@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use serde::Deserialize;
-use sha1::{Sha1, Digest};
+use sha1::{Digest, Sha1};
 
 #[pyclass]
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, Hash)]
@@ -62,13 +62,16 @@ impl Issue {
     pub fn get_fingerprint(&self) -> String {
         let unique_string = format!(
             "{}|{}|{}|{}",
-            self.rule_id, self.file_path, self.line_number, self.code.trim()
+            self.rule_id,
+            self.file_path,
+            self.line_number,
+            self.code.trim()
         );
 
         let mut hasher = Sha1::new();
         hasher.update(unique_string.as_bytes());
         let result = hasher.finalize();
-        
+
         format!("{:x}", result)
     }
 }

@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+!docs/build/.gitignore
 develop-eggs/
 dist/
 downloads/
@@ -61,3 +62,7 @@ venv.bak/
 # IDEs
 .idea/
 .vscode/
+
+# Rust 
+Cargo.lock
+target/

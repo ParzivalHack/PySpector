@@ -47,27 +47,29 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
 
 fn is_in_comment_or_string(line: &str) -> bool {
     let trimmed = line.trim();
-    
+
     // Skip obvious comments
     if trimmed.starts_with('#') {
         return true;
     }
-    
+
     // Skip lines that are entirely string literals (docstrings)
-    if (trimmed.starts_with("\"\"\"") && trimmed.ends_with("\"\"\"") && trimmed.len() > 6) ||
-       (trimmed.starts_with("'''") && trimmed.ends_with("'''") && trimmed.len() > 6) ||
-       (trimmed.starts_with('"') && trimmed.ends_with('"') && !trimmed.contains(" = ")) ||
-       (trimmed.starts_with('\'') && trimmed.ends_with('\'') && !trimmed.contains(" = ")) {
+    if (trimmed.starts_with("\"\"\"") && trimmed.ends_with("\"\"\"") && trimmed.len() > 6)
+        || (trimmed.starts_with("'''") && trimmed.ends_with("'''") && trimmed.len() > 6)
+        || (trimmed.starts_with('"') && trimmed.ends_with('"') && !trimmed.contains(" = "))
+        || (trimmed.starts_with('\'') && trimmed.ends_with('\'') && !trimmed.contains(" = "))
+    {
         return true;
     }
-    
+
     // More sophisticated check: if the line contains quotes but no assignment/function call
     // it's likely a standalone string/docstring
-    if (trimmed.contains("\"\"\"") || trimmed.contains("'''")) && 
-       !trimmed.contains('=') && 
-       !trimmed.contains('(') {
+    if (trimmed.contains("\"\"\"") || trimmed.contains("'''"))
+        && !trimmed.contains('=')
+        && !trimmed.contains('(')
+    {
         return true;
     }
-    
+
     false
 }

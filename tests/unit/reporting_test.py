@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from types import SimpleNamespace
 from pyspector.reporting import Reporter
 
+
 class TestReporter(unittest.TestCase):
 
     test_issue = SimpleNamespace(
@@ -14,7 +15,7 @@ class TestReporter(unittest.TestCase):
         line_number=1,
         code='eval("a=5 print(a)")',
         severity="High",
-        remediation="Avoid 'eval()'. Use safer alternatives like 'ast.literal_eval' for data parsing."
+        remediation="Avoid 'eval()'. Use safer alternatives like 'ast.literal_eval' for data parsing.",
     )
 
     def test_to_json(self):
@@ -22,7 +23,7 @@ class TestReporter(unittest.TestCase):
         output = reporter.to_json()
 
         output_json = json.loads(output)
-        
+
         # Check issues summary
         self.assertEqual(output_json["summary"]["issue_count"], 1)
 
@@ -36,7 +37,6 @@ class TestReporter(unittest.TestCase):
         self.assertEqual(issue_json["severity"], self.test_issue.severity)
         self.assertEqual(issue_json["remediation"], self.test_issue.remediation)
 
-
     def test_to_sarif(self):
         reporter = Reporter([self.test_issue], "sarif")
         output = reporter.to_sarif()
@@ -45,7 +45,10 @@ class TestReporter(unittest.TestCase):
 
         # Check top level SARIF fields
         self.assertEqual(output_json.get("version"), "2.1.0")
-        self.assertEqual(output_json.get("schema_uri"), "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json")
+        self.assertEqual(
+            output_json.get("schema_uri"),
+            "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+        )
 
         # Check runs
         self.assertIn("runs", output_json)
@@ -68,7 +71,7 @@ class TestReporter(unittest.TestCase):
         # Check rule id
         self.assertEqual(result.get("rule_id"), self.test_issue.rule_id)
         self.assertEqual(result.get("kind"), "fail")
-        
+
         # Check description
         self.assertIn("message", result)
         self.assertEqual(result["message"].get("text"), self.test_issue.description)
@@ -83,7 +86,6 @@ class TestReporter(unittest.TestCase):
         artifact = physical["artifact_location"]
         self.assertEqual(artifact.get("uri"), self.test_issue.file_path)
 
-
     def test_to_html(self):
         reporter = Reporter([self.test_issue], "html")
         output = reporter.to_html()
@@ -91,7 +93,7 @@ class TestReporter(unittest.TestCase):
         soup = BeautifulSoup(output, "html.parser")
 
         self.assertEqual(soup.title.string, "PySpector Scan Report")
-        
+
         # Check header h1
         h1 = soup.find("h1")
         self.assertIsNotNone(h1)
@@ -120,10 +122,11 @@ class TestReporter(unittest.TestCase):
         self.assertEqual(cells[1].text.strip(), str(self.test_issue.line_number))
         self.assertEqual(cells[2].text.strip(), self.test_issue.severity)
         self.assertEqual(cells[3].text.strip(), self.test_issue.description)
-        
+
         code_cell = cells[4].find("code")
         self.assertIsNotNone(code_cell)
         self.assertEqual(code_cell.text.strip(), self.test_issue.code)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -26,32 +26,43 @@ fn build_from_statements(
                 // Create blocks for the two branches and the merge point after the if/else
                 let if_body_block_id = cfg.add_block().id;
                 let merge_block_id = cfg.add_block().id;
-                
+
                 // The 'else' block is optional
-                let else_body_block_id = if stmt.children.get("orelse").map_or(false, |v| !v.is_empty()) {
-                    cfg.add_block().id
-                } else {
-                    merge_block_id // If no else, the false branch goes straight to merge
-                };
+                let else_body_block_id =
+                    if stmt.children.get("orelse").map_or(false, |v| !v.is_empty()) {
+                        cfg.add_block().id
+                    } else {
+                        merge_block_id // If no else, the false branch goes straight to merge
+                    };
 
                 // Add edges from the current block to the branches
-                cfg.add_edge(current_block_id, if_body_block_id, EdgeType::Conditional(true));
-                cfg.add_edge(current_block_id, else_body_block_id, EdgeType::Conditional(false));
+                cfg.add_edge(
+                    current_block_id,
+                    if_body_block_id,
+                    EdgeType::Conditional(true),
+                );
+                cfg.add_edge(
+                    current_block_id,
+                    else_body_block_id,
+                    EdgeType::Conditional(false),
+                );
 
                 // Recursively build the CFG for the 'if' body
                 if let Some(if_body) = stmt.children.get("body") {
-                    let final_if_block = build_from_statements(cfg, if_body, if_body_block_id, loop_exits);
+                    let final_if_block =
+                        build_from_statements(cfg, if_body, if_body_block_id, loop_exits);
                     cfg.add_edge(final_if_block, merge_block_id, EdgeType::Unconditional);
                 }
 
                 // Recursively build the CFG for the 'else' body
                 if let Some(orelse_body) = stmt.children.get("orelse") {
                     if !orelse_body.is_empty() {
-                         let final_else_block = build_from_statements(cfg, orelse_body, else_body_block_id, loop_exits);
-                         cfg.add_edge(final_else_block, merge_block_id, EdgeType::Unconditional);
+                        let final_else_block =
+                            build_from_statements(cfg, orelse_body, else_body_block_id, loop_exits);
+                        cfg.add_edge(final_else_block, merge_block_id, EdgeType::Unconditional);
                     }
                 }
-                
+
                 current_block_id = merge_block_id;
             }
             "For" | "While" => {
@@ -60,19 +71,20 @@ fn build_from_statements(
 
                 // Edge from current block into the loop
                 cfg.add_edge(current_block_id, loop_body_id, EdgeType::Unconditional);
-                
+
                 // Add the exit point for any 'break' statements
                 loop_exits.insert(after_loop_id);
                 if let Some(loop_body) = stmt.children.get("body") {
-                    let final_loop_block = build_from_statements(cfg, loop_body, loop_body_id, loop_exits);
+                    let final_loop_block =
+                        build_from_statements(cfg, loop_body, loop_body_id, loop_exits);
                     // Edge from the end of the loop body back to the start
                     cfg.add_edge(final_loop_block, loop_body_id, EdgeType::Unconditional);
                 }
                 loop_exits.remove(&after_loop_id);
-                
+
                 // Edge to exit the loop
-                cfg.add_edge(current_block_id, after_loop_id, EdgeType::Unconditional); 
-                
+                cfg.add_edge(current_block_id, after_loop_id, EdgeType::Unconditional);
+
                 current_block_id = after_loop_id;
             }
             "Break" => {
