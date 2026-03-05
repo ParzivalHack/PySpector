@@ -4,7 +4,7 @@
 
 # High-Performance Python/Rust Graph-Based SAST Framework
 
-[![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple?logo=https%3A%2F%2Fcloud-1de12d.becdn.net%2Fmedia%2FiW%3D1100%26iH%3D1100%26oX%3D0%26oY%3D92%26cW%3D1100%26cH%3D918%2F534dd37db28d01edf1d68b6db055b892%2FCopiadiLogosSecuritycert%25283240%25C3%25973240px%2529.png)](https://www.securitycert.it/)
+[![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
 [![latest release](https://img.shields.io/badge/latest%20release-v0.1.6--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.6-beta)
