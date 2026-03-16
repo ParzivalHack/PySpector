@@ -128,11 +128,11 @@ class Reporter:
         for issue in self.issues:
             html += f"""
             <tr>
-                <td style='padding: 8px;'>{issue.file_path}</td>
+                <td style='padding: 8px;'>{html_module.escape(issue.file_path)}</td>
                 <td style='padding: 8px;'>{issue.line_number}</td>
-                <td style='padding: 8px;'>{str(issue.severity)}</td>
-                <td style='padding: 8px;'>{issue.description}</td>
-                <td style='padding: 8px;'><pre><code>{issue.code}</code></pre></td>
+                <td style='padding: 8px;'>{html_module.escape(str(issue.severity))}</td>
+                <td style='padding: 8px;'>{html_module.escape(issue.description)}</td>
+                <td style='padding: 8px;'><pre><code>{html_module.escape(issue.code)}</code></pre></td>
             </tr>
             """
         html += "</table></body></html>"
