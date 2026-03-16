@@ -1,26 +1,40 @@
 use crate::ast_parser::AstNode;
 use crate::issues::Issue;
-use crate::rules::{RuleSet, Rule};
+use crate::rules::{Rule, RuleSet};
 
 // Main entry point for AST scanning
 pub fn scan_ast(ast: &AstNode, file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue> {
     let mut issues = Vec::new();
-    let ast_rules: Vec<&Rule> = ruleset.rules.iter()
+    let ast_rules: Vec<&Rule> = ruleset
+        .rules
+        .iter()
         .filter(|r| r.ast_match.is_some())
         .collect();
-    
-    if ast_rules.is_empty() { return issues; }
+
+    if ast_rules.is_empty() {
+        return issues;
+    }
 
     walk_ast(ast, file_path, content, &ast_rules, &mut issues);
     issues
 }
 
 // Recursively walks the AST, checking each node against the rules
-fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], issues: &mut Vec<Issue>) {
+fn walk_ast(
+    node: &AstNode,
+    file_path: &str,
+    content: &str,
+    rules: &[&Rule],
+    issues: &mut Vec<Issue>,
+) {
     for rule in rules.iter() {
         if let Some(match_pattern) = &rule.ast_match {
             if check_node_match(node, match_pattern) {
-                let line_content = content.lines().nth(node.lineno.saturating_sub(1) as usize).unwrap_or("").to_string();
+                let line_content = content
+                    .lines()
+                    .nth(node.lineno.saturating_sub(1) as usize)
+                    .unwrap_or("")
+                    .to_string();
                 issues.push(Issue::new(
                     rule.id.clone(),
                     rule.description.clone(),
@@ -47,13 +61,18 @@ fn check_node_match(node: &AstNode, match_pattern: &str) -> bool {
     let (node_type_match, props_str) = if let Some(open_paren) = match_pattern.find('(') {
         (
             &match_pattern[..open_paren],
-            Some(&match_pattern[open_paren + 1..match_pattern.rfind(')').unwrap_or(match_pattern.len())])
+            Some(
+                &match_pattern
+                    [open_paren + 1..match_pattern.rfind(')').unwrap_or(match_pattern.len())],
+            ),
         )
     } else {
         (match_pattern, None)
     };
 
-    if node.node_type != node_type_match { return false; }
+    if node.node_type != node_type_match {
+        return false;
+    }
 
     if let Some(props) = props_str {
         for prop in props.split(',') {
@@ -64,12 +83,14 @@ fn check_node_match(node: &AstNode, match_pattern: &str) -> bool {
             }
         }
     }
-    
+
     true
 }
 
 fn node_has_property(node: &AstNode, path: &[&str], expected_value: &str) -> bool {
-    if path.is_empty() { return false; }
+    if path.is_empty() {
+        return false;
+    }
 
     let current_part = path[0];
     let remaining_path = &path[1..];
@@ -78,9 +99,11 @@ fn node_has_property(node: &AstNode, path: &[&str], expected_value: &str) -> boo
         if let Some(field_value) = node.fields.get(current_part).and_then(|v| v.as_ref()) {
             return match field_value {
                 serde_json::Value::String(s) => s == expected_value,
-                serde_json::Value::Bool(b) => b.to_string().to_lowercase() == expected_value.to_lowercase(),
+                serde_json::Value::Bool(b) => {
+                    b.to_string().to_lowercase() == expected_value.to_lowercase()
+                }
                 serde_json::Value::Number(n) => n.to_string() == expected_value,
-                _ => false
+                _ => false,
             };
         }
     }
@@ -99,6 +122,6 @@ fn node_has_property(node: &AstNode, path: &[&str], expected_value: &str) -> boo
             }
         }
     }
-    
+
     false
 }
