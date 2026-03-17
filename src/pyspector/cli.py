@@ -14,6 +14,7 @@ from .reporting import Reporter
 from .triage import run_triage_tui
 from .plugin_system import get_plugin_manager, PluginSecurity
 import requests
+from urllib.parse import urlparse
 
 # Import the Rust core from its new location
 try:
@@ -268,7 +269,7 @@ def cli():
              __/>                       / \                                                                   
 """
     click.echo(click.style(banner))
-    click.echo("Version: 0.1.6\n")
+    click.echo("Version: 0.1.7\n")
     click.echo("Made with <3 by github.com/ParzivalHack\n")
     note = get_startup_note()
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
@@ -362,6 +363,16 @@ def run_scan_command(
 
         # Repo scan
         if params["repo_url"]:
+            try:
+                _parsed = urlparse(params["repo_url"])
+                _hostname = _parsed.hostname or ""
+            except Exception:
+                _hostname = ""
+
+            if _hostname not in ("github.com", "gitlab.com"):
+                raise click.BadParameter(
+                    "URL must be a public GitHub or GitLab repository. "
+            )
             with tempfile.TemporaryDirectory() as temp_dir:
                 click.echo(f"[*] Cloning '{params['repo_url']}' into temporary directory...")
                 subprocess.run(
@@ -435,8 +446,16 @@ def run_scan_command(
 
     if repo_url:
         # Handle Git URL cloning
-        if not ("github.com" in repo_url or "gitlab.com" in repo_url):
-            raise click.BadParameter("URL must be a public GitHub or GitLab repository.")
+        try:
+            _parsed = urlparse(repo_url)
+            _hostname = _parsed.hostname or ""
+        except Exception:
+            _hostname = ""
+
+        if _hostname not in ("github.com", "gitlab.com"):
+            raise click.BadParameter(
+                "URL must be a public GitHub or GitLab repository. "
+            )
         
         with tempfile.TemporaryDirectory() as temp_dir:
             click.echo(f"[*] Cloning '{repo_url}' into temporary directory...")

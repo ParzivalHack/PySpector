@@ -143,6 +143,8 @@ class PluginSecurity:
             "exec",
             "compile",
             "__import__",
+            "vars",
+            "getattr", 
             "os.system",
             "os.popen",
             "subprocess.Popen",
@@ -184,6 +186,10 @@ class PluginSecurity:
                     attrs.append(base)
                     attrs.reverse()
                     return ".".join(attrs)
+            if isinstance(node, ast.Call):
+                inner = resolve_name(node.func)
+                if inner:
+                    return inner
             return None
 
         class Analyzer(ast.NodeVisitor):
