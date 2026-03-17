@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PySpector - High-Performance Python SAST</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="PySpector is a high-performance Python SAST framework with a Rust core, deep taint analysis, and AI/LLM security rules." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #0d0d0d;
+      --border: #1a1a1a;
+      --text: #ffffff;
+      --muted: #b3b3b3;
+      --accent: #ffffff;
+      --accent-soft: rgba(255,255,255,.08);
+    }
+
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+
+    code, pre { font-family: "JetBrains Mono", monospace; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11,13,18,.9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 1.2rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+    }
+
+    .ascii-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+
+    .ascii-art {
+      font-family: "Courier New", Courier, monospace;
+      white-space: pre;
+      line-height: 1;
+      font-size: 14px;
+      letter-spacing: 0;
+      color: var(--text);
+    }
+
+
+    /* Large screens */
+    @media (min-width: 1200px) {
+      .ascii-art {
+        transform: scale(1);
+      }
+    }
+
+    /* Laptops */
+    @media (max-width: 1199px) {
+      .ascii-art {
+        transform: scale(0.9);
+      }
+    }
+
+    /* Tablets */
+    @media (max-width: 900px) {
+      .ascii-art {
+        transform: scale(0.8);
+      }
+    }
+
+    /* Phones */
+    @media (max-width: 600px) {
+      .ascii-art {
+        transform: scale(0.7);
+      }
+    }
+
+
+
+
+    header.hero {
+      padding: 96px 0 80px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 560px;
+      font-size: 1.05rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    /* Center hero text content */
+    .hero {
+      text-align: center;
+    }
+
+    .hero p {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-actions {
+      justify-content: center;
+    }
+
+
+    .btn {
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .btn.primary {
+      background: #ffffff;
+      border-color: #ffffff;
+      color: #000000;
+    }
+
+    .stats-wrapper {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin-top: 56px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+
+    .stat {
+      background: linear-gradient(
+        180deg,
+        rgba(255,255,255,.06),
+        rgba(255,255,255,.02)
+      );
+      border: 1px solid var(--border);
+      padding: 28px;
+      border-radius: 16px;
+      position: relative;
+    }
+
+
+    .stat::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: radial-gradient(
+        circle at top left,
+        rgba(255,255,255,.18),
+        transparent 60%
+      );
+
+      opacity: .35;
+      pointer-events: none;
+    }
+
+    .stat strong {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+
+    section {
+      padding: 96px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    section h2 {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+    }
+
+    section .lead {
+      color: var(--muted);
+      max-width: 720px;
+      font-size: 1.05rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .feature {
+      background: linear-gradient(
+        180deg,
+        rgba(255,255,255,.02),
+        rgba(255,255,255,.01)
+      );
+      border: 1px solid var(--border);
+      padding: 26px;
+      border-radius: 16px;
+    }
+
+    .feature h3 {
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .feature p {
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+    .arch {
+      margin-top: 48px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+
+    .arch-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      border-radius: 14px;
+    }
+
+    pre {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      padding: 24px;
+      border-radius: 14px;
+      overflow-x: auto;
+      margin-top: 32px;
+      font-size: .9rem;
+      color: #ffffff;
+    }
+
+    .cta-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 56px;
+      border-radius: 20px;
+      margin-top: 48px;
+      text-align: center;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    footer {
+      padding: 56px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 32px;
+    }
+
+    /* Desktop only layout fix for stats */
+    @media (min-width: 900px) {
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      /* Move SARIF to second row */
+      .stats .stat:nth-child(4) {
+        grid-column: 1;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <div class="logo">PySpector</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#usage">Usage</a>
+      <a href="#api-playground">API Playground</a>
+      <a href="#contribute">Contribute</a>
+      <a href="https://github.com/ParzivalHack/PySpector" target="_blank">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+
+    <div class="ascii-wrapper">
+      <pre class="ascii-art">    ╔══════════════════════════════════════════════════╗
+    ║                    PYSPECTOR                     ║
+    ║              Next-Gen Security Scanner           ║
+    ╚══════════════════════════════════════════════════╝
+    
+    ┌─────┐    ┌─────┐    ┌─────────────┐    ┌─────────┐
+    │ AST │◄──►│RUST │◄──►│ TAINT FLOW  │◄──►│ RESULTS │
+    │ GEN │    │CORE │    │   ANALYSIS  │    │ REPORT  │
+    └─────┘    └─────┘    └─────────────┘    └─────────┘
+         ▲                                         │
+         │                                         ▼
+    ┌─────────┐                               ┌─────────┐
+    │ PYTHON  │                               │  JSON   │
+    │   CLI   │                               │  HTML   │
+    │ HANDLER │                               │  SARIF  │
+    └─────────┘                               └─────────┘</pre>
+
+    </div>
+
+    <h1>The first hybrid SAST<br>for Real-World Python Codebases</h1>
+
+    <p>
+      PySpector is a static analysis security testing framework for Python,
+      combining a Rust-powered analysis core with AST parsing,
+      inter-procedural taint tracking, and first-class AI and LLM security rules.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank">View on GitHub</a>
+      <a class="btn" href="#usage">Quick Start</a>
+    </div>
+<div class="stats-wrapper">
+    <div class="stats">
+      <div class="stat"><strong>240+</strong><span>Security Rules</span></div>
+      <div class="stat"><strong>45+</strong><span>AI and LLM Rules</span></div>
+      <div class="stat"><strong>6,000+</strong><span>PyPI Downloads</span></div>
+      <div class="stat"><strong>SARIF</strong><span>CI and CD Ready</span></div>
+      <div class="stat"><strong>Open</strong><span>Community Driven</span></div>
+      <div class="stat"><strong>Rust</strong><span>Parallel Engine</span></div>
+    </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="container">
+    <h2>Core Capabilities</h2>
+    <p class="lead">
+      Designed for security engineers and developers who need speed,
+      transparency, and extensibility.
+    </p>
+
+    <div class="features">
+      <div class="feature"><h3>Rust-Powered Analysis</h3><p>Parallel execution for large Python repositories.</p></div>
+      <div class="feature"><h3>Inter-Procedural Taint Tracking</h3><p>Tracks data flows across call graphs.</p></div>
+      <div class="feature"><h3>AI and LLM Security</h3><p>Rules for prompt injection and unsafe agents.</p></div>
+      <div class="feature"><h3>Multi-Layered Detection</h3><p>Regex, AST, and semantic checks combined.</p></div>
+      <div class="feature"><h3>CI and CD Integration</h3><p>JSON, HTML, and SARIF outputs.</p></div>
+      <div class="feature"><h3>Extensible Rules</h3><p>TOML-based rule definitions.</p></div>
+      <div class="feature"><h3>Plugin System</h3><p>Post-processing and custom workflows.</p></div>
+      <div class="feature"><h3>Interactive Triage</h3><p>TUI-based triage and baseline management.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="container">
+    <h2>Hybrid Architecture</h2>
+    <p class="lead">
+      A clean separation between orchestration and analysis keeps PySpector fast and maintainable.
+    </p>
+
+    <div class="arch">
+      <div class="arch-box"><h4>Python CLI</h4><p>Configuration, AST generation, rule loading.</p></div>
+      <div class="arch-box"><h4>Rust Core</h4><p>Parallel analysis engine with taint propagation.</p></div>
+      <div class="arch-box"><h4>Results Layer</h4><p>Console, JSON, HTML, SARIF, and interactive TUI.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="usage">
+  <div class="container">
+    <h2>Quick Start</h2>
+
+    <pre><code># Install from PyPI
+pip install pyspector
+
+# Scan a project
+pyspector scan ./project
+
+# Enable AI and LLM rules
+pyspector scan ./project --ai
+
+# Generate HTML report
+pyspector scan ./project -f html -o report.html
+
+# Scan remote repository
+pyspector scan --url https://github.com/user/repo.git
+
+# Interactive triage
+pyspector triage report.json</code></pre>
+  </div>
+</section>
+
+<section id="api-playground">
+  <div class="container">
+    <h2>API Playground</h2>
+    <p class="lead">
+      Try PySpector's REST API directly from your browser. Scan public repositories with customizable options.
+    </p>
+
+    <div class="playground-container">
+      <div class="playground-input">
+        <label for="repo-url">Repository URL</label>
+        <input 
+          type="text" 
+          id="repo-url" 
+          placeholder="https://github.com/username/repository.git"
+          value="https://github.com/psf/requests.git"
+        />
+
+        <div class="playground-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="enable-ai" />
+            <span>Enable AI/LLM Rules</span>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="json-output" checked />
+            <span>JSON Output</span>
+          </label>
+        </div>
+
+        <button class="btn primary" id="scan-btn" onclick="runScan()">
+          <span id="btn-text">Run Scan</span>
+          <span id="btn-spinner" style="display:none;">⏳ Scanning...</span>
+        </button>
+
+        <div id="error-message" class="error-box" style="display:none;"></div>
+      </div>
+
+      <div class="playground-output">
+        <div class="output-header">
+          <span>Scan Results</span>
+          <button class="copy-btn" onclick="copyResults()" style="display:none;" id="copy-btn">Copy</button>
+        </div>
+        <pre id="scan-results"><code>Results will appear here...</code></pre>
+      </div>
+    </div>
+
+    <div class="api-docs-link">
+      <p>Want to start using PySpector directly on your machine? <a href="#usage">Check our Quick Start!</a></p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .playground-container {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  @media (max-width: 900px) {
+    .playground-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .playground-input label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .playground-input input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .playground-input input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .playground-options {
+    margin: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .playground-output {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .output-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-header span {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .copy-btn {
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .copy-btn:hover {
+    background: var(--accent-soft);
+  }
+
+  #scan-results {
+    flex: 1;
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+    margin: 0;
+    background: var(--bg);
+    padding: 20px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .error-box {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    color: #ef4444;
+    font-size: 0.9rem;
+  }
+
+  .api-docs-link {
+    margin-top: 32px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .api-docs-link a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  #btn-spinner {
+    display: inline-block;
+  }
+</style>
+
+<script>
+  const API_URL = 'https://pyspector-api.onrender.com/scan';
+
+  async function runScan() {
+    const repoUrl = document.getElementById('repo-url').value.trim();
+    const enableAi = document.getElementById('enable-ai').checked;
+    const jsonOutput = document.getElementById('json-output').checked;
+    const resultsElement = document.getElementById('scan-results');
+    const errorElement = document.getElementById('error-message');
+    const scanBtn = document.getElementById('scan-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const copyBtn = document.getElementById('copy-btn');
+
+    // Validation
+    if (!repoUrl) {
+      showError('Please enter a repository URL');
+      return;
+    }
+
+    if (!repoUrl.match(/^https?:\/\/(github\.com|gitlab\.com)\/.+\.git$/)) {
+      showError('Please enter a valid GitHub or GitLab repository URL (must end with .git)');
+      return;
+    }
+
+    // Reset UI
+    errorElement.style.display = 'none';
+    resultsElement.innerHTML = '<code>⏳ Scanning repository, please wait...</code>';
+    copyBtn.style.display = 'none';
+    scanBtn.disabled = true;
+    btnText.style.display = 'none';
+    btnSpinner.style.display = 'inline';
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: repoUrl,
+          ai: enableAi,
+          json_output: jsonOutput
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Scan failed: ${errorText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      let results;
+
+      if (contentType && contentType.includes('application/json')) {
+        results = await response.json();
+        results = JSON.stringify(results, null, 2);
+      } else {
+        results = await response.text();
+      }
+
+      resultsElement.innerHTML = `<code>${escapeHtml(results)}</code>`;
+      copyBtn.style.display = 'block';
+
+    } catch (error) {
+      showError(error.message);
+      resultsElement.innerHTML = '<code>Scan failed. See error above.</code>';
+    } finally {
+      scanBtn.disabled = false;
+      btnText.style.display = 'inline';
+      btnSpinner.style.display = 'none';
+    }
+  }
+
+  function showError(message) {
+    const errorElement = document.getElementById('error-message');
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function copyResults() {
+    const resultsElement = document.getElementById('scan-results');
+    const text = resultsElement.textContent;
+
+    navigator.clipboard.writeText(text).then(() => {
+      const copyBtn = document.getElementById('copy-btn');
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+    });
+  }
+</script>
+
+<section id="contribute">
+  <div class="container">
+    <div class="cta-box">
+      <h2>Contribute to PySpector</h2>
+      <p>
+        PySpector is an open source security project built by practitioners.
+        Contributions are welcome in rule development, Rust and Python core improvements,
+        documentation, testing, and security research.
+      </p>
+
+      <div class="cta-actions">
+        <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank">Star on GitHub</a>
+        <a class="btn" href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide</a>
+        <a class="btn" href="https://github.com/ParzivalHack/PySpector/issues" target="_blank">Good First Issues</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-grid">
+    <div style="text-align:center">
+      <strong>PySpector</strong><br>
+      High-performance Python SAST
+    </div>
+
+    <div style="text-align:center">
+      <a href="https://github.com/ParzivalHack/PySpector">Repository</a>
+      <a href="https://github.com/ParzivalHack/PySpector/releases">Releases</a>
+      <a href="https://github.com/ParzivalHack/PySpector/issues">Issues</a>
+    </div>
+
+    <div style="text-align:center">
+      <a href="https://github.com/ParzivalHack/PySpector/blob/main/README.md">Documentation</a>
+      <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md">Contributing</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
