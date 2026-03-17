@@ -1,4 +1,5 @@
 import json
+import html as html_module
 # Added 'Region' to imports for better SARIF compliance
 from sarif_om import SarifLog, Tool, Run, ReportingDescriptor, Result, ArtifactLocation, Location, PhysicalLocation, Region
 # Removed 'asdict' from imports as it is not needed for sarif_om
