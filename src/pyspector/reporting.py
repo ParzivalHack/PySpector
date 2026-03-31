@@ -1,11 +1,14 @@
 import json
 import html as html_module
+import importlib.metadata
+
 from sarif_om import (
     SarifLog,
     Tool,
     ToolComponent,
     Run,
     ReportingDescriptor,
+    ReportingConfiguration,
     MultiformatMessageString,
     Result,
     ArtifactLocation,
@@ -15,31 +18,51 @@ from sarif_om import (
     Message,
 )
 
+
 # Maps internal severity levels to SARIF-compliant level strings.
 _SEVERITY_TO_SARIF_LEVEL = {
     "CRITICAL": "error",
-    "HIGH":     "error",
-    "MEDIUM":   "warning",
-    "LOW":      "note",
+    "HIGH": "error",
+    "MEDIUM": "warning",
+    "LOW": "note",
 }
 
-_PYSPECTOR_VERSION = "1.0.0"
+
+def _get_version():
+    """Return installed PySpector version dynamically."""
+    try:
+        return importlib.metadata.version("pyspector")
+    except importlib.metadata.PackageNotFoundError:
+        return "dev"
+
+
+_PYSPECTOR_VERSION = _get_version()
+
+
+def _severity_key(issue) -> str:
+    """Normalize enum-like severity values."""
+    return str(issue.severity).split(".")[-1].upper()
+
 
 def _clean(obj):
-    """
-    Recursively serialize a sarif_om object to a plain dict,
-    dropping any key whose value is None so the output stays lean.
-    sarif_om objects expose their data via __dict__; we walk that
-    structure and strip falsy-None leaves.
-    """
+
     if isinstance(obj, list):
         return [_clean(item) for item in obj]
+
+    if isinstance(obj, dict):
+        return {
+            k: _clean(v)
+            for k, v in obj.items()
+            if v is not None
+        }
+
     if hasattr(obj, "__dict__"):
         return {
             k: _clean(v)
             for k, v in obj.__dict__.items()
             if v is not None
         }
+
     return obj
 
 
@@ -57,9 +80,6 @@ class Reporter:
             return self.to_html()
         return self.to_console()
 
-    # ------------------------------------------------------------------ #
-    #  Console                                                             #
-    # ------------------------------------------------------------------ #
 
     def to_console(self) -> str:
         if not self.issues:
@@ -70,7 +90,7 @@ class Reporter:
 
         issues_by_severity: dict[str, list] = {}
         for issue in self.issues:
-            severity = str(issue.severity).split(".")[-1].upper()
+            severity = _severity_key(issue)
             issues_by_severity.setdefault(severity, []).append(issue)
 
         for severity in severity_order:
@@ -81,6 +101,7 @@ class Reporter:
                 issues_by_severity[severity],
                 key=lambda i: (i.file_path, i.line_number),
             )
+
             output.append(f"\n{'='*60}")
             output.append(
                 f"  {severity} ({len(sorted_issues)} issue{'s' if len(sorted_issues) != 1 else ''})"
@@ -98,7 +119,7 @@ class Reporter:
         return "\n".join(output)
 
     # ------------------------------------------------------------------ #
-    #  JSON                                                                #
+    #  JSON                                                              #
     # ------------------------------------------------------------------ #
 
     def to_json(self) -> str:
@@ -111,55 +132,37 @@ class Reporter:
                     "file_path": issue.file_path,
                     "line_number": issue.line_number,
                     "code": issue.code,
-                    "severity": str(issue.severity).split(".")[-1],
+                    "severity": _severity_key(issue),
                     "remediation": issue.remediation,
                 }
                 for issue in self.issues
             ],
         }
+
         return json.dumps(report, indent=2)
 
     # ------------------------------------------------------------------ #
-    #  SARIF                                                               #
+    #  SARIF                                                             #
     # ------------------------------------------------------------------ #
 
     def to_sarif(self) -> str:
-        """
-        Produces a SARIF 2.1.0 document.
 
-        Improvements over the previous implementation:
-        - Uses ToolComponent (correct type for Tool.driver).
-        - Builds a deduplicated, ordered rule list and references rules by
-          index in each Result (rule_index), which is required for tooling
-          that doesn't index rules by ID alone.
-        - Maps internal severity levels to the SARIF `level` field
-          (error / warning / note) so consumers can filter by severity
-          without understanding PySpector-specific values.
-        - Surfaces remediation guidance in rule.help so it appears in
-          IDEs and dashboards that consume SARIF.
-        - Uses proper Message / MultiformatMessageString objects instead
-          of raw dicts.
-        - Serialises via a custom _clean() helper that drops None-valued
-          keys, keeping the output compact and spec-compliant.
-        """
-
-        # ── 1. Build an ordered, deduplicated rule list ──────────────────
         rule_index_map: dict[str, int] = {}
         rules: list[ReportingDescriptor] = []
 
         for issue in self.issues:
+
             if issue.rule_id in rule_index_map:
                 continue
 
-            severity_key = str(issue.severity).split(".")[-1].upper()
+            severity_key = _severity_key(issue)
 
             rule = ReportingDescriptor(
                 id=issue.rule_id,
-                name=issue.rule_id,  # human-friendly CamelCase id is conventional
+                name=issue.rule_id,
                 short_description=MultiformatMessageString(
                     text=issue.description
                 ),
-                # help surfaces remediation in GitHub Advanced Security, VS Code, etc.
                 help=MultiformatMessageString(
                     text=issue.remediation or issue.description,
                     markdown=(
@@ -168,40 +171,47 @@ class Reporter:
                         else None
                     ),
                 ),
-                # default_configuration carries the base severity level for the rule
-                default_configuration={"level": _SEVERITY_TO_SARIF_LEVEL.get(severity_key, "warning")},
+                default_configuration=ReportingConfiguration(
+                    level=_SEVERITY_TO_SARIF_LEVEL.get(
+                        severity_key,
+                        "warning",
+                    )
+                ),
             )
 
             rule_index_map[issue.rule_id] = len(rules)
             rules.append(rule)
 
-        # ── 2. Assemble the Tool ─────────────────────────────────────────
         driver = ToolComponent(
             name="PySpector",
             version=_PYSPECTOR_VERSION,
             information_uri="https://github.com/your-org/pyspector",
             rules=rules,
         )
+
         tool = Tool(driver=driver)
 
-        # ── 3. Build Results ─────────────────────────────────────────────
         results: list[Result] = []
 
         for issue in self.issues:
-            severity_key = str(issue.severity).split(".")[-1].upper()
-            level = _SEVERITY_TO_SARIF_LEVEL.get(severity_key, "warning")
+
+            severity_key = _severity_key(issue)
+            level = _SEVERITY_TO_SARIF_LEVEL.get(
+                severity_key,
+                "warning",
+            )
 
             region = Region(
                 start_line=issue.line_number,
-                # Snippet lets viewers show the offending code inline
-                snippet=MultiformatMessageString(text=issue.code.strip()),
+                snippet=MultiformatMessageString(
+                    text=issue.code.strip()
+                ),
             )
 
             location = Location(
                 physical_location=PhysicalLocation(
                     artifact_location=ArtifactLocation(
                         uri=issue.file_path,
-                        # uri_base_id makes paths relative to the repo root,
                         uri_base_id="%SRCROOT%",
                     ),
                     region=region,
@@ -218,19 +228,22 @@ class Reporter:
 
             results.append(result)
 
-        # ── 4. Compose the log ───────────────────────────────────────────
         run = Run(tool=tool, results=results)
+
         log = SarifLog(
             version="2.1.0",
             schema_uri=(
-                "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/"
-                "master/Schemata/sarif-schema-2.1.0.json"
+                "https://raw.githubusercontent.com/oasis-tcs/"
+                "sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
             ),
             runs=[run],
         )
 
-        # ── 5. Serialise, stripping None values ──────────────────────────
         return json.dumps(_clean(log), indent=2)
+
+    # ------------------------------------------------------------------ #
+    #  HTML                                                              #
+    # ------------------------------------------------------------------ #
 
     def to_html(self) -> str:
         html = f"""
@@ -241,13 +254,14 @@ class Reporter:
         <h2>Found {len(self.issues)} issues.</h2>
         <table border='1' style='border-collapse: collapse; width: 100%;'>
         <tr style='background-color: #f2f2f2;'>
-            <th style='padding: 8px; text-align: left;'>File</th>
-            <th style='padding: 8px; text-align: left;'>Line</th>
-            <th style='padding: 8px; text-align: left;'>Severity</th>
-            <th style='padding: 8px; text-align: left;'>Description</th>
-            <th style='padding: 8px; text-align: left;'>Code</th>
+            <th style='padding: 8px;'>File</th>
+            <th style='padding: 8px;'>Line</th>
+            <th style='padding: 8px;'>Severity</th>
+            <th style='padding: 8px;'>Description</th>
+            <th style='padding: 8px;'>Code</th>
         </tr>
         """
+
         for issue in self.issues:
             html += f"""
             <tr>
@@ -258,5 +272,7 @@ class Reporter:
                 <td style='padding: 8px;'><pre><code>{html_module.escape(issue.code)}</code></pre></td>
             </tr>
             """
+
         html += "</table></body></html>"
+
         return html
