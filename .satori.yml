@@ -1,0 +1,44 @@
+settings:
+  name: "PySpector Tests"
+  description: PySPector positive and negative tests
+  image: rust:latest
+  cpu: 16384
+  memory: 32768
+  example: satori run ./ --output
+
+install:
+  - export DEBIAN_FRONTEND=noninteractive; apt-get update >/dev/null 2>&1; apt-get install -qy python3 python3-pip python3-venv >/dev/null 2>&1
+  - pip install --break-system-packages -r requirements.txt --disable-pip-version-check --root-user-action=ignore 
+  - pip install --break-system-packages . --disable-pip-version-check --root-user-action=ignore 
+  - cargo build --release
+  - cp target/release/pyspector-api /usr/local/bin/
+
+tests:
+  assertStdoutNotContains:
+    - "can't decode"
+    - "Expecting value"
+    - SyntaxWarning
+    - Traceback
+
+  positive:
+    scan:
+      - pyspector scan . --supply-chain
+
+  negative:
+    # Don't parse binaries as plugins
+    plugin_install:
+      - pyspector plugin install /bin/ls 
+    scan_plugin-config:
+      - pyspector scan . --plugin-config=/etc/hostname
+    # Don't throw SyntaxWarnings
+    SyntaxWarning:
+      - pyspector scan --url=https://github.com/Instagram/LibCST
+
+    # Don't throw Tracebacks
+    Traceback:
+      - pyspector scan --url=https://github.com/google/python-fire
+
+    return_error:
+      assertReturnCodeNot: 0
+      url:
+        - pyspector scan --url=https://github.com.attacker.com/some/thing
