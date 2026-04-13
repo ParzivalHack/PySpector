@@ -209,8 +209,7 @@ fn find_dependency_files(root: &str) -> Vec<String> {
                    name == "pyproject.toml" ||
                    name == "Pipfile" ||
                    name == "Cargo.toml" {
-                    let rel = entry.path().strip_prefix(root_path).unwrap_or(entry.path());
-                    if let Some(path) = rel.to_str() {
+                    if let Some(path) = entry.path().to_str() {
                         files.push(path.to_string());
                     }
                 }
@@ -469,9 +468,14 @@ fn raw_query_osv(client: &reqwest::blocking::Client, name: &str, version: &str, 
     match client.post(url).json(&body).send() {
         Ok(resp) => {
             if resp.status().is_success() {
-                 match resp.json::<OsvResponse>() {
+                 let text = resp.text().unwrap_or_default();
+                 match serde_json::from_str::<OsvResponse>(&text) {
                      Ok(osv_resp) => osv_resp.vulns,
-                     Err(_) => vec![],
+                     Err(e) => {
+                         println!("DEBUG ERROR parsing JSON: {}", e);
+                         println!("DEBUG TEXT: {}", text);
+                         vec![]
+                     }
                  }
             } else {
                 vec![]

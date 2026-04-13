@@ -340,7 +340,7 @@ def run_wizard():
 @click.option('--plugin', 'plugins', multiple=True, help="Load and execute a plugin (can be specified multiple times)")
 @click.option('--plugin-config', 'plugin_config_file', type=click.Path(exists=True, path_type=Path), help="Path to plugin configuration JSON file")
 @click.option('--list-plugins', 'list_plugins', is_flag=True, help="List available plugins and exit")
-@click.option('--supply-chain', 'supply_chain_scan', is_flag=True, default=False, help="Scan dependencies for known CVE vulnerabilities.")
+@click.option('--supply-chain', is_flag=True, default=False, help="Scan dependencies for known CVE vulnerabilities.")
 @click.option('--wizard', is_flag=True, help="Interactive guided scan for first-time users")
 def run_scan_command(
     path: Optional[Path], 
@@ -353,7 +353,7 @@ def run_scan_command(
     plugins: tuple,
     plugin_config_file: Optional[Path],
     list_plugins: bool,
-    supply_chain_scan: bool,
+    supply_chain: bool,
     wizard: bool
 ):
     """The main scan command with plugin support."""
@@ -398,7 +398,6 @@ def run_scan_command(
                 config_path,
                 params["output_file"],
                 params["report_format"],
-                params["severity_level"],
                 params["severity_level"],
                 params["ai_scan"],
                 plugins=(),
@@ -468,7 +467,7 @@ def run_scan_command(
                 )
                 scan_path = Path(temp_dir)
                 scan_path = Path(temp_dir)
-                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain_scan)
+                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain)
             except subprocess.CalledProcessError as e:
                 click.echo(click.style(f"Error: Failed to clone repository.\n{e.stderr}", fg="red"))
                 sys.exit(1)
@@ -479,7 +478,7 @@ def run_scan_command(
         # Handle local path scan
         scan_path = path
         scan_path = path
-        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain_scan)
+        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain)
     return
 
 
