@@ -39,30 +39,30 @@ https://github.com/user-attachments/assets/0fe03961-0b62-4964-83ba-849f2357efba
 
 ### Prerequisites
 
-- **Python**: Python 3.9 – 3.12 supported (Python 3.9 or newer, up to 3.12).
+- **Python**: Python 3.9 – 3.14 supported (Python 3.9 or newer, up to 3.14).
 - **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can easily install the **Rust toolchain** via [rustup](https://rustup.rs/) and verify your installation by running `cargo --version`.
 
 ### Installation
 
-It is **highly recommended** to install PySpector in a dedicated Python 3.12 venv.
+It is **highly recommended** to install PySpector in a dedicated Python 3.14 venv.
 
 #### Create a Virtual Environment:
 
 - **Linux (Bash)**:
 
   ```bash
-  # Download Python 3.12
-  python3.12 -m venv venv
+  # Download Python 3.14
+  python3.14 -m venv venv
   source venv/bin/activate
   ```
 
 - **Windows (PowerShell)**:
 
   ```powershell
-  # Download Python 3.12 from the Microsoft Store and run:
-  python3.12 -m venv venv
+  # Download Python 3.14 from the Microsoft Store and run:
+  python3.14 -m venv venv
   .\venv\Scripts\Activate.ps1
-  # or, depending on the Python 3.12 installation source:
+  # or, depending on the Python 3.14 installation source:
   .\venv\bin\Activate.ps1
   ```
 
