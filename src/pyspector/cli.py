@@ -1,4 +1,3 @@
-from __future__ import annotations
 import click
 import time
 import json
@@ -125,40 +124,75 @@ def should_skip_file(file_path: Path) -> bool:
     return False
 
 
-def get_python_file_asts(path: Path) -> List[Dict[str, Any]]:
+def get_python_file_asts(path: Path, enable_syntax_warnings: bool = False) -> List[Dict[str, Any]]:
     """Recursively finds Python files and returns their content and AST."""
     results = []
-    files_to_scan = list(path.glob('**/*.py')) if path.is_dir() else [path]
+    files_to_scan = list(path.glob("**/*.py")) if path.is_dir() else [path]
 
-    # Suppress Python's SyntaxWarning during AST parsing
+    # Suppress or treat Python's SyntaxWarning as errors during AST parsing
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=SyntaxWarning)
-        
+        if not enable_syntax_warnings:
+            warnings.filterwarnings('ignore', category=SyntaxWarning)
+        else:
+            warnings.filterwarnings('error', category=SyntaxWarning)
+
         for py_file in files_to_scan:
             if py_file.is_file():
-                # Skip test fixtures
+                # Pre-compute the relative path to maintain consistent log messages
+                display_path = py_file.relative_to(path) if path.is_dir() else py_file.name
+
+                # Skip test fixtures and notify the user
                 if should_skip_file(py_file):
+                    click.echo(
+                        click.style(
+                            f"Info: Skipped {display_path} (test file or fixture)",
+                            fg="blue",
+                        )
+                    )
                     continue
-                
+
                 try:
-                    content = py_file.read_text(encoding='utf-8')
+                    content = py_file.read_text(encoding="utf-8")
                     parsed_ast = ast.parse(content, filename=str(py_file))
                     ast_json = json.dumps(parsed_ast, cls=AstEncoder)
-                    results.append({
-                        "file_path": str(py_file.relative_to(path)) if path.is_dir() else py_file.name,
-                        "content": content,
-                        "ast_json": ast_json
-                    })
+                    results.append(
+                        {
+                            "file_path": str(display_path),
+                            "content": content,
+                            "ast_json": ast_json,
+                        }
+                    )
+                except SyntaxWarning as e:
+                    # Log a warning when AST parsing fails due to Python syntax warning
+                    click.echo(
+                        click.style(
+                            f"SyntaxWarning: there is a syntax warning in {display_path} - {e.msg} (line {e.lineno})",
+                            fg="yellow",
+                        )
+                    )
                 except SyntaxError as e:
-                    # Only warn about syntax errors in non-test files
-                    if not should_skip_file(py_file):
-                        click.echo(click.style(
-                            f"Warning: Could not parse {py_file.relative_to(path) if path.is_dir() else py_file.name}: {e.msg} ({py_file.name}, line {e.lineno})",
-                            fg="yellow"
-                        ))
+                    # Log a error when AST parsing fails due to invalid Python syntax
+                    click.echo(
+                        click.style(
+                            f"SyntaxError: Could not parse {display_path} - {e.msg} (line {e.lineno})",
+                            fg="red",
+                        )
+                    )
                 except UnicodeDecodeError as e:
-                    click.echo(click.style(f"Warning: Could not read {py_file}: {e}", fg="yellow"))
-    
+                    # Log a warning when a file cannot be read as utf-8
+                    click.echo(
+                        click.style(
+                            f"Warning: Could not read {display_path} - Invalid UTF-8 encoding ({e.reason})",
+                            fg="yellow",
+                        )
+                    )
+                except Exception as e:
+                    click.echo(
+                        click.style(
+                            f"Warning: Could not read {display_path} - {e}", fg="yellow"
+                        )
+                    )
+
     return results
 
 
@@ -308,6 +342,8 @@ def run_wizard():
 
     supply_chain = click.confirm("Check dependencies for CVE vulnerabilities?", default=False)
 
+    syntax_warnings = click.confirm("Treat Python SyntaxWarnings as errors?", default=False)
+
 
     output_file = None
     if report_format != "console":
@@ -325,6 +361,7 @@ def run_wizard():
         "report_format": report_format,
         "output_file": output_file,
         "supply_chain_scan": supply_chain,
+        "syntax_warnings": syntax_warnings,
     }
 
 
@@ -342,6 +379,7 @@ def run_wizard():
 @click.option('--plugin-config', 'plugin_config_file', type=click.Path(exists=True, path_type=Path), help="Path to plugin configuration JSON file")
 @click.option('--list-plugins', 'list_plugins', is_flag=True, help="List available plugins and exit")
 @click.option('--supply-chain', is_flag=True, default=False, help="Scan dependencies for known CVE vulnerabilities.")
+@click.option('--syntax-warnings', is_flag=True, default=False, help="Treat SyntaxWarning as errors during parsing.")
 @click.option('--wizard', is_flag=True, help="Interactive guided scan for first-time users")
 def run_scan_command(
     path: Optional[Path], 
@@ -355,6 +393,7 @@ def run_scan_command(
     plugin_config_file: Optional[Path],
     list_plugins: bool,
     supply_chain: bool,
+    syntax_warnings: bool,
     wizard: bool
 ):
     """The main scan command with plugin support."""
@@ -391,7 +430,8 @@ def run_scan_command(
                     params["ai_scan"],
                     plugins=(),
                     plugin_config={},
-                    supply_chain_scan=params["supply_chain_scan"]
+                    supply_chain_scan=params["supply_chain_scan"],
+                    syntax_warnings=params["syntax_warnings"]
                 )
         else:
             _execute_scan(
@@ -403,7 +443,8 @@ def run_scan_command(
                 params["ai_scan"],
                 plugins=(),
                 plugin_config={},
-                supply_chain_scan=params["supply_chain_scan"]
+                supply_chain_scan=params["supply_chain_scan"],
+                syntax_warnings=params["syntax_warnings"]
             )
         return
 
@@ -468,7 +509,7 @@ def run_scan_command(
                 )
                 scan_path = Path(temp_dir)
                 scan_path = Path(temp_dir)
-                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain)
+                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain, syntax_warnings)
             except subprocess.CalledProcessError as e:
                 click.echo(click.style(f"Error: Failed to clone repository.\n{e.stderr}", fg="red"))
                 sys.exit(1)
@@ -479,7 +520,7 @@ def run_scan_command(
         # Handle local path scan
         scan_path = path
         scan_path = path
-        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain)
+        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain, syntax_warnings)
     return
 
 
@@ -492,7 +533,8 @@ def _execute_scan(
     ai_scan: bool,
     plugins: tuple,
     plugin_config: dict,
-    supply_chain_scan: bool = False
+    supply_chain_scan: bool = False,
+    syntax_warnings: bool = False
 ):
     """Helper function to run the actual scan and reporting."""
     start_time = time.time()
@@ -515,7 +557,7 @@ def _execute_scan(
             click.echo(click.style(f"Warning: Could not parse baseline file '{baseline_path}'.", fg="yellow"))
     
     # --- AST Generation for Python files ---
-    python_files_data = get_python_file_asts(scan_path)
+    python_files_data = get_python_file_asts(scan_path, enable_syntax_warnings=syntax_warnings)
     click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files")
     
     # --- Supply Chain Scanning ---
