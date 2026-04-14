@@ -109,75 +109,121 @@ class PySpectorPlugin(ABC):
 
 class PluginSecurity:
     """Security utilities for plugin system"""
-    
+ 
     DANGEROUS_MODULES = {
         'os.system', 'subprocess.Popen', 'eval', 'exec',
         '__import__', 'compile'
     }
-    
+ 
     ALLOWED_IMPORTS = {
         'json', 'pathlib', 'typing', 'dataclasses', 're',
         'datetime', 'collections', 'itertools', 'functools'
     }
-    
+ 
     @staticmethod
     def calculate_checksum(file_path: Path) -> str:
-        """Calculate SHA256 checksum of a plugin file"""
+        import hashlib
         sha256 = hashlib.sha256()
         with open(file_path, 'rb') as f:
             for chunk in iter(lambda: f.read(4096), b''):
                 sha256.update(chunk)
         return sha256.hexdigest()
-    
+
     @staticmethod
     def validate_plugin_code(plugin_path: Path) -> tuple[bool, str]:
         """
-        Basic static analysis of plugin code for security.
-
+        Static analysis of plugin code for security.
         Returns:
             Tuple of (is_safe, message)
+ 
+        Design principle: fail-closed.  Anything that cannot be statically
+        resolved is treated as potentially dangerous rather than silently
+        allowed.
         """
-
-        fatal_calls = {
-            "eval",
-            "exec",
-            "compile",
-            "__import__",
-            "vars",
-            "getattr", 
-            "os.system",
-            "os.popen",
+ 
+        # Any direct or aliased call to these names is an immediate rejection.
+        fatal_calls: set[str] = {
+            # Code execution
+            "eval", "exec", "compile", "__import__",
+            # Reflection/introspection
+            "vars", "getattr",
+            # importlib — dynamic module loading (all public entry-points)
+            "importlib.import_module",
+            "importlib.util.spec_from_file_location",
+            "importlib.util.spec_from_loader",
+            "importlib.util.module_from_spec",
+            # os — process execution: complete API surface
+            "os.system", "os.popen",
+            "os.spawnl",   "os.spawnle",   "os.spawnlp",   "os.spawnlpe",
+            "os.spawnv",   "os.spawnve",   "os.spawnvp",   "os.spawnvpe",
+            "os.execl",    "os.execle",    "os.execlp",    "os.execlpe",
+            "os.execv",    "os.execve",    "os.execvp",    "os.execvpe",
+            "os.posix_spawn", "os.posix_spawnp",
+            # subprocess — complete API surface
             "subprocess.Popen",
             "subprocess.run",
             "subprocess.call",
             "subprocess.check_call",
             "subprocess.check_output",
+            "subprocess.getoutput",          
+            "subprocess.getstatusoutput",    
+            # ctypes — direct native/OS calls
+            "ctypes.CDLL", "ctypes.cdll", "ctypes.windll", "ctypes.oledll",
         }
-        warning_calls = {
-            "open",
-            "builtins.open",
+ 
+        # Importing any of these (or sub-packages thereof) is an immediate rejection, because they enable dynamic execution that the call-level checks cannot fully enumerate.
+        fatal_import_modules: set[str] = {
+            "importlib",          # dynamic module loading
+            "importlib.util",
+            "ctypes",             # native library access
+            "cffi",               # native library access
+            "types",              # raw bytecode construction
+        }
+ 
+        # Subscript access (obj[key]) on these expressions is rejected because it exposes an arbitrary callable:
+        #   sys.modules['os'].system(...)
+        #   builtins.__dict__['exec'](...)
+        fatal_subscript_bases: set[str] = {
+            "sys.modules",
+            "__builtins__",
+            "builtins.__dict__",
         }
 
+        # When the call target is of the form <unresolvable>.<attr>(), we check whether <attr> is one of these names.  This catches the importlib.import_module('os').system(...) pattern.
+        dangerous_opaque_attrs: set[str] = {
+            "system", "popen",
+            "spawnl",   "spawnle",  "spawnlp",  "spawnlpe",
+            "spawnv",   "spawnve",  "spawnvp",  "spawnvpe",
+            "execl",    "execle",   "execlp",   "execlpe",
+            "execv",    "execve",   "execvp",   "execvpe",
+            "posix_spawn", "posix_spawnp",
+            "Popen", "run", "call", "check_call", "check_output",
+            "getoutput", "getstatusoutput",
+            "exec", "eval", "compile",
+            "load_module", "exec_module",  # importlib loader API
+        }
+ 
+        warning_calls: set[str] = {"open", "builtins.open"}
         try:
             source = plugin_path.read_text()
             tree = ast.parse(source, filename=str(plugin_path))
         except Exception as exc:
             return False, f"Error validating plugin: {exc}"
-
+ 
         alias_map: Dict[str, str] = {}
         detected_fatal: set[str] = set()
         detected_warnings: set[str] = set()
-
+ 
+ 
         def register_alias(alias: str, target: str) -> None:
             alias_map[alias] = target
-
+ 
         def resolve_name(node: ast.AST) -> Optional[str]:
             if isinstance(node, ast.Name):
-                target = alias_map.get(node.id, node.id)
-                return target
+                return alias_map.get(node.id, node.id)
             if isinstance(node, ast.Attribute):
                 attrs: List[str] = []
-                current = node
+                current: ast.AST = node
                 while isinstance(current, ast.Attribute):
                     attrs.append(current.attr)
                     current = current.value
@@ -186,62 +232,105 @@ class PluginSecurity:
                     attrs.append(base)
                     attrs.reverse()
                     return ".".join(attrs)
+                return None
             if isinstance(node, ast.Call):
                 inner = resolve_name(node.func)
                 if inner:
                     return inner
             return None
+ 
+        def _normalise(name: str) -> str:
+            """Apply alias map to the leading component of a dotted name."""
+            parts = name.split(".")
+            root = alias_map.get(parts[0], parts[0])
+            return ".".join([root, *parts[1:]]) if len(parts) > 1 else root
 
         class Analyzer(ast.NodeVisitor):
             def visit_Import(self, node: ast.Import) -> None:
                 for alias in node.names:
-                    register_alias(alias.asname or alias.name, alias.name)
+                    mod = alias.name
+                    for blocked in fatal_import_modules:
+                        if mod == blocked or mod.startswith(blocked + "."):
+                            detected_fatal.add(f"import {mod}")
+                    register_alias(alias.asname or mod, mod)
                 self.generic_visit(node)
 
             def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
                 module = node.module or ""
+                for blocked in fatal_import_modules:
+                    if module == blocked or module.startswith(blocked + "."):
+                        for alias in node.names:
+                            detected_fatal.add(f"from {module} import {alias.name}")
                 for alias in node.names:
                     target = f"{module}.{alias.name}" if module else alias.name
                     register_alias(alias.asname or alias.name, target)
                 self.generic_visit(node)
 
+            def visit_Subscript(self, node: ast.Subscript) -> None:
+                """
+                Flag dangerous subscript patterns:
+                  sys.modules['os']          → sys.modules[...]
+                  builtins.__dict__['exec']  → builtins.__dict__[...]
+                """
+                base_name = resolve_name(node.value)
+                if base_name:
+                    normalised = _normalise(base_name)
+                    if (normalised in fatal_subscript_bases
+                            or base_name in fatal_subscript_bases):
+                        detected_fatal.add(f"{normalised}[...]")
+                self.generic_visit(node)
+
             def visit_Call(self, node: ast.Call) -> None:
                 name = resolve_name(node.func)
-                if name:
-                    simplified = name.replace("builtins.", "")
+ 
+                if name is None:
+                    if isinstance(node.func, ast.Attribute):
+                        attr = node.func.attr
+                        if attr in dangerous_opaque_attrs:
+                            detected_fatal.add(f"<opaque>.{attr}()")
 
-                    # Handle alias that already resolved to dotted path
+                    elif isinstance(node.func, ast.Subscript):
+                        base_name = resolve_name(node.func.value)
+                        if base_name:
+                            normalised = _normalise(base_name)
+                            if (normalised in fatal_subscript_bases
+                                    or base_name in fatal_subscript_bases):
+                                detected_fatal.add(
+                                    f"call_via_{normalised}[...]"
+                                )
+                        else:
+                            detected_fatal.add("<opaque_subscript_call>")
+ 
+                else:
+                    simplified = name.replace("builtins.", "")
+ 
                     if simplified in fatal_calls:
                         detected_fatal.add(simplified)
                     elif simplified in warning_calls:
                         detected_warnings.add(simplified)
                     else:
-                        # Check dotted paths by normalising alias root
-                        parts = simplified.split(".")
-                        if parts:
-                            root = alias_map.get(parts[0], parts[0])
-                            normalised = ".".join([root, *parts[1:]]) if len(parts) > 1 else root
-                            normalised = normalised.replace("builtins.", "")
-
-                            if normalised in fatal_calls:
-                                detected_fatal.add(normalised)
-                            elif normalised in warning_calls:
-                                detected_warnings.add(normalised)
-
+                        normalised = _normalise(simplified).replace(
+                            "builtins.", ""
+                        )
+                        if normalised in fatal_calls:
+                            detected_fatal.add(normalised)
+                        elif normalised in warning_calls:
+                            detected_warnings.add(normalised)
+ 
                 self.generic_visit(node)
-
+ 
         Analyzer().visit(tree)
-
+ 
         if detected_fatal:
             ordered = ", ".join(sorted(detected_fatal))
             return False, f"Plugin uses high-risk calls: {ordered}"
-
+ 
         if detected_warnings:
             ordered = ", ".join(sorted(detected_warnings))
             return True, f"Plugin uses sensitive operations: {ordered}"
-
+ 
         return True, ""
-    
+ 
     @staticmethod
     def verify_checksum(plugin_path: Path, expected_checksum: str) -> bool:
         """Verify plugin file checksum"""
