@@ -59,7 +59,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
     
     // Initialize summaries for all functions
     for func_id in call_graph.functions.keys() {
-        global_ctx.summaries.insert(func_id.clone(), FunctionSummary::default());
+        global_ctx.summaries.insert(func_id.clone(), FunctionSummary::default() as FunctionSummary);
     }
     
     let mut all_issues = Vec::new();
@@ -76,7 +76,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
         for (func_id, func_node) in &call_graph.functions {
             let cfg = build_cfg(func_node);
             
-            let file_path = func_id.split("::").next().unwrap_or("");
+            let file_path: &str = func_id.split("::").next().unwrap_or("");
             let default_content = String::new();
             let content = call_graph.file_contents.get(file_path).unwrap_or(&default_content);
             
