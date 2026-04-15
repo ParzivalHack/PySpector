@@ -457,3 +457,28 @@ For continuous monitoring, you can schedule regular scans of your projects using
 ```
 
 The script will prompt you for the project path, desired scan frequency (daily, weekly, monthly), and a location to store the JSON reports. It will then output the command to add to your crontab, automating your security scanning and reporting process.
+<<<<<<< HEAD
+=======
+
+## 🛡️ Security Hall of Fame
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://satori.ci/"><img src="https://avatars.githubusercontent.com/u/89515805?v=4?s=100" width="100px;" alt="satoridev01"/><br /><sub><b>satoridev01</b></sub></a><br /><a href="#security-satoridev01" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Shinigami81"><img src="https://avatars.githubusercontent.com/u/122274261?v=4?s=100" width="100px;" alt="Shinigami"/><br /><sub><b>Shinigami</b></sub></a><br /><a href="#security-Shinigami81" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://youtube.com/fantasm"><img src="https://avatars.githubusercontent.com/u/35772301?v=4?s=100" width="100px;" alt="fg0x0"/><br /><sub><b>fg0x0</b></sub></a><br /><a href="#security-fg0x0" title="Security">🛡️</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
+>>>>>>> 6e31dc0 (Add Security HoF)
