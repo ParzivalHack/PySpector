@@ -456,10 +456,6 @@ For continuous monitoring, you can schedule regular scans of your projects using
 ./scripts/setup_cron.sh
 ```
 
-The script will prompt you for the project path, desired scan frequency (daily, weekly, monthly), and a location to store the JSON reports. It will then output the command to add to your crontab, automating your security scanning and reporting process.
-<<<<<<< HEAD
-=======
-
 ## 🛡️ Security Hall of Fame
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
@@ -481,4 +477,3 @@ The script will prompt you for the project path, desired scan frequency (daily, 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
->>>>>>> 6e31dc0 (Add Security HoF)
