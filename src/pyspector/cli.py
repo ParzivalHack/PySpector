@@ -14,6 +14,7 @@ from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
 from .plugin_system import get_plugin_manager, PluginSecurity
+from .stats import StatsCollector
 import requests
 from urllib.parse import urlparse
 
@@ -36,14 +37,12 @@ def get_startup_note():
         "💡 Hardware: The parts of a computer system that can be kicked."
     ]
     try:
-        # Programming category, safe mode on, single line only
         url = "https://v2.jokeapi.dev/joke/Programming?safe-mode&type=single"
-        # 1.5s timeout so the tool doesn't feel slow if the user is offline
         response = requests.get(url, timeout=1.5)
         if response.status_code == 200:
             return f"💡 {response.json()['joke']}"
     except Exception:
-        pass 
+        pass
     return random.choice(fallbacks)
 
 _list = list
@@ -60,11 +59,9 @@ class AstEncoder(json.JSONEncoder):
                 "lineno": getattr(node, 'lineno', -1),
                 "col_offset": getattr(node, 'col_offset', -1),
             }
-            # Separate fields from children nodes for clarity in Rust
             child_nodes = {}
             simple_fields = {}
             for field, value in _ast_iter_fields(node):
-                # Check if it's a list of AST nodes
                 if type(value).__name__ == 'list':
                     if value and all(isinstance(n, _ast_AST) for n in value):
                         child_nodes[field] = value
@@ -73,7 +70,6 @@ class AstEncoder(json.JSONEncoder):
                 elif isinstance(value, _ast_AST):
                     child_nodes[field] = [value]
                 else:
-                    # Handle non-JSON serializable types
                     if isinstance(value, bytes):
                         simple_fields[field] = value.decode('utf-8', errors='replace')
                     elif isinstance(value, int) and value.bit_length() > 14000:
@@ -81,28 +77,21 @@ class AstEncoder(json.JSONEncoder):
                     elif isinstance(value, (int, float, str, bool)) or value is None:
                         simple_fields[field] = value
                     else:
-                        # Convert other types to string representation
                         simple_fields[field] = str(value)
-            
+
             fields["children"] = child_nodes
             fields["fields"] = simple_fields
             return fields
         elif isinstance(node, bytes):
             return node.decode('utf-8', errors='replace')
         elif hasattr(node, '__dict__'):
-            # Handle other objects that might not be JSON serializable
             return str(node)
         return super().default(node)
 
 
 def should_skip_file(file_path: Path) -> bool:
-    """
-    Determine if a file should be skipped during AST parsing.
-    Excludes test fixtures and other files with intentionally malformed syntax.
-    """
+    """Determine if a file should be skipped during AST parsing."""
     path_str = str(file_path)
-    
-    # Skip test fixture directories
     skip_patterns = [
         '/tests/fixtures/',
         '/test/fixtures/',
@@ -110,27 +99,40 @@ def should_skip_file(file_path: Path) -> bool:
         '/_fixtures/',
         '/fixtures/',
     ]
-    
     for pattern in skip_patterns:
         if pattern in path_str.replace('\\', '/'):
             return True
-    
-    # Skip common test file patterns
     filename = file_path.name
     if filename.startswith('test_') or filename.endswith('_test.py'):
-        # Only skip if in a tests directory
         if '/tests/' in path_str.replace('\\', '/') or '/test/' in path_str.replace('\\', '/'):
             return True
-    
     return False
 
 
-def get_python_file_asts(path: Path, enable_syntax_warnings: bool = False) -> List[Dict[str, Any]]:
-    """Recursively finds Python files and returns their content and AST."""
+def get_python_file_asts(
+    path: Path,
+    enable_syntax_warnings: bool = False,
+    _stats_meta: Optional[Dict[str, int]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Recursively finds Python files and returns their content and AST.
+
+    Args:
+        path: File or directory to scan.
+        enable_syntax_warnings: When True, SyntaxWarning is treated as an
+            error and the offending file is excluded from results.
+        _stats_meta: Optional dict that will be populated with
+            ``{'skipped': N, 'errors': N}`` for use by StatsCollector.
+            Defaults to None (no tracking).  Backward-compatible: callers
+            that do not pass this argument are unaffected.
+    """
+    if _stats_meta is not None:
+        _stats_meta['skipped'] = 0
+        _stats_meta['errors']  = 0
+
     results = []
     files_to_scan = list(path.glob("**/*.py")) if path.is_dir() else [path]
 
-    # Suppress or treat Python's SyntaxWarning as errors during AST parsing
     with warnings.catch_warnings():
         if not enable_syntax_warnings:
             warnings.filterwarnings('ignore', category=SyntaxWarning)
@@ -139,10 +141,10 @@ def get_python_file_asts(path: Path, enable_syntax_warnings: bool = False) -> Li
 
         for py_file in files_to_scan:
             if py_file.is_file():
-                # Pre-compute the relative path to maintain consistent log messages
-                display_path = py_file.relative_to(path) if path.is_dir() else py_file.name
+                display_path = (
+                    py_file.relative_to(path) if path.is_dir() else py_file.name
+                )
 
-                # Skip test fixtures and notify the user
                 if should_skip_file(py_file):
                     click.echo(
                         click.style(
@@ -150,6 +152,8 @@ def get_python_file_asts(path: Path, enable_syntax_warnings: bool = False) -> Li
                             fg="blue",
                         )
                     )
+                    if _stats_meta is not None:
+                        _stats_meta['skipped'] += 1
                     continue
 
                 try:
@@ -164,58 +168,61 @@ def get_python_file_asts(path: Path, enable_syntax_warnings: bool = False) -> Li
                         }
                     )
                 except SyntaxWarning as e:
-                    # Log a warning when AST parsing fails due to Python syntax warning
                     click.echo(
                         click.style(
-                            f"SyntaxWarning: there is a syntax warning in {display_path} - {e.msg} (line {e.lineno})",
+                            f"SyntaxWarning: there is a syntax warning in "
+                            f"{display_path} - {e.msg} (line {e.lineno})",
                             fg="yellow",
                         )
                     )
+                    if _stats_meta is not None:
+                        _stats_meta['errors'] += 1
                 except SyntaxError as e:
-                    # Log a error when AST parsing fails due to invalid Python syntax
                     click.echo(
                         click.style(
-                            f"SyntaxError: Could not parse {display_path} - {e.msg} (line {e.lineno})",
+                            f"SyntaxError: Could not parse {display_path} "
+                            f"- {e.msg} (line {e.lineno})",
                             fg="red",
                         )
                     )
+                    if _stats_meta is not None:
+                        _stats_meta['errors'] += 1
                 except UnicodeDecodeError as e:
-                    # Log a warning when a file cannot be read as utf-8
                     click.echo(
                         click.style(
-                            f"Warning: Could not read {display_path} - Invalid UTF-8 encoding ({e.reason})",
+                            f"Warning: Could not read {display_path} "
+                            f"- Invalid UTF-8 encoding ({e.reason})",
                             fg="yellow",
                         )
                     )
+                    if _stats_meta is not None:
+                        _stats_meta['errors'] += 1
                 except Exception as e:
                     click.echo(
                         click.style(
-                            f"Warning: Could not read {display_path} - {e}", fg="yellow"
+                            f"Warning: Could not read {display_path} - {e}",
+                            fg="yellow",
                         )
                     )
+                    if _stats_meta is not None:
+                        _stats_meta['errors'] += 1
 
     return results
 
 
 def _normalize_plugin_name_cli(raw_name: str) -> tuple[str, bool]:
-    """
-    Normalise plugin identifiers for CLI usage.
-
-    Returns:
-        Tuple of (normalised_name, was_changed)
-    """
+    """Normalise plugin identifiers for CLI usage."""
     stripped = raw_name.strip()
     normalised = stripped.replace("-", "_")
-
     if not normalised:
         raise click.ClickException("Plugin name cannot be empty.")
-
     if not normalised.isidentifier():
         raise click.ClickException(
-            "Plugin names must be valid Python identifiers (letters, numbers, underscores)."
+            "Plugin names must be valid Python identifiers "
+            "(letters, numbers, underscores)."
         )
-
     return normalised, normalised != stripped
+
 
 def execute_plugins(
     findings: list,
@@ -269,7 +276,6 @@ def execute_plugins(
                     fg="green",
                 )
             )
-
             if result.get("output_files"):
                 click.echo("[*] Generated files:")
                 for file_path in result["output_files"]:
@@ -281,6 +287,7 @@ def execute_plugins(
                     fg="red",
                 )
             )
+
 
 # --- Main CLI Logic ---
 
@@ -309,6 +316,7 @@ def cli():
     click.echo("Made with <3 by github.com/ParzivalHack\n")
     note = get_startup_note()
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
+
 
 def run_wizard():
     click.echo("\n🧙 PySpector Scan Wizard\n")
@@ -342,9 +350,8 @@ def run_wizard():
     )
 
     supply_chain = click.confirm("Check dependencies for CVE vulnerabilities?", default=False)
-
     syntax_warnings = click.confirm("Treat Python SyntaxWarnings as errors?", default=False)
-
+    show_stats = click.confirm("Show scan performance statistics at the end?", default=False)
 
     output_file = None
     if report_format != "console":
@@ -355,72 +362,104 @@ def run_wizard():
     click.echo("\n[*] Wizard completed. Starting scan...\n")
 
     return {
-        "scan_path": scan_path,
-        "repo_url": repo_url,
-        "ai_scan": ai_scan,
-        "severity_level": severity_level,
-        "report_format": report_format,
-        "output_file": output_file,
+        "scan_path":       scan_path,
+        "repo_url":        repo_url,
+        "ai_scan":         ai_scan,
+        "severity_level":  severity_level,
+        "report_format":   report_format,
+        "output_file":     output_file,
         "supply_chain_scan": supply_chain,
         "syntax_warnings": syntax_warnings,
+        "show_stats":      show_stats,
     }
 
 
-
-
-@click.command(help="Scan a directory, file, or remote Git repository for vulnerabilities.")
-@click.argument('path', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, path_type=Path), required=False)
-@click.option('-u', '--url', 'repo_url', type=str, help="URL of a public GitHub/GitLab repository to clone and scan.")
-@click.option('-c', '--config', 'config_path', type=click.Path(exists=True, path_type=Path), help="Path to a pyspector.toml config file.")
-@click.option('-o', '--output', 'output_file', type=click.Path(path_type=Path), help="Path to write the report to.")
-@click.option('-f', '--format', 'report_format', type=click.Choice(['console', 'json', 'sarif', 'html']), default='console', help="Format of the report.")
-@click.option('-s', '--severity', 'severity_level', type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']), default='LOW', help="Minimum severity level to report.")
-@click.option('--ai', 'ai_scan', is_flag=True, default=False, help="Enable specialized scanning for AI/LLM vulnerabilities.")
-@click.option('--plugin', 'plugins', multiple=True, help="Load and execute a plugin (can be specified multiple times)")
-@click.option('--plugin-config', 'plugin_config_file', type=click.Path(exists=True, path_type=Path), help="Path to plugin configuration JSON file")
-@click.option('--list-plugins', 'list_plugins', is_flag=True, help="List available plugins and exit")
-@click.option('--supply-chain', is_flag=True, default=False, help="Scan dependencies for known CVE vulnerabilities.")
-@click.option('--syntax-warnings', is_flag=True, default=False, help="Treat SyntaxWarning as errors during parsing.")
-@click.option('--wizard', is_flag=True, help="Interactive guided scan for first-time users")
+@click.command(
+    help="Scan a directory, file, or remote Git repository for vulnerabilities."
+)
+@click.argument(
+    'path',
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True,
+        readable=True, path_type=Path
+    ),
+    required=False,
+)
+@click.option('-u', '--url', 'repo_url', type=str,
+              help="URL of a public GitHub/GitLab repository to clone and scan.")
+@click.option('-c', '--config', 'config_path',
+              type=click.Path(exists=True, path_type=Path),
+              help="Path to a pyspector.toml config file.")
+@click.option('-o', '--output', 'output_file',
+              type=click.Path(path_type=Path),
+              help="Path to write the report to.")
+@click.option('-f', '--format', 'report_format',
+              type=click.Choice(['console', 'json', 'sarif', 'html']),
+              default='console',
+              help="Format of the report.")
+@click.option('-s', '--severity', 'severity_level',
+              type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+              default='LOW',
+              help="Minimum severity level to report.")
+@click.option('--ai', 'ai_scan', is_flag=True, default=False,
+              help="Enable specialized scanning for AI/LLM vulnerabilities.")
+@click.option('--plugin', 'plugins', multiple=True,
+              help="Load and execute a plugin (can be specified multiple times)")
+@click.option('--plugin-config', 'plugin_config_file',
+              type=click.Path(exists=True, path_type=Path),
+              help="Path to plugin configuration JSON file")
+@click.option('--list-plugins', 'list_plugins', is_flag=True,
+              help="List available plugins and exit")
+@click.option('--supply-chain', is_flag=True, default=False,
+              help="Scan dependencies for known CVE vulnerabilities.")
+@click.option('--syntax-warnings', is_flag=True, default=False,
+              help="Treat SyntaxWarning as errors during parsing.")
+@click.option('--wizard', is_flag=True,
+              help="Interactive guided scan for first-time users")
+@click.option('--stats', 'show_stats', is_flag=True, default=False,
+              help=(
+                  "Print a detailed performance and findings statistics table "
+                  "at the end of the scan (LoC/sec, memory, engine breakdown, "
+                  "top rules, top files, vulnerability density, and more)."
+              ))
 def run_scan_command(
-    path: Optional[Path], 
-    repo_url: Optional[str], 
-    config_path: Optional[Path], 
-    output_file: Optional[Path], 
-    report_format: str, 
-    severity_level: str, 
-    ai_scan: bool,
-    plugins: tuple,
+    path:             Optional[Path],
+    repo_url:         Optional[str],
+    config_path:      Optional[Path],
+    output_file:      Optional[Path],
+    report_format:    str,
+    severity_level:   str,
+    ai_scan:          bool,
+    plugins:          tuple,
     plugin_config_file: Optional[Path],
-    list_plugins: bool,
-    supply_chain: bool,
-    syntax_warnings: bool,
-    wizard: bool
+    list_plugins:     bool,
+    supply_chain:     bool,
+    syntax_warnings:  bool,
+    wizard:           bool,
+    show_stats:       bool,
 ):
-    """The main scan command with plugin support."""
+    """The main scan command with plugin and stats support."""
+
     # --- Wizard Mode ---
     if wizard:
         params = run_wizard()
 
-        # Repo scan
         if params["repo_url"]:
             try:
-                _parsed = urlparse(params["repo_url"])
+                _parsed   = urlparse(params["repo_url"])
                 _hostname = _parsed.hostname or ""
             except Exception:
                 _hostname = ""
 
             if _hostname not in ("github.com", "gitlab.com"):
                 raise click.BadParameter(
-                    "URL must be a public GitHub or GitLab repository. "
-            )
+                    "URL must be a public GitHub or GitLab repository."
+                )
             with tempfile.TemporaryDirectory() as temp_dir:
                 click.echo(f"[*] Cloning '{params['repo_url']}' into temporary directory...")
                 subprocess.run(
                     ['git', 'clone', '--depth', '1', params["repo_url"], temp_dir],
-                    check=True,
-                    capture_output=True,
-                    text=True
+                    check=True, capture_output=True, text=True,
                 )
                 _execute_scan(
                     Path(temp_dir),
@@ -432,7 +471,8 @@ def run_scan_command(
                     plugins=(),
                     plugin_config={},
                     supply_chain_scan=params["supply_chain_scan"],
-                    syntax_warnings=params["syntax_warnings"]
+                    syntax_warnings=params["syntax_warnings"],
+                    show_stats=params["show_stats"],
                 )
         else:
             _execute_scan(
@@ -445,16 +485,17 @@ def run_scan_command(
                 plugins=(),
                 plugin_config={},
                 supply_chain_scan=params["supply_chain_scan"],
-                syntax_warnings=params["syntax_warnings"]
+                syntax_warnings=params["syntax_warnings"],
+                show_stats=params["show_stats"],
             )
         return
 
     # Handle --list-plugins
     if list_plugins:
         plugin_manager = get_plugin_manager()
-        available = plugin_manager.list_available_plugins()
+        available  = plugin_manager.list_available_plugins()
         registered = plugin_manager.registry.list_plugins()
-        
+
         click.echo("\n=== Available Plugins ===")
         if not available:
             click.echo("No plugins found")
@@ -465,125 +506,185 @@ def run_scan_command(
                 if info:
                     status = "trusted" if info.get("trusted") else "untrusted"
                     click.echo(
-                        f"  - {plugin_name} ({status}) - v{info.get('version', 'unknown')}"
+                        f"  - {plugin_name} ({status}) "
+                        f"- v{info.get('version', 'unknown')}"
                     )
                 else:
                     click.echo(f"  - {plugin_name} (not registered)")
         click.echo()
         return
-    
+
     if not path and not repo_url:
         raise click.UsageError("You must provide either a PATH or a --url to scan.")
     if path and repo_url:
         raise click.UsageError("You cannot provide both a PATH and a --url.")
 
     # Load plugin config if provided
-    plugin_config = {}
+    plugin_config: Dict[str, Any] = {}
     if plugin_config_file:
         try:
             with open(plugin_config_file, 'r') as f:
                 plugin_config = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            click.echo(click.style(f"Warning: Could not load plugin config: {e}", fg="yellow"))
+            click.echo(
+                click.style(f"Warning: Could not load plugin config: {e}", fg="yellow")
+            )
 
     if repo_url:
-        # Handle Git URL cloning
         try:
-            _parsed = urlparse(repo_url)
+            _parsed   = urlparse(repo_url)
             _hostname = _parsed.hostname or ""
         except Exception:
             _hostname = ""
 
         if _hostname not in ("github.com", "gitlab.com"):
             raise click.BadParameter(
-                "URL must be a public GitHub or GitLab repository. "
+                "URL must be a public GitHub or GitLab repository."
             )
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             click.echo(f"[*] Cloning '{repo_url}' into temporary directory...")
             try:
                 subprocess.run(
                     ['git', 'clone', '--depth', '1', repo_url, temp_dir],
-                    check=True,
-                    capture_output=True,
-                    text=True
+                    check=True, capture_output=True, text=True,
                 )
-                scan_path = Path(temp_dir)
-                scan_path = Path(temp_dir)
-                _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain, syntax_warnings)
+                _execute_scan(
+                    Path(temp_dir), config_path, output_file,
+                    report_format, severity_level, ai_scan,
+                    plugins, plugin_config, supply_chain,
+                    syntax_warnings, show_stats,
+                )
             except subprocess.CalledProcessError as e:
-                click.echo(click.style(f"Error: Failed to clone repository.\n{e.stderr}", fg="red"))
+                click.echo(
+                    click.style(
+                        f"Error: Failed to clone repository.\n{e.stderr}", fg="red"
+                    )
+                )
                 sys.exit(1)
             except FileNotFoundError:
-                click.echo(click.style("Error: 'git' command not found. Please ensure Git is installed and in your PATH.", fg="red"))
+                click.echo(
+                    click.style(
+                        "Error: 'git' command not found. "
+                        "Please ensure Git is installed and in your PATH.",
+                        fg="red",
+                    )
+                )
                 sys.exit(1)
     else:
-        # Handle local path scan
-        scan_path = path
-        scan_path = path
-        _execute_scan(scan_path, config_path, output_file, report_format, severity_level, ai_scan, plugins, plugin_config, supply_chain, syntax_warnings)
-    return
+        _execute_scan(
+            path, config_path, output_file,
+            report_format, severity_level, ai_scan,
+            plugins, plugin_config, supply_chain,
+            syntax_warnings, show_stats,
+        )
 
 
 def _execute_scan(
-    scan_path: Path, 
-    config_path: Optional[Path], 
-    output_file: Optional[Path], 
-    report_format: str, 
-    severity_level: str, 
-    ai_scan: bool,
-    plugins: tuple,
-    plugin_config: dict,
-    supply_chain_scan: bool = False,
-    syntax_warnings: bool = False
+    scan_path:        Path,
+    config_path:      Optional[Path],
+    output_file:      Optional[Path],
+    report_format:    str,
+    severity_level:   str,
+    ai_scan:          bool,
+    plugins:          tuple,
+    plugin_config:    dict,
+    supply_chain_scan: bool   = False,
+    syntax_warnings:   bool   = False,
+    show_stats:        bool   = False,
 ):
-    """Helper function to run the actual scan and reporting."""
+    """
+    Core scan orchestrator.
+
+    When *show_stats* is True a StatsCollector is attached to the run.
+    It samples resource usage in a background thread, records per-phase
+    metrics, and prints the ASCII stats table after the normal report.
+    """
+
+    # ── Stats initialisation ──────────────────────────────────────────────
+    stats: Optional[StatsCollector] = None
+    if show_stats:
+        stats = StatsCollector()
+        stats.start()
+
     start_time = time.time()
-    
-    config = load_config(config_path)
-    rules_toml_str = get_default_rules(ai_scan)
+
+    config          = load_config(config_path)
+    rules_toml_str  = get_default_rules(ai_scan)
+
+    # Let the stats collector parse the rule TOML to build its detection map
+    if stats:
+        stats.record_rules(rules_toml_str)
 
     click.echo(f"[*] Starting PySpector scan on '{scan_path}'...")
-    
-    # --- Load Baseline ---
-    baseline_path = scan_path / ".pyspector_baseline.json" if scan_path.is_dir() else scan_path.parent / ".pyspector_baseline.json"
-    ignored_fingerprints = set()
+
+    # ── Load Baseline ─────────────────────────────────────────────────────
+    baseline_path = (
+        scan_path / ".pyspector_baseline.json"
+        if scan_path.is_dir()
+        else scan_path.parent / ".pyspector_baseline.json"
+    )
+    ignored_fingerprints: set = set()
     if baseline_path.exists():
         try:
             with baseline_path.open('r') as f:
                 baseline_data = json.load(f)
-                ignored_fingerprints = set(baseline_data.get("ignored_fingerprints", []))
-                click.echo(f"[*] Loaded baseline from '{baseline_path}', ignoring {len(ignored_fingerprints)} known issues.")
+                ignored_fingerprints = set(
+                    baseline_data.get("ignored_fingerprints", [])
+                )
+                click.echo(
+                    f"[*] Loaded baseline from '{baseline_path}', "
+                    f"ignoring {len(ignored_fingerprints)} known issues."
+                )
         except json.JSONDecodeError:
-            click.echo(click.style(f"Warning: Could not parse baseline file '{baseline_path}'.", fg="yellow"))
-    
-    # --- AST Generation for Python files ---
-    python_files_data = get_python_file_asts(scan_path, enable_syntax_warnings=syntax_warnings)
+            click.echo(
+                click.style(
+                    f"Warning: Could not parse baseline file '{baseline_path}'.",
+                    fg="yellow",
+                )
+            )
+
+    # ── AST Generation ────────────────────────────────────────────────────
+    ast_stats_meta: Dict[str, int] = {}
+    python_files_data = get_python_file_asts(
+        scan_path,
+        enable_syntax_warnings=syntax_warnings,
+        _stats_meta=ast_stats_meta,
+    )
     click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files")
-    
-    # --- Supply Chain Scanning ---
+
+    if stats:
+        stats.record_files(
+            python_files_data,
+            skipped=ast_stats_meta.get('skipped', 0),
+            errors=ast_stats_meta.get('errors',  0),
+        )
+
+    # ── Supply Chain Scanning ─────────────────────────────────────────────
     if supply_chain_scan:
         try:
             from pyspector._rust_core import scan_supply_chain
             click.echo("\n[*] Scanning dependencies for known vulnerabilities...")
             dep_vulns = scan_supply_chain(str(scan_path.resolve()))
-            
+
             if dep_vulns:
                 click.echo(f"\n{'='*60}")
                 click.echo(f"  SUPPLY CHAIN VULNERABILITIES ({len(dep_vulns)} found)")
                 click.echo(f"{'='*60}")
-                
+
                 for vuln in dep_vulns:
                     sev_color = {
                         'CRITICAL': 'bright_red',
-                        'HIGH': 'red',
-                        'MEDIUM': 'yellow',
-                        'LOW': 'blue',
-                        'UNKNOWN': 'white'
+                        'HIGH':     'red',
+                        'MEDIUM':   'yellow',
+                        'LOW':      'blue',
+                        'UNKNOWN':  'white',
                     }.get(vuln['severity'], 'white')
-                    
-                    click.echo(f"\n[{click.style(vuln['severity'], fg=sev_color)}] "
-                              f"{vuln['dependency']} @ {vuln['version']}")
+
+                    click.echo(
+                        f"\n[{click.style(vuln['severity'], fg=sev_color)}] "
+                        f"{vuln['dependency']} @ {vuln['version']}"
+                    )
                     click.echo(f"    Vulnerability: {vuln['vulnerability_id']}")
                     click.echo(f"    File: {vuln['file']}")
                     click.echo(f"    Summary: {vuln['summary'][:100]}...")
@@ -593,61 +694,107 @@ def _execute_scan(
             else:
                 click.echo("[+] No known vulnerabilities found in dependencies")
         except ImportError:
-            click.echo(click.style("Error: Supply chain scanner not available. Reinstall PySpector.", fg="red"))
+            click.echo(
+                click.style(
+                    "Error: Supply chain scanner not available. Reinstall PySpector.",
+                    fg="red",
+                )
+            )
         except Exception as e:
             click.echo(click.style(f"Error during supply chain scan: {e}", fg="red"))
 
-    # --- Run Scan ---
+    # ── Run Scan (Rust core) ───────────────────────────────────────────────
     try:
-        raw_issues = run_scan(str(scan_path.resolve()), rules_toml_str, config, python_files_data)
+        raw_issues = run_scan(
+            str(scan_path.resolve()), rules_toml_str, config, python_files_data
+        )
     except ValueError as e:
-        click.echo(click.style(f"Configuration error: {e}\n"
-        "Invalid configuration detected. Please verify your settings and retry.",fg = "red"))
+        click.echo(
+            click.style(
+                f"Configuration error: {e}\n"
+                "Invalid configuration detected. "
+                "Please verify your settings and retry.",
+                fg="red",
+            )
+        )
+        if stats:
+            stats.stop()
         return
-    
     except RuntimeError as e:
-        click.echo(click.style(f"Runtime error during execution: {e}\n"
-        "The scan engine encountered an operational error. Please retry or open an Issue, if the problem persists.",
-        fg="red"))
+        click.echo(
+            click.style(
+                f"Runtime error during execution: {e}\n"
+                "The scan engine encountered an operational error. "
+                "Please retry or open an Issue if the problem persists.",
+                fg="red",
+            )
+        )
+        if stats:
+            stats.stop()
         return
-    
     except Exception as e:
-        click.echo(click.style(f"A critical Exception was raised during the scan process: {e}", fg="red"))
+        click.echo(
+            click.style(
+                f"A critical Exception was raised during the scan process: {e}",
+                fg="red",
+            )
+        )
+        if stats:
+            stats.stop()
         return
 
-    # --- Filter by Severity and Baseline ---
+    # Record raw issues before any filtering
+    if stats:
+        stats.record_raw_issues(raw_issues)
+
+    # ── Filter by Severity and Baseline ───────────────────────────────────
     severity_map = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2, 'CRITICAL': 3}
     min_severity_val = severity_map[severity_level.upper()]
 
-    final_issues = [
+    # Separate the two filter passes so we can count each independently
+    severity_passed = [
         issue for issue in raw_issues
-        if (severity_map[str(issue.severity).split('.')[-1].upper()] >= min_severity_val
-            and issue.get_fingerprint() not in ignored_fingerprints)
+        if severity_map[str(issue.severity).split('.')[-1].upper()] >= min_severity_val
     ]
-    
-    # Convert issues to dictionaries for plugins
+    final_issues = [
+        issue for issue in severity_passed
+        if issue.get_fingerprint() not in ignored_fingerprints
+    ]
+
+    _severity_filtered = len(raw_issues) - len(severity_passed)
+    _baseline_ignored  = len(severity_passed) - len(final_issues)
+
+    if stats:
+        stats.record_final_issues(
+            final_issues,
+            severity_filtered=_severity_filtered,
+            baseline_ignored=_baseline_ignored,
+        )
+
+    # ── Plugins ────────────────────────────────────────────────────────────
     findings_dict = [
         {
-            "rule_id": issue.rule_id,
+            "rule_id":     issue.rule_id,
             "description": issue.description,
-            "file": issue.file_path,
-            "line": issue.line_number,
-            "code": issue.code,
-            "severity": str(issue.severity).split('.')[-1],
+            "file":        issue.file_path,
+            "line":        issue.line_number,
+            "code":        issue.code,
+            "severity":    str(issue.severity).split('.')[-1],
             "remediation": issue.remediation,
-        } for issue in final_issues
+        }
+        for issue in final_issues
     ]
-    
+
     if plugins:
         try:
             execute_plugins(findings_dict, scan_path, list(plugins), plugin_config)
         except click.ClickException as exc:
             click.echo(click.style(f"[!] Plugin error: {exc}", fg="red"))
-    
-    # --- Generate Report ---
+
+    # ── Generate Report ────────────────────────────────────────────────────
     reporter = Reporter(final_issues, report_format)
-    output = reporter.generate()
-    
+    output   = reporter.generate()
+
     if output_file:
         try:
             output_file.write_text(output, encoding='utf-8')
@@ -658,29 +805,50 @@ def _execute_scan(
         click.echo(output)
 
     end_time = time.time()
-    click.echo(f"\n[*] Scan finished in {end_time - start_time:.2f} seconds. Found {len(final_issues)} issues.")
+    click.echo(
+        f"\n[*] Scan finished in {end_time - start_time:.2f} seconds. "
+        f"Found {len(final_issues)} issues."
+    )
     if len(raw_issues) > len(final_issues):
-        click.echo(f"[*] Ignored {len(raw_issues) - len(final_issues)} issues based on severity level or baseline.")
+        click.echo(
+            f"[*] Ignored {len(raw_issues) - len(final_issues)} issues "
+            f"based on severity level or baseline."
+        )
+
+    # ── Stats Table ────────────────────────────────────────────────────────
+    if stats:
+        stats.stop()
+        click.echo("\n")
+        click.echo(stats.render_table())
+
     sys.stdout.flush()
     sys.stderr.flush()
-    return
 
 
-@click.command(help="Start the interactive TUI to review and baseline findings.")
-@click.argument('report_file', type=click.Path(exists=True, readable=True, path_type=Path))
+@click.command(
+    help="Start the interactive TUI to review and baseline findings."
+)
+@click.argument(
+    'report_file',
+    type=click.Path(exists=True, readable=True, path_type=Path),
+)
 def triage_command(report_file: Path):
     """The TUI command for baselining."""
     if not report_file.name.endswith('.json'):
-        click.echo(click.style("Error: Triage mode only supports JSON report files generated by PySpector.", fg="red"))
+        click.echo(
+            click.style(
+                "Error: Triage mode only supports JSON report files "
+                "generated by PySpector.",
+                fg="red",
+            )
+        )
         return
 
     try:
         with report_file.open('r', encoding='utf-8') as f:
             issues_data = json.load(f)
-        
-        # Determine baseline path relative to the report file
+
         baseline_path = report_file.parent / ".pyspector_baseline.json"
-        
         run_triage_tui(issues_data.get("issues", []), baseline_path)
 
     except (json.JSONDecodeError, IOError) as e:
@@ -699,27 +867,27 @@ def plugin():
 def list_plugins_command():
     """List available plugins"""
     plugin_manager = get_plugin_manager()
-    available = plugin_manager.list_available_plugins()
+    available  = plugin_manager.list_available_plugins()
     registered = plugin_manager.registry.list_plugins()
-    
+
     click.echo("\n" + "="*60)
     click.echo("PySpector Plugins")
     click.echo("="*60)
-    
+
     if not available:
         click.echo("\nNo plugins found in plugin directory")
         click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
     else:
         click.echo(f"\nFound {len(available)} plugin(s):\n")
-        
+
         for plugin_name in available:
             info = next((p for p in registered if p["name"] == plugin_name), None)
 
             if info:
-                is_trusted = bool(info.get("trusted"))
-                status_text = "trusted" if is_trusted else "untrusted"
-                status_color = "green" if is_trusted else "yellow"
-                status = click.style(status_text, fg=status_color)
+                is_trusted   = bool(info.get("trusted"))
+                status_text  = "trusted" if is_trusted else "untrusted"
+                status_color = "green"   if is_trusted else "yellow"
+                status       = click.style(status_text, fg=status_color)
                 click.echo(f"  {plugin_name}")
                 click.echo(f"    Status: {status}")
                 click.echo(f"    Version: {info.get('version', 'unknown')}")
@@ -727,10 +895,12 @@ def list_plugins_command():
                 click.echo(f"    Category: {info.get('category', 'general')}")
             else:
                 click.echo(f"  {plugin_name}")
-                click.echo(f"    Status: {click.style('not registered', fg='red')}")
+                click.echo(
+                    f"    Status: {click.style('not registered', fg='red')}"
+                )
 
             click.echo()
-    
+
     click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
     click.echo("="*60 + "\n")
 
@@ -756,29 +926,32 @@ def info(plugin_name: str):
         click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
 
     plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
-    
+
     if not plugin_path.exists():
         click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
         return
-    
+
     info_data = plugin_manager.registry.get_plugin_info(plugin_name)
-    
+
     click.echo(f"\n{'='*60}")
     click.echo(f"Plugin: {plugin_name}")
     click.echo('='*60)
-    
+
     if info_data:
-        trusted = click.style("Yes", fg="green") if info_data.get('trusted') else click.style("No", fg="red")
+        trusted = (
+            click.style("Yes", fg="green")
+            if info_data.get('trusted')
+            else click.style("No", fg="red")
+        )
         click.echo(f"Trusted: {trusted}")
         click.echo(f"Version: {info_data.get('version', 'unknown')}")
         click.echo(f"Author: {info_data.get('author', 'unknown')}")
         click.echo(f"Category: {info_data.get('category', 'general')}")
         click.echo(f"Path: {info_data.get('path', 'unknown')}")
-        
-        # Show checksum
+
         current_checksum = PluginSecurity.calculate_checksum(plugin_path)
-        stored_checksum = info_data.get('checksum', '')
-        
+        stored_checksum  = info_data.get('checksum', '')
+
         if current_checksum == stored_checksum:
             click.echo(f"Checksum: {click.style('valid', fg='green')}")
         else:
@@ -786,7 +959,7 @@ def info(plugin_name: str):
     else:
         click.echo(click.style("Not registered", fg="yellow"))
         click.echo(f"Path: {plugin_path}")
-    
+
     click.echo(f"\n{'='*60}\n")
 
 
@@ -802,7 +975,7 @@ def install(plugin_file: Path, name: str, trust: bool):
     if renamed:
         click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
 
-    target_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
+    target_path     = plugin_manager.plugin_dir / f"{plugin_name}.py"
     overwrite_allowed = False
 
     if target_path.exists():
@@ -817,14 +990,14 @@ def install(plugin_file: Path, name: str, trust: bool):
             return
 
     if trust:
-        if not plugin_manager.trust_plugin(plugin_name, plugin_file, overwrite=overwrite_allowed):
+        if not plugin_manager.trust_plugin(
+            plugin_name, plugin_file, overwrite=overwrite_allowed
+        ):
             return
         click.echo(click.style(f"[+] Plugin stored at {target_path}", fg="green"))
     else:
         staged_path = plugin_manager.install_plugin_file(
-            plugin_name,
-            plugin_file,
-            overwrite=overwrite_allowed,
+            plugin_name, plugin_file, overwrite=overwrite_allowed,
         )
         if not staged_path:
             return
@@ -843,30 +1016,26 @@ def remove(plugin_name: str, force: bool):
         click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
 
     plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
-    
+
     if not plugin_path.exists():
         click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
         return
-    
+
     if not force:
         if not click.confirm(f"Remove plugin '{plugin_name}'?"):
             return
-    
+
     try:
         plugin_path.unlink()
-        
-        # Remove from registry
         if plugin_name in plugin_manager.registry.plugins:
             del plugin_manager.registry.plugins[plugin_name]
             plugin_manager.registry.save_registry()
-        
         click.echo(click.style(f"[+] Plugin '{plugin_name}' removed", fg="green"))
-        
     except Exception as e:
         click.echo(click.style(f"Error removing plugin: {e}", fg="red"))
 
 
 # Add commands to the CLI group
 cli.add_command(run_scan_command, name="scan")
-cli.add_command(triage_command, name="triage")
+cli.add_command(triage_command,   name="triage")
 cli.add_command(plugin)
