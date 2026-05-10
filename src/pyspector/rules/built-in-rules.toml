@@ -1,6 +1,56 @@
 # PySpector Built-in Security Rules
 
 # -------------------------------------------
+# SECTION: Global Defaults (inherited by every rule)
+# -------------------------------------------
+[defaults]
+# File-path globs excluded from ALL rules unless a rule opts out.
+# Add paths here instead of repeating exclude_file_pattern on each rule.
+exclude_file_patterns = [
+  "*tests*",       # test directories and test_*.py / *_test.py files
+  "*fixtures*",    # fixture data
+  "*testdata*",    # test data
+  "*conftest*",    # pytest configuration
+]
+
+# Rules disabled globally because they produce 100% false positives by flagging
+# every use of a Python built-in function (len, isinstance, super, str, etc.).
+# These rules have no security value on their own without taint analysis.
+# Re-enable any of these per-project by removing the ID from this list.
+disabled_rule_ids = [
+  # Python built-in functions — not security sinks without taint context
+  "ABS1089", "ALL1107", "ANY1104", "BOOL1035", "BYTEARRAY1008", "BYTES1005",
+  "CALLABLE1131", "CAPITALIZE954", "CASEFOLD918", "CHR1017", "CLASSMETHOD1125",
+  "COUNT909", "DECODE882", "DICT1050", "DIR849", "DIVMOD1098",
+  "ENCODE885", "ENDSWITH900", "ENUMERATE1059", "FILTER1068", "FIND903",
+  "FLOAT1029", "FROZENSET1053", "HASH1137", "HEX1020", "ID1134",
+  "INDEX906", "INT1038", "ISALPHA972", "ISASCII975", "ISDIGIT981",
+  "ISIDENTIFIER984", "ISINSTANCE855", "ISPRINTABLE993", "ISSPACE996",
+  "ISUPPER1002", "ITER1110", "JOIN876", "LEN1101", "LIST1041",
+  "LJUST930", "LOWER888", "LSTRIP957", "MAP1065", "MAX1083",
+  "MEMORYVIEW1011", "MIN1086", "NEXT1113", "ORD1014", "PARTITION936",
+  "PRINT1146", "PROPERTY1119", "RANGE1056", "REDUCE1071", "REMOVEPREFIX963",
+  "REMOVESUFFIX966", "REPLACE879", "REPR858", "REVERSED1077", "RJUST933",
+  "ROUND1092", "RPARTITION939", "RSPLIT942", "RSTRIP960", "SET1047",
+  "SLICE1116", "SORTED1074", "SPLIT873", "SPLITLINES945", "STARTSWITH897",
+  "STATICMETHOD1122", "STR861", "STRIP894", "SUM1080", "SUPER1128",
+  "TITLE951", "TRANSLATE912", "TUPLE1044", "TYPE852", "UPPER891",
+  "VARS840", "ZIP1062",
+  # Medium-noise rules: too broad without taint analysis
+  "FSTRING867",    # every f-string is NOT an injection risk
+  "GETATTR828",    # every getattr() is NOT unsafe
+  "SETATTR831",    # every setattr() is NOT unsafe
+  "HASATTR837",    # every hasattr() is NOT a disclosure risk
+  "DELATTR834",    # every delattr() is NOT unsafe
+  "FORMAT864",     # every .format() is NOT an injection risk
+  "DJG513",        # csrf_exempt covered by CSRF747 already
+  "MIME786",       # HttpResponse with content_type is not a vulnerability
+  "BRUTE765",      # login_required is not "missing brute force protection"
+  "INFO738",       # traceback.print_exc is not information disclosure by itself
+  "SER522",        # serializers.serialize() is not inherently unsafe
+]
+
+# -------------------------------------------
 # SECTION: Taint Analysis Rules
 # -------------------------------------------
 
@@ -90,6 +140,8 @@ severity = "High"
 remediation = "Use 'yaml.safe_load()' instead of 'yaml.load()'."
 ast_match = "Call(func.value.id=yaml, func.attr=load)"
 file_pattern = "*.py"
+# Do not flag when SafeLoader or BaseLoader is explicitly passed
+exclude_pattern = "Loader\\s*=\\s*(yaml\\.)?(Safe|Base)Loader"
 
 # -------------------------------------------
 # SECTION: Cryptographic Failures (OWASP A02:2021)
@@ -163,6 +215,8 @@ severity = "High"
 remediation = "Always use 'yaml.safe_load()' to prevent arbitrary code execution from malicious YAML."
 pattern = "^\\s*[^#]*yaml\\.load" # This regex ignores comment lines
 file_pattern = "*.py"
+# Do not flag when SafeLoader or safe_load is used
+exclude_pattern = "Loader\\s*=\\s*(yaml\\.)?(Safe|Base)Loader|yaml\\.safe_load"
 
 [[rule]]
 id = "PY303"
@@ -434,8 +488,9 @@ file_pattern = "*.ini"
 [[rule]]
 id = "PY511"
 description = "JSON deserialization without validation."
-severity = "High"
-remediation = "Validate JSON data before processing and implement schema validation."
+severity = "Low"
+confidence = "Low"
+remediation = "json.loads() is safe from code execution. Only flag if the result feeds into eval/exec/pickle."
 ast_match = "Call(func.value.id=json, func.attr=loads)"
 file_pattern = "*.py"
 
@@ -470,6 +525,8 @@ severity = "High"
 remediation = "Dynamic code compilation can be dangerous. Validate all inputs and consider static alternatives."
 ast_match = "Call(func.attr=compile)"
 file_pattern = "*.py"
+# re.compile() and sql compiler.compile() are not Python code execution
+exclude_pattern = "re\\.compile|regex\\.compile|compiler\\.compile|self\\.compile"
 
 [[rule]]
 id = "DOM516"
@@ -634,9 +691,9 @@ file_pattern = "*.conf"
 [[rule]]
 id = "JSON612"
 description = "JSON parsing without input validation."
-severity = "High"
-confidence = "Medium"
-remediation = "Implement JSON schema validation and sanitize input data before parsing."
+severity = "Low"
+confidence = "Low"
+remediation = "json.loads() is safe from code execution. Only flag if result feeds into eval/exec/pickle."
 ast_match = "Call(func.value.id=json, func.attr=loads)"
 file_pattern = "*.py"
 
@@ -684,6 +741,7 @@ confidence = "Medium"
 remediation = "Avoid compile() function with untrusted input. Use static code analysis instead."
 ast_match = "Call(func.attr=compile)"
 file_pattern = "*.py"
+exclude_pattern = "re\\.compile|regex\\.compile|compiler\\.compile|self\\.compile"
 
 [[rule]]
 id = "PERM650"
@@ -729,6 +787,7 @@ confidence = "Medium"
 remediation = "Avoid dynamic code compilation. Consider static analysis or predefined code patterns."
 ast_match = "Call(func.attr=compile)"
 file_pattern = "*.py"
+exclude_pattern = "re\\.compile|regex\\.compile|compiler\\.compile|self\\.compile"
 
 [[rule]]
 id = "SHELL675"
@@ -916,7 +975,8 @@ description = "Session fixation vulnerability in session handling."
 severity = "High"
 confidence = "Medium"
 remediation = "Regenerate session IDs after authentication to prevent fixation attacks."
-pattern = "session\\[.*\\]\\s*=.*request\\."
+# Writing data to a session is NOT session fixation. Only flag direct session key assignment from request.
+pattern = "session\\.session_key\\s*=.*request\\."
 file_pattern = "*.py"
 
 [[rule]]

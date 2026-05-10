@@ -19,7 +19,18 @@ pub struct AnalysisContext<'a> {
     pub py_files: &'a [PythonFile],
 }
 
-pub fn run_analysis(context: AnalysisContext) -> Vec<Issue> {
+pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
+    // Apply disabled_rule_ids from [defaults] before scanning
+    if !context.ruleset.defaults.disabled_rule_ids.is_empty() {
+        let disabled: std::collections::HashSet<&str> = context.ruleset.defaults
+            .disabled_rule_ids.iter().map(|s| s.as_str()).collect();
+        let before = context.ruleset.rules.len();
+        context.ruleset.rules.retain(|r| !disabled.contains(r.id.as_str()));
+        let removed = before - context.ruleset.rules.len();
+        if removed > 0 {
+            println!("[*] Disabled {} rules via [defaults].disabled_rule_ids", removed);
+        }
+    }
     println!("[*] Starting analysis with {} rules", context.ruleset.rules.len());
     
     let root_path = Path::new(&context.root_path);
