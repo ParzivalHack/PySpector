@@ -1,54 +1,54 @@
-FROM python:3.12-slim-bookworm as builder
+    FROM python:3.12-slim-bookworm as builder
 
-RUN apt-get update && apt-get install -y \
-    curl build-essential pkg-config libssl-dev git
+    RUN apt-get update && apt-get install -y \
+        curl build-essential pkg-config libssl-dev git \
+        && rm -rf /var/lib/apt/lists/*
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+    # Installazione di Rust
+    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    ENV PATH="/root/.cargo/bin:${PATH}"
+    ENV PYO3_PYTHON=/usr/local/bin/python3.12
 
-WORKDIR /app
-COPY . .
+    WORKDIR /app
 
-ENV PYO3_PYTHON=/usr/local/bin/python3.12
+    COPY Cargo.toml Cargo.lock* ./
+    COPY requirements.txt ./
 
-# Build the Rust API binary
-RUN cargo build --release -j 1 --config 'target.x86_64-unknown-linux-gnu.rustflags=["-C", "link-arg=-L/usr/local/lib", "-C", "link-arg=-lpython3.12"]'
+    RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+        cargo build --release -j $(nproc) && \
+        rm -rf src
 
-FROM python:3.12-slim-bookworm
+    # 2. Copiamo tutto il codice sorgente
+    COPY . .
 
-ENV LD_LIBRARY_PATH=/usr/local/lib
+    RUN cargo build --release -j $(nproc) --config 'target.x86_64-unknown-linux-gnu.rustflags=["-C", "link-arg=-L/usr/local/lib", "-C", "link-arg=-lpython3.12"]'
 
-# Install git AND Rust compiler tools for the pip install step
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+    # --- STAGE 2: Runtime (Immagine finale) ---
+    FROM python:3.12-slim-bookworm
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+    # Definiamo le variabili d'ambiente necessarie
+    ENV PYTHONDONTWRITEBYTECODE=1 \
+        PYTHONUNBUFFERED=1 \
+        LD_LIBRARY_PATH=/usr/local/lib
 
-WORKDIR /app
+    WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+    RUN apt-get update && apt-get install -y \
+        libssl3 \
+        && rm -rf /var/lib/apt/lists/*
 
-# Copy the binary from builder
-COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
+    COPY --from=builder /app/target/release/pyspector-api /usr/local/bin/pyspector-api
 
-# Install PySpector as a package
-COPY setup.py setup.cfg pyproject.toml MANIFEST.in README.md ./
-COPY src ./src
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
 
-# Install PySpector properly so it's importable
-RUN pip install --no-cache-dir -e .
+    COPY . .
+    RUN pip install --no-cache-dir .
 
-# Verify installation
-RUN python3 -c "import pyspector.cli; import pyspector.config; import pyspector.reporting; import pyspector._rust_core; print('✓ All imports successful')"
+    RUN python3 -c "import pyspector._rust_core; print('✓ Rust core loaded successfully')"
 
-EXPOSE 10000
-CMD ["pyspector-api"]
+    # Esposizione porta e comando di avvio
+    EXPOSE 10000
+
+    # Usiamo ENTRYPOINT per permettere di passare argomenti al binario se necessario
+    ENTRYPOINT ["pyspector-api"]

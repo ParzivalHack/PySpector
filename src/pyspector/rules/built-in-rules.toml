@@ -187,7 +187,7 @@ severity = "Critical"
 ast_match = "Call(func.id=exec)"
 
 [[rule]]
-id = "PY306"  
+id = "PY306"
 description = "Unsafe pickle.loads() can execute arbitrary code"
 severity = "High"
 ast_match = "Call(func.value.id=pickle, func.attr=loads)"

@@ -1,21 +1,33 @@
+#![allow(deprecated)]
+#![allow(dead_code)]
+#![allow(unused_assignments)]
+#![allow(mismatched_lifetime_syntaxes)]
+#![allow(clippy::get_first)]
+#![allow(clippy::unwrap_or_default)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::unnecessary_map_or)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::map_entry)]
+#![allow(clippy::manual_strip)]
+#![allow(clippy::for_kv_map)]
+
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
+mod analysis;
 mod ast_parser;
 mod graph;
 mod issues;
 mod rules;
-mod analysis;
 mod supply_chain;
 
-
-use issues::{Issue, Severity};
-use rules::RuleSet;
 use analysis::{run_analysis, AnalysisContext};
 use ast_parser::PythonFile;
+use issues::{Issue, Severity};
+use rules::RuleSet;
 
 #[pymodule]
-fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> { 
+fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Issue>()?;
     m.add_class::<Severity>()?;
 
@@ -28,8 +40,9 @@ fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         config: &Bound<'_, PyDict>,
         python_files_data: &Bound<'_, PyList>,
     ) -> PyResult<PyObject> {
-        
-        let exclusions: Vec<String> = config.get_item("exclude")?.map_or(Ok(Vec::new()), |v| v.extract())?;
+        let exclusions: Vec<String> = config
+            .get_item("exclude")?
+            .map_or(Ok(Vec::new()), |v| v.extract())?;
 
         let ruleset: RuleSet = toml::from_str(&rules_toml_str).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("Failed to parse rules: {}", e))
@@ -58,21 +71,14 @@ fn _rust_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         for issue in issues {
             py_issues.append(Py::new(py, issue)?)?;
         }
-        
+
         Ok(py_issues.to_object(py))
     }
 
-
-
     #[pyfn(m)]
     #[pyo3(name = "scan_supply_chain")]
-    fn scan_supply_chain_py(
-        py: Python,
-        project_path: String,
-    ) -> PyResult<PyObject> {
-        let vulnerabilities = py.allow_threads(|| {
-            supply_chain::scan_dependencies(&project_path)
-        });
+    fn scan_supply_chain_py(py: Python, project_path: String) -> PyResult<PyObject> {
+        let vulnerabilities = py.allow_threads(|| supply_chain::scan_dependencies(&project_path));
 
         let py_list = PyList::empty(py);
         for vuln in vulnerabilities {

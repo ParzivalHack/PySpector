@@ -8,8 +8,8 @@ settings:
 
 install:
   - export DEBIAN_FRONTEND=noninteractive; apt-get update >/dev/null 2>&1; apt-get install -qy python3 python3-pip python3-venv >/dev/null 2>&1
-  - pip install --break-system-packages -r requirements.txt --disable-pip-version-check --root-user-action=ignore 
-  - pip install --break-system-packages . --disable-pip-version-check --root-user-action=ignore 
+  - pip install --break-system-packages -r requirements.txt --disable-pip-version-check --root-user-action=ignore
+  - pip install --break-system-packages . --disable-pip-version-check --root-user-action=ignore
   - cargo build --release
   - cp target/release/pyspector-api /usr/local/bin/
 
@@ -27,7 +27,7 @@ tests:
   negative:
     # Don't parse binaries as plugins
     plugin_install:
-      - pyspector plugin install /bin/ls 
+      - pyspector plugin install /bin/ls
     scan_plugin-config:
       - pyspector scan . --plugin-config=/etc/hostname
     # Don't throw SyntaxWarnings

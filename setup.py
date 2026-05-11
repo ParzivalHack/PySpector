@@ -1,17 +1,18 @@
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 from setuptools_rust import RustExtension
 
 # Get the project version from the Rust crate to ensure they are always in sync.
 cargo_toml_path = os.path.join(os.path.dirname(__file__), "src/pyspector/_rust_core/Cargo.toml")
-with open(cargo_toml_path, "r") as f:
+with open(cargo_toml_path) as f:
     for line in f:
         if line.startswith("version ="):
             version = line.strip().split("=")[1].strip().strip('"')
             break
     else:
         raise RuntimeError("Could not find version in Cargo.toml")
-    
+
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
 
@@ -45,6 +46,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pyspector = pyspector.cli:cli",
+            "pyspector-pre-commit = pyspector.pre_commit:main",
         ],
     },
     include_package_data=True,

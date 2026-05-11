@@ -1,11 +1,12 @@
-use actix_web::{post, web, App, HttpServer, HttpResponse, Responder};
-use actix_governor::{Governor, GovernorConfigBuilder};
-use pyo3::prelude::*;
+#![allow(deprecated)]
+
 use actix_cors::Cors;
-use pyo3::types::PyDict;
+use actix_governor::{Governor, GovernorConfigBuilder};
+use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use pyo3::prelude::*;
 use serde::Deserialize;
-use std::process::Command;
 use std::fs;
+use std::process::Command;
 
 #[derive(Deserialize)]
 struct ScanRequest {
@@ -39,7 +40,7 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
             let temp_path = format!("/tmp/pyspector_scan_{}", timestamp);
 
             let output = Command::new("git")
-                .args(&["clone", "--depth", "1", u, &temp_path])
+                .args(["clone", "--depth", "1", u, &temp_path])
                 .output();
 
             match output {
@@ -60,20 +61,23 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
         let result = Python::with_gil(|py| -> Result<String, String> {
             // Import the required modules
             let pyspector_cli = py.import("pyspector.cli").map_err(|e| {
-                format!("Failed to import pyspector.cli: {}. Is PySpector installed?", e)
-            })?;
-            
-            let pyspector_config = py.import("pyspector.config").map_err(|e| {
-                format!("Failed to import pyspector.config: {}", e)
-            })?;
-            
-            let pyspector_reporting = py.import("pyspector.reporting").map_err(|e| {
-                format!("Failed to import pyspector.reporting: {}", e)
+                format!(
+                    "Failed to import pyspector.cli: {}. Is PySpector installed?",
+                    e
+                )
             })?;
 
-            let pyspector_rust_core = py.import("pyspector._rust_core").map_err(|e| {
-                format!("Failed to import pyspector._rust_core: {}", e)
-            })?;
+            let pyspector_config = py
+                .import("pyspector.config")
+                .map_err(|e| format!("Failed to import pyspector.config: {}", e))?;
+
+            let pyspector_reporting = py
+                .import("pyspector.reporting")
+                .map_err(|e| format!("Failed to import pyspector.reporting: {}", e))?;
+
+            let pyspector_rust_core = py
+                .import("pyspector._rust_core")
+                .map_err(|e| format!("Failed to import pyspector._rust_core: {}", e))?;
 
             // Load configuration
             let config = pyspector_config
@@ -86,10 +90,10 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
                 .map_err(|e| format!("Failed to get default rules: {}", e))?;
 
             // Create Path object for the scan target
-            let pathlib = py.import("pathlib").map_err(|e| {
-                format!("Failed to import pathlib: {}", e)
-            })?;
-            
+            let pathlib = py
+                .import("pathlib")
+                .map_err(|e| format!("Failed to import pathlib: {}", e))?;
+
             let path_obj = pathlib
                 .call_method1("Path", (&target_path,))
                 .map_err(|e| format!("Failed to create Path object: {}", e))?;
@@ -112,7 +116,7 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
             let reporter = pyspector_reporting
                 .call_method1("Reporter", (raw_issues, report_format))
                 .map_err(|e| format!("Failed to create reporter: {}", e))?;
-            
+
             let output: String = reporter
                 .call_method0("generate")
                 .map_err(|e| format!("Failed to generate report: {}", e))?
@@ -138,15 +142,11 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
                     .content_type("application/json")
                     .body(output)
             } else {
-                HttpResponse::Ok()
-                    .content_type("text/plain")
-                    .body(output)
+                HttpResponse::Ok().content_type("text/plain").body(output)
             }
         }
-        Ok(Err(e)) => HttpResponse::InternalServerError()
-            .body(format!("Scan failed: {}", e)),
-        Err(e) => HttpResponse::InternalServerError()
-            .body(format!("Internal error: {}", e)),
+        Ok(Err(e)) => HttpResponse::InternalServerError().body(format!("Scan failed: {}", e)),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Internal error: {}", e)),
     }
 }
 
@@ -162,7 +162,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let cors = Cors::permissive();
-        
+
         App::new()
             .wrap(cors)
             .wrap(Governor::new(&gov_conf))

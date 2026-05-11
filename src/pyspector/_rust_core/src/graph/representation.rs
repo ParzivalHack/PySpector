@@ -19,7 +19,12 @@ pub struct BasicBlock {
 
 impl BasicBlock {
     pub fn new(id: BlockId) -> Self {
-        Self { id, statements: Vec::new(), predecessors: HashSet::new(), successors: HashMap::new() }
+        Self {
+            id,
+            statements: Vec::new(),
+            predecessors: HashSet::new(),
+            successors: HashMap::new(),
+        }
     }
 }
 
@@ -36,16 +41,20 @@ impl ControlFlowGraph {
         let entry_block = BasicBlock::new(0);
         let entry_id = entry_block.id;
         blocks.insert(entry_id, entry_block);
-        Self { blocks, entry: entry_id, exits: HashSet::new() }
+        Self {
+            blocks,
+            entry: entry_id,
+            exits: HashSet::new(),
+        }
     }
-    
+
     pub fn add_block(&mut self) -> &mut BasicBlock {
         let new_id = self.blocks.len();
         let new_block = BasicBlock::new(new_id);
         self.blocks.insert(new_id, new_block);
         self.blocks.get_mut(&new_id).unwrap()
     }
-    
+
     pub fn add_edge(&mut self, from: BlockId, to: BlockId, edge_type: EdgeType) {
         if let Some(from_block) = self.blocks.get_mut(&from) {
             from_block.successors.insert(to, edge_type);

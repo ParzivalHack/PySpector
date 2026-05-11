@@ -1,11 +1,11 @@
 ## Security Policy: PySpector Vulnerability Disclosure Program (VDP)
 
-Thank you for helping to keep **PySpector** secure.  
+Thank you for helping to keep **PySpector** secure.
 We encourage responsible disclosure of all security vulnerabilities in our codebase.
 
 ## 👉 How to Report
 
-All security issues must be reported **privately** through **GitHub Security Advisories**:  
+All security issues must be reported **privately** through **GitHub Security Advisories**:
 [**Report a Vulnerability here**](https://github.com/ParzivalHack/PySpector/security/advisories/new)
 
 This is our preferred channel because it keeps the disclosure private until a fix is released, allows for direct collaboration between you and the maintainers, and enables us to **formally request a CVE on your behalf**.
@@ -85,7 +85,7 @@ We follow a **responsible disclosure process**:
 
 ## 🛡️ Safe-Harbor Statement
 
-We support **good-faith security research**.  
+We support **good-faith security research**.
 You will **not face any legal action** if:
 - You always act ethically and in good faith.
 - You report the vulnerability promptly via GitHub Security Advisories or our contact email.
@@ -97,10 +97,10 @@ Violations involving data exfiltration, destructive testing, or public disclosur
 
 ## 💬 Contact
 
-Questions or clarifications?  
+Questions or clarifications?
 You can [contact](mailto:pyspector@protonmail.com) maintainers directly.
 
 All reports and communications will be handled confidentially.
 
-Thank you for helping improve the security and reliability of **PySpector**.  
+Thank you for helping improve the security and reliability of **PySpector**.
 — *The PySpector Team*

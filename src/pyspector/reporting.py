@@ -1,23 +1,22 @@
-import json
 import html as html_module
 import importlib.metadata
+import json
 
 from sarif_om import (
+    ArtifactLocation,
+    Location,
+    Message,
+    MultiformatMessageString,
+    PhysicalLocation,
+    Region,
+    ReportingConfiguration,
+    ReportingDescriptor,
+    Result,
+    Run,
     SarifLog,
     Tool,
     ToolComponent,
-    Run,
-    ReportingDescriptor,
-    ReportingConfiguration,
-    MultiformatMessageString,
-    Result,
-    ArtifactLocation,
-    Location,
-    PhysicalLocation,
-    Region,
-    Message,
 )
-
 
 # Maps internal severity levels to SARIF-compliant level strings.
 _SEVERITY_TO_SARIF_LEVEL = {
@@ -45,23 +44,14 @@ def _severity_key(issue) -> str:
 
 
 def _clean(obj):
-
     if isinstance(obj, list):
         return [_clean(item) for item in obj]
 
     if isinstance(obj, dict):
-        return {
-            k: _clean(v)
-            for k, v in obj.items()
-            if v is not None
-        }
+        return {k: _clean(v) for k, v in obj.items() if v is not None}
 
     if hasattr(obj, "__dict__"):
-        return {
-            k: _clean(v)
-            for k, v in obj.__dict__.items()
-            if v is not None
-        }
+        return {k: _clean(v) for k, v in obj.__dict__.items() if v is not None}
 
     return obj
 
@@ -79,7 +69,6 @@ class Reporter:
         if self.format == "html":
             return self.to_html()
         return self.to_console()
-
 
     def to_console(self) -> str:
         if not self.issues:
@@ -102,11 +91,11 @@ class Reporter:
                 key=lambda i: (i.file_path, i.line_number),
             )
 
-            output.append(f"\n{'='*60}")
+            output.append(f"\n{'=' * 60}")
             output.append(
                 f"  {severity} ({len(sorted_issues)} issue{'s' if len(sorted_issues) != 1 else ''})"
             )
-            output.append(f"{'='*60}")
+            output.append(f"{'=' * 60}")
 
             for issue in sorted_issues:
                 output.append(
@@ -146,12 +135,10 @@ class Reporter:
     # ------------------------------------------------------------------ #
 
     def to_sarif(self) -> str:
-
         rule_index_map: dict[str, int] = {}
         rules: list[ReportingDescriptor] = []
 
         for issue in self.issues:
-
             if issue.rule_id in rule_index_map:
                 continue
 
@@ -160,15 +147,11 @@ class Reporter:
             rule = ReportingDescriptor(
                 id=issue.rule_id,
                 name=issue.rule_id,
-                short_description=MultiformatMessageString(
-                    text=issue.description
-                ),
+                short_description=MultiformatMessageString(text=issue.description),
                 help=MultiformatMessageString(
                     text=issue.remediation or issue.description,
                     markdown=(
-                        f"**Remediation:** {issue.remediation}"
-                        if issue.remediation
-                        else None
+                        f"**Remediation:** {issue.remediation}" if issue.remediation else None
                     ),
                 ),
                 default_configuration=ReportingConfiguration(
@@ -194,7 +177,6 @@ class Reporter:
         results: list[Result] = []
 
         for issue in self.issues:
-
             severity_key = _severity_key(issue)
             level = _SEVERITY_TO_SARIF_LEVEL.get(
                 severity_key,
@@ -203,9 +185,7 @@ class Reporter:
 
             region = Region(
                 start_line=issue.line_number,
-                snippet=MultiformatMessageString(
-                    text=issue.code.strip()
-                ),
+                snippet=MultiformatMessageString(text=issue.code.strip()),
             )
 
             location = Location(

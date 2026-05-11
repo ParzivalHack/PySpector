@@ -380,7 +380,7 @@ PySpector includes Shell helper scripts to integrate security scanning directly 
 
 ## SARIF Output and Security Tool Integration
 
-PySpector supports exporting scan results in **SARIF (Static Analysis Results Interchange Format)**.  
+PySpector supports exporting scan results in **SARIF (Static Analysis Results Interchange Format)**.
 SARIF is a standardized format used by many security platforms and CI/CD systems to aggregate and visualize static analysis findings.
 
 ### Why SARIF?
@@ -433,17 +433,29 @@ pyspector scan ./project -f sarif -o report.sarif
 
 The generated `report.sarif` file can then be uploaded to supported security platforms for analysis and visualization.
 
-### Git Pre-Commit Hook
+### Git Pre-Commit Framework
 
-To ensure that no new high-severity issues are introduced into the codebase, you can set up a Git pre-commit hook. This hook will automatically scan staged Python files before each commit and block the commit if any HIGH or CRITICAL issues are found.
+This repository uses the [pre-commit](https://pre-commit.com) framework to run Python and Rust quality checks, conventional-commit validation, and secret detection before every commit.
 
-**To set up the hook, run the following script from the root of your Git repository:**
+Install and enable hooks from the project root:
 
 ```bash
-./scripts/setup_hooks.sh
+pip install pre-commit
+pre-commit install
+pre-commit install --hook-type commit-msg
 ```
 
-This script creates an executable .git/hooks/pre-commit file that performs the check. You can bypass the hook for a specific commit by using the --no-verify flag with your git commit command.
+Run all hooks manually:
+
+```bash
+pre-commit run --all-files
+```
+
+Skip a specific hook in emergencies:
+
+```bash
+SKIP=<hook-id> git commit -m "your message"
+```
 
 ## Scheduled Scans with Cron
 
