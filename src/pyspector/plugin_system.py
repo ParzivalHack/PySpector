@@ -147,6 +147,13 @@ class PluginSecurity:
             "eval", "exec", "compile", "__import__",
             # Reflection/introspection
             "vars", "getattr",
+            # Sandbox escape via class hierarchy traversal —
+            # object.__subclasses__() retrieves ALL loaded classes (including subprocess.Popen)
+            # without any import, bypassing every import-level check.
+            "__subclasses__",
+            # Globals access via function object — exposes the full module namespace
+            # of any function, including builtins and imported modules.
+            "__globals__", "__builtins__",
             # importlib — dynamic module loading (all public entry-points)
             "importlib.import_module",
             "importlib.util.spec_from_file_location",
@@ -201,6 +208,9 @@ class PluginSecurity:
             "getoutput", "getstatusoutput",
             "exec", "eval", "compile",
             "load_module", "exec_module",  # importlib loader API
+            # Sandbox escape primitives
+            "__subclasses__", "__globals__", "__builtins__",
+            "__reduce__", "__reduce_ex__",  # pickle deserialization hooks
         }
  
         warning_calls: set[str] = {"open", "builtins.open"}
@@ -303,7 +313,7 @@ class PluginSecurity:
  
                 else:
                     simplified = name.replace("builtins.", "")
- 
+
                     if simplified in fatal_calls:
                         detected_fatal.add(simplified)
                     elif simplified in warning_calls:
@@ -316,7 +326,15 @@ class PluginSecurity:
                             detected_fatal.add(normalised)
                         elif normalised in warning_calls:
                             detected_warnings.add(normalised)
- 
+
+                    # Also block dangerous dunder methods regardless of receiver:
+                    # object.__subclasses__(), cls.__subclasses__(), etc.
+                    # These are sandbox-escape primitives and have no place in plugins.
+                    if "." in simplified:
+                        method_attr = simplified.rsplit(".", 1)[-1]
+                        if method_attr in dangerous_opaque_attrs:
+                            detected_fatal.add(f"<receiver>.{method_attr}()")
+
                 self.generic_visit(node)
  
         Analyzer().visit(tree)

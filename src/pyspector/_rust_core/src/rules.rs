@@ -36,22 +36,46 @@ pub struct Rule {
     /// Rule-level glob to exclude specific files (stacks on top of [defaults]).
     #[serde(default)]
     pub exclude_file_pattern: Option<String>,
+    /// Regex checked against the FULL FILE CONTENT. If the file content matches,
+    /// this rule is suppressed for that file regardless of line-level matches.
+    /// Use to avoid library-specific FPs: e.g. suppress yaml.load() findings in
+    /// files that import ruamel.yaml (which is safe by default).
+    /// Example: file_content_exclude = "from ruamel\\.yaml|import ruamel"
+    #[serde(with = "serde_regex", default)]
+    pub file_content_exclude: Option<regex::Regex>,
 }
 
 impl Rule {
-    /// Returns true if `file_path` is excluded by this rule's own exclude_file_pattern
-    /// OR by the global defaults.
+    /// Returns true if the file should be excluded based on path patterns OR
+    /// file content (file_content_exclude checked against the full file text).
     pub fn is_file_excluded(&self, file_path: &str, defaults: &Defaults) -> bool {
+        self.is_excluded(file_path, "", defaults)
+    }
+
+    /// Full exclusion check: path patterns + optional file content regex.
+    /// Pass file content when available for the most accurate result.
+    pub fn is_excluded(&self, file_path: &str, content: &str, defaults: &Defaults) -> bool {
         // Check global default exclusions first
         for pattern in &defaults.exclude_file_patterns {
             if wildmatch::WildMatch::new(pattern).matches(file_path) {
                 return true;
             }
         }
-        // Then rule-level exclusion
+        // Then rule-level file path exclusion (supports comma-separated patterns)
         if let Some(efp) = &self.exclude_file_pattern {
-            if wildmatch::WildMatch::new(efp).matches(file_path) {
-                return true;
+            for pattern in efp.split(',') {
+                if wildmatch::WildMatch::new(pattern.trim()).matches(file_path) {
+                    return true;
+                }
+            }
+        }
+        // Finally, file content exclusion — suppress rule if the file imports
+        // a library or uses a pattern that makes the rule inapplicable.
+        if !content.is_empty() {
+            if let Some(fce) = &self.file_content_exclude {
+                if fce.is_match(content) {
+                    return true;
+                }
             }
         }
         false
@@ -74,14 +98,48 @@ pub struct TaintSinkRule {
     pub vulnerability_id: String,
     pub description: String,
     pub function_call: String,
+    /// Index of the positional argument that must be tainted to trigger this sink.
+    /// Ignored when vulnerable_receiver = true.
+    #[serde(default)]
     pub vulnerable_parameter_index: usize,
+    /// When true, the method *receiver* (the object before the dot) must be
+    /// tainted rather than a positional argument.
+    /// e.g. tainted_template.format(...)  →  receiver "tainted_template" is the risk.
+    #[serde(default)]
+    pub vulnerable_receiver: bool,
+    /// When true, this sink is a method call (called as obj.method()), so matching
+    /// uses ends_with(".function_call"). When false (default), it is a direct builtin
+    /// call (e.g. set(), open()) matched with exact equality to prevent "cache.set"
+    /// matching the "set" builtin sink.
+    #[serde(default)]
+    pub is_method: bool,
+    /// Which taint origins trigger this sink (default = "all" attacker-controlled).
+    /// "injectable_only" — only fires for HttpRequest/External, NOT ShellSanitized.
+    ///   Use for shell injection sinks (PY102): shlex.quote() is a valid mitigation.
+    /// "all" (default) — fires for HttpRequest, External, AND ShellSanitized.
+    ///   Use for path/SQL/URL sinks where shlex.quote doesn't help.
+    #[serde(default = "default_triggers_on")]
+    pub triggers_on: String,
+    /// When set, only this named keyword argument triggers the sink.
+    /// e.g. vulnerable_keyword = "password" fires only on create(..., password=tainted).
+    /// When absent, any tainted positional or keyword arg may trigger.
+    #[serde(default)]
+    pub vulnerable_keyword: Option<String>,
 }
+
+fn default_triggers_on() -> String { "all".to_string() }
 
 #[derive(Debug, Deserialize)]
 pub struct TaintSanitizerRule {
     pub id: String,
     pub description: String,
     pub function_call: String,
+    /// When set, the sanitizer does NOT clear taint but transforms its origin.
+    /// e.g. transforms_to = "ShellSanitized" means shlex.quote() turns
+    /// HttpRequest taint into ShellSanitized taint — still risky for path
+    /// traversal / f-strings, but safe for shell injection (PY102).
+    #[serde(default)]
+    pub transforms_to: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

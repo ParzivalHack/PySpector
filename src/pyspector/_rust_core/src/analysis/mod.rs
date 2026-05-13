@@ -55,33 +55,32 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         }
     }
     
-    println!("[+] Found {} files to scan", files_to_scan.len());
-    
+    println!("[+] Found {} files to scan ({} non-Python)", files_to_scan.len(),
+             files_to_scan.iter().filter(|f| !f.ends_with(".py")).count());
+
     // Scan all files with regex patterns
+    let t_config = std::time::Instant::now();
     let mut issues: Vec<Issue> = files_to_scan
         .par_iter()
         .flat_map(|file_path| {
             if let Ok(content) = fs::read_to_string(file_path) {
                 config_analysis::scan_file(file_path, &content, &context.ruleset)
-            } else { 
-                Vec::new() 
+            } else {
+                Vec::new()
             }
         })
         .collect();
-
-    println!("[+] Found {} issues from config analysis", issues.len());
+    println!("[*] Pattern/config scan: {:.2}s → {} issues", t_config.elapsed().as_secs_f64(), issues.len());
 
     // Process Python files with AST analysis
+    let t_ast = std::time::Instant::now();
     let python_issues: Vec<Issue> = context.py_files
         .par_iter()
         .flat_map(|py_file| {
             let mut findings = Vec::new();
-            if is_excluded(Path::new(&py_file.file_path), &enhanced_exclusions) { 
-                return findings; 
+            if is_excluded(Path::new(&py_file.file_path), &enhanced_exclusions) {
+                return findings;
             }
-            
-            // Skip regex scan for Python files (already done above)
-            
             if let Some(ast) = &py_file.ast {
                 let ast_findings = ast_analysis::scan_ast(ast, &py_file.file_path, &py_file.content, &context.ruleset);
                 findings.extend(ast_findings);
@@ -89,12 +88,13 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
             findings
         })
         .collect();
-        
-    println!("[+] {} issues from Python AST analysis", python_issues.len());
+    println!("[*] AST analysis: {:.2}s → {} issues", t_ast.elapsed().as_secs_f64(), python_issues.len());
     issues.extend(python_issues);
 
     // Build the call graph and run taint analysis
+    let t_callgraph = std::time::Instant::now();
     let call_graph = call_graph_builder::build_call_graph(context.py_files);
+    println!("[*] Call graph build: {:.2}s", t_callgraph.elapsed().as_secs_f64());
     let taint_issues = taint_analysis::analyze_program_for_taint(&call_graph, &context.ruleset);
     println!("[+] Found {} issues from taint analysis", taint_issues.len());
     issues.extend(taint_issues);

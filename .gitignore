@@ -60,4 +60,5 @@ venv.bak/
 
 # IDEs
 .idea/
-.vscode/
+.vscode/target/
+Cargo.lock

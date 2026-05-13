@@ -645,13 +645,14 @@ def _execute_scan(
             )
 
     # ── AST Generation ────────────────────────────────────────────────────
+    t_parse = time.time()
     ast_stats_meta: Dict[str, int] = {}
     python_files_data = get_python_file_asts(
         scan_path,
         enable_syntax_warnings=syntax_warnings,
         _stats_meta=ast_stats_meta,
     )
-    click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files")
+    click.echo(f"[*] Successfully parsed {len(python_files_data)} Python files in {time.time()-t_parse:.2f}s")
 
     if stats:
         stats.record_files(
@@ -704,10 +705,12 @@ def _execute_scan(
             click.echo(click.style(f"Error during supply chain scan: {e}", fg="red"))
 
     # ── Run Scan (Rust core) ───────────────────────────────────────────────
+    t_rust = time.time()
     try:
         raw_issues = run_scan(
             str(scan_path.resolve()), rules_toml_str, config, python_files_data
         )
+        click.echo(f"[*] Rust core scan: {time.time()-t_rust:.2f}s")
     except ValueError as e:
         click.echo(
             click.style(

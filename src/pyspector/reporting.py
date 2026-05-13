@@ -132,7 +132,7 @@ class Reporter:
                     "file_path": issue.file_path,
                     "line_number": issue.line_number,
                     "code": issue.code,
-                    "severity": _severity_key(issue),
+                    "severity": str(issue.severity).split(".")[-1],
                     "remediation": issue.remediation,
                 }
                 for issue in self.issues

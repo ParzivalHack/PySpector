@@ -18,8 +18,8 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
             }
         }
 
-        // Respect global defaults + rule-level exclude_file_pattern
-        if rule.is_file_excluded(file_path, &ruleset.defaults) {
+        // Respect global defaults + rule-level file exclusions (path + content)
+        if rule.is_excluded(file_path, content, &ruleset.defaults) {
             continue;
         }
 

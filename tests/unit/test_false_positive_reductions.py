@@ -359,14 +359,15 @@ class TestPickleStillFlagged:
         assert findings_for_rule(code, "PY002") != [], \
             "PY002 must still fire for pickle.loads() — this is a TRUE POSITIVE"
 
-    def test_pickle_loads_still_flagged_py306(self):
-        """pickle.loads() MUST still be flagged — it's a true positive."""
+    def test_pickle_loads_still_flagged_py002(self):
+        """pickle.loads() MUST still be flagged — it's a true positive.
+        PY306 was disabled (duplicate of PY002); PY002 is the canonical rule."""
         code = """
             import pickle
             return pickle.loads(zlib.decompress(f.read()))
         """
-        assert findings_for_rule(code, "PY306") != [], \
-            "PY306 must still fire for pickle.loads() — this is a TRUE POSITIVE"
+        assert findings_for_rule(code, "PY002") != [], \
+            "PY002 must still fire for pickle.loads() — this is a TRUE POSITIVE"
 
 
 # ===========================================================================
