@@ -57,7 +57,7 @@ async fn scan(req: web::Json<ScanRequest>) -> impl Responder {
             path.clone().unwrap()
         };
 
-        let result = Python::with_gil(|py| -> Result<String, String> {
+        let result = Python::attach(|py| -> Result<String, String> {
             // Import the required modules
             let pyspector_cli = py.import("pyspector.cli").map_err(|e| {
                 format!("Failed to import pyspector.cli: {}. Is PySpector installed?", e)

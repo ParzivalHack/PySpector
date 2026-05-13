@@ -5,10 +5,11 @@
 [![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
-[![latest release](https://img.shields.io/badge/latest%20release-v0.1.7--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.7-beta)
+[![latest release](https://img.shields.io/badge/latest%20release-v0.1.8--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.8-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![CodeQL Status](https://github.com/ParzivalHack/PySpector/workflows/CodeQL/badge.svg)](https://github.com/ParzivalHack/PySpector/actions/workflows/github-code-scanning/codeql)
 [![Trusted By](https://img.shields.io/badge/Trusted_By-SatoriCI-97ca00?logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4KCjxzdmcKICAgdmVyc2lvbj0iMS4xIgogICBpZD0iTGF5ZXJfMSIKICAgeD0iMHB4IgogICB5PSIwcHgiCiAgIHdpZHRoPSI1MTIiCiAgIGhlaWdodD0iNTEyIgogICB2aWV3Qm94PSIwIDAgNTExLjk5OTk5IDUxMS45OTk5OSIKICAgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMTE5MC41NTEgODQxLjg5IgogICB4bWw6c3BhY2U9InByZXNlcnZlIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzCiAgIGlkPSJkZWZzMjUiIC8+Cgo8cG9seWdvbgogICBmaWxsLXJ1bGU9ImV2ZW5vZGQiCiAgIGNsaXAtcnVsZT0iZXZlbm9kZCIKICAgZmlsbD0iIzBmM2I1ZiIKICAgcG9pbnRzPSI3MTYuMzkzLDUwMy43MjQgNjA0LjI1NCw1NjguNDY4IDQ5Mi4xMTksNTAzLjcyNCAzNzkuOTgsNDM4Ljk4MiAzNzkuOTgsMzA5LjQ4OSAzNzkuOTgsMjc4LjIzNCA2MjQuNjYxLDQxOS41MDEgNjAzLjA3OSw0MzEuOTYzIDQyMy4zMDIsMzI4LjE3OSA0MjMuMzAyLDQxMy45NjcgNTEzLjc3OSw0NjYuMjA2IDYwNC4yNTQsNTE4LjQ0MiA2OTQuNzMyLDQ2Ni4yMDYgNzc2LjUxMSw0MTguOTgyIDM3OS45OCwxOTAuMDM3IDM1OC42MTQsMTc3LjcwNyAzNTguNjE0LDI2NS45MDUgMzU4LjYxNCwzMDkuNDg5IDM1OC42MTQsNDUxLjMxMyA0ODEuNDMxLDUyMi4yMjEgNjA0LjI1NCw1OTMuMTM3IDcyNy4wNyw1MjIuMjIxIDg0MS4yMTEsNDU2LjMzIDgxOS44NDUsNDQ0ICIKICAgaWQ9InBvbHlnb24yIgogICB0cmFuc2Zvcm09Im1hdHJpeCgwLjg4MzQxMzk2LDAsMCwwLjg4MzQxMzk2LC0yNzcuNjM4NTcsLTE3LjUxNzc3MykiCiAgIHN0eWxlPSJmaWxsOiMwNWE1NTE7ZmlsbC1vcGFjaXR5OjEiIC8+PHBvbHlnb24KICAgZmlsbC1ydWxlPSJldmVub2RkIgogICBjbGlwLXJ1bGU9ImV2ZW5vZGQiCiAgIGZpbGw9IiNhNWNkMzkiCiAgIHBvaW50cz0iNDkxLjczNSwxMTUuNTA3IDYwMy44NzQsNTAuNzcgNzE2LjAwOSwxMTUuNTA3IDgyOC4xNDcsMTgwLjI0OCA4MjguMTQ3LDMwOS43MyA4MjguMTQ3LDM0MC45OTQgNTgzLjQ2NiwxOTkuNzI5IDYwNS4wNSwxODcuMjY1IDc4NC44MjgsMjkxLjA1MSA3ODQuODI4LDIwNS4yNjIgNjk0LjM0OSwxNTMuMDI0IDYwMy44NzQsMTAwLjc4NiA1MTMuMzk1LDE1My4wMjQgNDMxLjYxOCwyMDAuMjQ4IDgyOC4xNDcsNDI5LjE5MiA4NDkuNTE0LDQ0MS41MjIgODQ5LjUxNCwzNTMuMzI1IDg0OS41MTQsMzA5LjczIDg0OS41MTQsMTY3LjkxNyA3MjYuNjk3LDk3LjAwOCA2MDMuODc0LDI2LjA5MiA0ODEuMDU4LDk3LjAwOCAzNjYuOTE5LDE2Mi44OTggMzg4LjI4NSwxNzUuMjI5ICIKICAgaWQ9InBvbHlnb240IgogICB0cmFuc2Zvcm09Im1hdHJpeCgwLjg4MzQxMzk2LDAsMCwwLjg4MzQxMzk2LC0yNzcuNjM4NTcsLTE3LjUxNzc3MykiCiAgIHN0eWxlPSJmaWxsOiMwNmFlZWY7ZmlsbC1vcGFjaXR5OjEiIC8+PHBhdGgKICAgZmlsbC1ydWxlPSJldmVub2RkIgogICBjbGlwLXJ1bGU9ImV2ZW5vZGQiCiAgIGZpbGw9IiNhNWNkMzkiCiAgIGQ9Im0gMjU2LjE2Nzg0LDM0Mi42NjQyNCAxOC4wMjk2LDEwLjQxNTQ1IC0xOC4wMjk2LDEwLjQwNzUgdiA3Ni45OTMwNiBsIDc5LjkyNzc3LC00Ni4xNDk1NSA3Mi4yNDY0NywtNDEuNzE1NjkgaCAwLjAwNiBMIDI1Ni4xNjc4NCwyNjQuNzUwNjYgWiBtIDAsMTYzLjgwMzUgdiAtMjEuNzk1NTkgbCA5OS4wNjUxNiwtNTcuMTk5MjkgOTEuMzkwOTQsLTUyLjc1NjYgMTguODc1MDMsMTAuODkzMzggLTEwMC44Mjc1Nyw1OC4yMTUyMSB6IgogICBpZD0icGF0aDYiCiAgIHN0eWxlPSJzdHJva2Utd2lkdGg6MC44ODM0MTQ7ZmlsbDojYTZjZTM5O2ZpbGwtb3BhY2l0eToxIiAvPjxwYXRoCiAgIGZpbGwtcnVsZT0iZXZlbm9kZCIKICAgY2xpcC1ydWxlPSJldmVub2RkIgogICBmaWxsPSIjMGYzYjVmIgogICBkPSJtIDQ1My45NTgwNSwyODMuNzIyODYgLTEyMy4xMDEwOSwtNzEuMDcwNjUgLTY3LjQ3NjA0LDM4Ljk1MjM3IDE5MC41NzcxMywxMTAuMDMxODYgMTguODc1MDIsMTAuODkyNDkgViAyOTQuNjE0NDcgMjU2LjEwMjA0IDEzMC44MjI0NSBsIC0wLjEyMTkxLC0wLjA2ODkgLTE4Ljg3NDE0LDEwLjg5NDI2IDAuMTIxMDMsMC4wNjg5IHYgMTE0LjM4NTMzIHogbSAtMTA0LjAyOTA3LC04Mi4wODQxOCA2NS42MzU4OSwtMzcuODg5NjIgMC4xMjEwMywwLjA2NzEgdiA3NS43ODQ1NSB6IgogICBpZD0icGF0aDgiCiAgIHN0eWxlPSJzdHJva2Utd2lkdGg6MC44ODM0MTQ7ZmlsbDojMDA3NmJmO2ZpbGwtb3BhY2l0eToxIiAvPjwvc3ZnPgo=)](https://satori.ci/)
 
 PySpector is a State-of-the-Art Static Analysis Security Testing (SAST) framework, built in Rust for next-gen performances, made for modern Python projects and large codebases. Unlike traditional linters, PySpector utilizes a **Flow-Sensitive, Inter-Procedural Taint Engine** to track untrusted data across complex function boundaries and control flow structures.
@@ -39,30 +40,30 @@ https://github.com/user-attachments/assets/0fe03961-0b62-4964-83ba-849f2357efba
 
 ### Prerequisites
 
-- **Python**: Python 3.9 – 3.12 supported (Python 3.9 or newer, up to 3.12).
+- **Python**: Python 3.9 – 3.14 supported (Python 3.9 or newer, up to 3.14).
 - **Rust**: The Rust compiler (`rustc`) and Cargo package manager are required. You can easily install the **Rust toolchain** via [rustup](https://rustup.rs/) and verify your installation by running `cargo --version`.
 
 ### Installation
 
-It is **highly recommended** to install PySpector in a dedicated Python 3.12 venv.
+It is **highly recommended** to install PySpector in a dedicated Python 3.14 venv.
 
 #### Create a Virtual Environment:
 
 - **Linux (Bash)**:
 
   ```bash
-  # Download Python 3.12
-  python3.12 -m venv venv
+  # Download Python 3.14
+  python3.14 -m venv venv
   source venv/bin/activate
   ```
 
 - **Windows (PowerShell)**:
 
   ```powershell
-  # Download Python 3.12 from the Microsoft Store and run:
-  python3.12 -m venv venv
+  # Download Python 3.14 from the Microsoft Store and run:
+  python3.14 -m venv venv
   .\venv\Scripts\Activate.ps1
-  # or, depending on the Python 3.12 installation source:
+  # or, depending on the Python 3.14 installation source:
   .\venv\bin\Activate.ps1
   ```
 
@@ -455,4 +456,24 @@ For continuous monitoring, you can schedule regular scans of your projects using
 ./scripts/setup_cron.sh
 ```
 
-The script will prompt you for the project path, desired scan frequency (daily, weekly, monthly), and a location to store the JSON reports. It will then output the command to add to your crontab, automating your security scanning and reporting process.
+## 🛡️ Security Hall of Fame
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://satori.ci/"><img src="https://avatars.githubusercontent.com/u/89515805?v=4?s=100" width="100px;" alt="satoridev01"/><br /><sub><b>satoridev01</b></sub></a><br /><a href="#security-satoridev01" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Shinigami81"><img src="https://avatars.githubusercontent.com/u/122274261?v=4?s=100" width="100px;" alt="Shinigami"/><br /><sub><b>Shinigami</b></sub></a><br /><a href="#security-Shinigami81" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://youtube.com/fantasm"><img src="https://avatars.githubusercontent.com/u/35772301?v=4?s=100" width="100px;" alt="fg0x0"/><br /><sub><b>fg0x0</b></sub></a><br /><a href="#security-fg0x0" title="Security">🛡️</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.

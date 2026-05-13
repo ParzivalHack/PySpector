@@ -18,6 +18,11 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
             }
         }
 
+        // Respect global defaults + rule-level file exclusions (path + content)
+        if rule.is_excluded(file_path, content, &ruleset.defaults) {
+            continue;
+        }
+
         // Regex pattern matching with comment/string filtering
         if let Some(pattern) = &rule.pattern {
             for (i, line) in lines.iter().enumerate() {
@@ -27,6 +32,12 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
                 }
 
                 if pattern.is_match(line) {
+                    // Skip if the line also matches the exclude pattern
+                    if let Some(exclude) = &rule.exclude_pattern {
+                        if exclude.is_match(line) {
+                            continue;
+                        }
+                    }
                     issues.push(Issue::new(
                         rule.id.clone(),
                         rule.description.clone(),

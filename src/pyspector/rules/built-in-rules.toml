@@ -1,6 +1,51 @@
 # PySpector Built-in Security Rules
 
 # -------------------------------------------
+# SECTION: Global Defaults (inherited by every rule)
+# -------------------------------------------
+[defaults]
+# File-path globs excluded from ALL rules unless a rule opts out.
+# Add paths here instead of repeating exclude_file_pattern on each rule.
+exclude_file_patterns = [
+  "*tests*",        # test directories and test_*.py / *_test.py files
+  "*fixtures*",     # fixture data — never production code
+  "*testdata*",     # test data
+  "*conftest*",     # pytest configuration
+  "*/test/*",       # test infrastructure directories (e.g. django/test/)
+  "*lorem_ipsum*",  # demo/placeholder text generators
+  "*fake_data*",    # synthetic data generators
+  "*sample_data*",  # sample data files
+  # Documentation and example code — hardcoded credentials/simplified patterns are intentional.
+  # Patterns anchor on path separators to avoid substring matches (e.g. "frutadocs").
+  "*/docs/*",       # /docs/ as a path component (nested)
+  "docs/*",         # top-level docs/
+  "*/docs_src/*",   # /docs_src/ — documentation source (used by many projects)
+  "docs_src/*",     # top-level docs_src/
+  "*/examples/*",   # /examples/ as a path component
+  "examples/*",     # top-level examples/
+  "*/example/*",    # /example/ as a path component
+  "example/*",      # top-level example/
+  "*/samples/*",    # /samples/
+  "*/demo/*",       # /demo/
+  "*/tutorial/*",   # /tutorial/
+  "*/tutorials/*",  # /tutorials/
+  # Machine-generated data files — contain language docs/data as string literals,
+  # not executable code. Pattern-matching against these produces 100% FPs.
+  "*/pydoc_data/*", # Python language docs embedded as string dictionaries
+  "pydoc_data/*",
+]
+
+# Rules disabled globally because they produce 100% false positives by flagging
+# every use of a Python built-in function (len, isinstance, super, str, etc.).
+# These rules have no security value on their own without taint analysis.
+# Re-enable any of these per-project by removing the ID from this list.
+disabled_rule_ids = [
+  # Valid concept, needs taint or context to avoid FPs before activating:
+  "CACHE756",     # cache.set(request.*) — cache poisoning; needs taint to confirm HTTP origin
+  "INFO738",      # traceback.print_exc() — information disclosure; needs prod-vs-test context
+]
+
+# -------------------------------------------
 # SECTION: Taint Analysis Rules
 # -------------------------------------------
 
@@ -10,17 +55,794 @@ description = "Data from a web request is considered tainted."
 function_call = "request.get"
 taint_target = "return"
 
+[[taint_source]]
+id = "TS002"
+description = "Django GET parameter is tainted."
+function_call = "request.GET.get"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS003"
+description = "Django POST parameter is tainted."
+function_call = "request.POST.get"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS004"
+description = "Flask query string parameter is tainted."
+function_call = "request.args.get"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS005"
+description = "Flask form field is tainted."
+function_call = "request.form.get"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS006"
+description = "Interactive user input is tainted."
+function_call = "input"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS007"
+description = "Environment variable is considered tainted."
+function_call = "os.environ.get"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS008"
+description = "CLI argument via argparse — user-controlled input."
+function_call = "parse_args"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS009"
+description = "CLI argument via click — user-controlled input."
+function_call = "click.argument"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS010"
+description = "sys.argv — raw command-line arguments, user-controlled."
+function_call = "sys.argv"
+taint_target = "return"
+
+# HTTP CLIENT RESPONSE SOURCES
+# Data received from external HTTP APIs is attacker-controlled when the API
+# server is compromised or a MITM attack is in progress.
+
+[[taint_source]]
+id = "TS011"
+description = "HTTP response streaming line iterator — network data is tainted."
+function_call = ".iter_lines"
+taint_target = "return"
+# Leading dot matches any receiver: s.iter_lines(), response.iter_lines()
+
+[[taint_source]]
+id = "TS012"
+description = "HTTP response streaming text iterator — network data is tainted."
+function_call = ".iter_text"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS013"
+description = "HTTP response streaming bytes/raw iterator — network data is tainted."
+function_call = ".iter_bytes"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS013B"
+description = "HTTP response raw chunk iterator."
+function_call = ".iter_raw"
+taint_target = "return"
+
+[[taint_source]]
+id = "TS014"
+description = "HTTP response .json() method on any response object — parsed API data is tainted."
+function_call = ".json"
+taint_target = "return"
+# Matches: local_run.json(), response.json(), res.json(), new_api_call().json()
+# Does NOT match: json.loads(), json.dumps() (those have 'json' as module prefix, not method)
+
+[[taint_source]]
+id = "TS015"
+description = "marshal.loads() returns a deserialized Python code object — treat as dangerous taint."
+function_call = "marshal.loads"
+taint_target = "return"
+# The deserialized code object is dangerous bytecode from an untrusted source.
+# Any function created from it (FunctionType, exec) should be flagged.
+# Works with DESER723 (pattern) and SK_DESER724 (taint sink for FunctionType).
+
+# -------------------------------------------
+# SECTION: Taint Sinks
+# -------------------------------------------
+
 [[taint_sink]]
 id = "SK001"
-vulnerability_id = "PY102" # This sink triggers the high-confidence Command Injection rule
+vulnerability_id = "PY102"
 description = "Data is passed to a command execution function."
 function_call = "subprocess.run"
 vulnerable_parameter_index = 0
+triggers_on = "shell_injectable"
+
+[[taint_sink]]
+id = "SK001B"
+vulnerability_id = "PY102"
+description = "User-controlled command string passed to asyncio create_subprocess_shell()."
+function_call = "create_subprocess_shell"
+vulnerable_parameter_index = 0
+is_method = false
+triggers_on = "shell_injectable"
+
+[[taint_sink]]
+id = "SK001C"
+vulnerability_id = "PY102"
+description = "User-controlled args passed to asyncio create_subprocess_exec()."
+function_call = "create_subprocess_exec"
+vulnerable_parameter_index = 0
+is_method = false
+triggers_on = "shell_injectable"
+
+[[taint_sink]]
+id = "SK002"
+vulnerability_id = "GETATTR828"
+description = "Tainted attribute name passed to getattr() — attacker controls which attribute is accessed."
+function_call = "getattr"
+vulnerable_parameter_index = 1
+
+[[taint_sink]]
+id = "SK003"
+vulnerability_id = "OPEN1149"
+description = "Tainted file path passed to open() — attacker may read/write arbitrary files."
+function_call = "open"
+vulnerable_parameter_index = 0
+
+[[taint_sink]]
+id = "SK004"
+vulnerability_id = "PY103"
+description = "Tainted command passed to os.system()."
+function_call = "os.system"
+vulnerable_parameter_index = 0
+triggers_on = "shell_injectable"
+
+[[taint_sink]]
+id = "SK005"
+vulnerability_id = "SETATTR831"
+description = "Tainted attribute name passed to setattr() — attacker writes arbitrary object attributes."
+function_call = "setattr"
+vulnerable_parameter_index = 1
+
+[[taint_sink]]
+id = "SK006"
+vulnerability_id = "DELATTR834"
+description = "Tainted attribute name passed to delattr() — attacker deletes arbitrary object attributes."
+function_call = "delattr"
+vulnerable_parameter_index = 1
+
+[[taint_sink]]
+id = "SK007"
+vulnerability_id = "SER522"
+description = "Tainted format/queryset arg[0] to serializer."
+function_call = "serialize"
+vulnerable_parameter_index = 0
+
+[[taint_sink]]
+id = "SK007B"
+vulnerability_id = "SER522"
+description = "Tainted data object (arg[1]) passed to serializer."
+function_call = "serialize"
+vulnerable_parameter_index = 1
+
+[[taint_sink]]
+id = "SK008"
+vulnerability_id = "RAND810"
+description = "Tainted seed passed to random.seed() — predictable PRNG output."
+function_call = "random.seed"
+vulnerable_parameter_index = 0
+
+[[taint_sink]]
+id = "SK009"
+vulnerability_id = "FORMAT864"
+description = "Tainted format string used as template in .format() — SSTI-like injection."
+function_call = "format"
+is_method = true
+vulnerable_receiver = true
+# Only fires when the FORMAT STRING ITSELF is tainted (receiver = the template).
+# Tainted ARGUMENTS to .format() are not themselves dangerous — the receiver
+# controls the template structure. Removing vulnerable_parameter_index prevents
+# FPs from os.replace(), code.replace(), node.replace() and similar APIs.
+
+[[taint_sink]]
+id = "SK010"
+vulnerability_id = "REPLACE879"
+description = "Tainted first arg (search string) in .replace() — filter bypass possible."
+function_call = "replace"
+vulnerable_parameter_index = 0
+is_method = true
+vulnerable_receiver = false
+
+[[taint_sink]]
+id = "SK010B"
+vulnerability_id = "REPLACE879"
+description = "Tainted second arg (replacement string) in .replace() — injection via replacement."
+function_call = "replace"
+vulnerable_parameter_index = 1
+is_method = true
+vulnerable_receiver = false
+
+[[taint_sink]]
+id = "SK011"
+vulnerability_id = "TRANSLATE912"
+description = "Tainted translation table in .translate() — sanitization bypass."
+function_call = "translate"
+vulnerable_parameter_index = 0
+is_method = true
+vulnerable_receiver = false
+
+# -------------------------------------------
+# SECTION: A_SINK rules — attribute/object inspection
+# -------------------------------------------
+
+[[taint_sink]]
+id = "SK012"
+vulnerability_id = "HASATTR837"
+description = "Tainted attribute name to hasattr() — attacker probes object's attributes."
+function_call = "hasattr"
+vulnerable_parameter_index = 1
+
+[[taint_sink]]
+id = "SK013"
+vulnerability_id = "VARS840"
+description = "Tainted object to vars() — attacker dumps object's internal dict."
+function_call = "vars"
+vulnerable_parameter_index = 0
+
+[[taint_sink]]
+id = "SK014"
+vulnerability_id = "DIR849"
+description = "Tainted object to dir() — attacker enumerates object attributes."
+function_call = "dir"
+vulnerable_parameter_index = 0
+
+# SK015 (CALLABLE1131) removed — rule disabled, sink caused downstream FP propagation
+
+# -------------------------------------------
+# A_SINK — encoding / low-level byte operations
+# -------------------------------------------
+
+# SK016 (BYTES1005) removed — rule disabled, sink caused downstream FP propagation
+
+[[taint_sink]]
+id = "SK017"
+vulnerability_id = "BYTEARRAY1008"
+description = "Tainted data passed to bytearray() — mutable buffer from untrusted input."
+function_call = "bytearray"
+vulnerable_parameter_index = 0
+
+# SK018 (MEMORYVIEW1011) removed — rule disabled
+
+[[taint_sink]]
+id = "SK019"
+vulnerability_id = "ORD1014"
+description = "Tainted character to ord() — extracts code point from untrusted input."
+function_call = "ord"
+vulnerable_parameter_index = 0
+
+[[taint_sink]]
+id = "SK020"
+vulnerability_id = "CHR1017"
+description = "Tainted code point to chr() — generates character from attacker-controlled value."
+function_call = "chr"
+vulnerable_parameter_index = 0
+
+# -------------------------------------------
+# A_SINK — width-based memory exhaustion
+# -------------------------------------------
+
+[[taint_sink]]
+id = "SK021"
+vulnerability_id = "CENTER927"
+description = "Tainted width in .center() — attacker may allocate excessive memory."
+function_call = "center"
+vulnerable_parameter_index = 0
+is_method = true
+vulnerable_receiver = false
+
+[[taint_sink]]
+id = "SK022"
+vulnerability_id = "LJUST930"
+description = "Tainted width in .ljust() — attacker may allocate excessive memory."
+function_call = "ljust"
+vulnerable_parameter_index = 0
+is_method = true
+vulnerable_receiver = false
+
+[[taint_sink]]
+id = "SK023"
+vulnerability_id = "RJUST933"
+description = "Tainted width in .rjust() — attacker may allocate excessive memory."
+function_call = "rjust"
+vulnerable_parameter_index = 0
+is_method = true
+vulnerable_receiver = false
+
+# SK024-SK028 removed — associated rules disabled (RANGE1056, JOIN876, SORTED1074, SUM1080, SET1047)
+# These sinks caused downstream FP propagation: disabling the rule but keeping the sink
+# continued to taint downstream variables, causing cascading false positives in SQL rules.
+
+[[taint_sink]]
+id = "SK_PY105"
+vulnerability_id = "PY105"
+description = "Tainted data passed to mark_safe() — XSS risk if data contains HTML."
+function_call = "mark_safe"
+vulnerable_parameter_index = 0
+triggers_on = "html_injectable"
+
+[[taint_sink]]
+id = "SK_PY105B"
+vulnerability_id = "PY105"
+description = "Tainted data passed to Markup() — XSS risk."
+function_call = "Markup"
+vulnerable_parameter_index = 0
+triggers_on = "html_injectable"
 
 [[taint_sanitizer]]
 id = "SN001"
-description = "Shell argument escaping sanitizes data for command execution."
+description = "Shell argument escaping — transforms to ShellSanitized instead of clearing."
 function_call = "shlex.quote"
+transforms_to = "ShellSanitized"
+# shlex.quote converts HttpRequest → ShellSanitized:
+# - PY102/SHELL sinks (triggers_on = "shell_injectable"): do NOT fire — shlex.quote is valid mitigation
+# - PATH813/OPEN1149/FSTRING867/SSRF (triggers_on = "all"): STILL fire — quoted path still traverses
+# Result: `cat {shlex.quote(tainted_path)} | bash` correctly fires FSTRING867
+#         `subprocess.run(["bash", shlex.quote(arg)])` correctly does NOT fire PY102
+
+[[taint_sanitizer]]
+id = "SN002"
+description = "HTML escaping — transforms to HtmlSanitized."
+function_call = "escape"
+transforms_to = "HtmlSanitized"
+
+[[taint_sanitizer]]
+id = "SN003"
+description = "format_html safely escapes for HTML — transforms to HtmlSanitized."
+function_call = "format_html"
+transforms_to = "HtmlSanitized"
+
+[[taint_sanitizer]]
+id = "SN004"
+description = "conditional_escape for HTML — transforms to HtmlSanitized."
+function_call = "conditional_escape"
+transforms_to = "HtmlSanitized"
+
+[[taint_sanitizer]]
+id = "SN005"
+description = "DB identifier quoting — transforms to SqlSanitized."
+function_call = "quote_name"
+transforms_to = "SqlSanitized"
+
+[[taint_sanitizer]]
+id = "SN006"
+description = "DB identifier quoting via ops — transforms to SqlSanitized."
+function_call = "ops.quote_name"
+transforms_to = "SqlSanitized"
+
+[[taint_sanitizer]]
+id = "SN_SAFE_URL001"
+description = "Django is_safe_url() validates the URL host against an allowed-hosts list — prevents open redirect."
+function_call = "is_safe_url"
+
+[[taint_sanitizer]]
+id = "SN_SAFE_URL002"
+description = "Django url_has_allowed_host_and_scheme() validates URL host and scheme — prevents open redirect."
+function_call = "url_has_allowed_host_and_scheme"
+
+# -------------------------------------------
+# SECTION: SQL Injection Taint Sinks
+# -------------------------------------------
+
+[[taint_sink]]
+id = "SK_SQL001"
+vulnerability_id = "PY101"
+description = "Tainted SQL string passed to cursor.execute() — SQL injection risk."
+function_call = "execute"
+vulnerable_parameter_index = 0
+is_method = true
+triggers_on = "sql_injectable"
+
+[[taint_sink]]
+id = "SK_SQL002"
+vulnerability_id = "PY101"
+description = "Tainted SQL string passed to cursor.executemany() — SQL injection risk."
+function_call = "executemany"
+vulnerable_parameter_index = 0
+is_method = true
+triggers_on = "sql_injectable"
+
+[[taint_sink]]
+id = "SK_PY507"
+vulnerability_id = "PY507"
+description = "Tainted data passed to .exec() method — attacker may inject code or SQL."
+function_call = "exec"
+vulnerable_parameter_index = 0
+is_method = true
+triggers_on = "sql_injectable"
+
+[[taint_sink]]
+id = "SK_MKDIR001"
+vulnerability_id = "PATH813"
+description = "Tainted path used in mkdir() — attacker can create directories at arbitrary locations."
+function_call = "mkdir"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_MAKEDIRS001"
+vulnerability_id = "PATH813"
+description = "Tainted path used in os.makedirs() — attacker can create directories at arbitrary locations."
+function_call = "os.makedirs"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SYMLINK001"
+vulnerability_id = "SYMLINK816"
+description = "User-controlled path as symlink source — attacker can create links to arbitrary files."
+function_call = "os.symlink"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_DESER724"
+vulnerability_id = "DESER724"
+description = "Deserialized code object passed to types.FunctionType() — creates callable from untrusted bytecode."
+function_call = "types.FunctionType"
+vulnerable_parameter_index = 0
+is_method = false
+# Dotted path uses contains(): matches types.FunctionType AND python_types.FunctionType
+# (python_TYPES contains "types" as suffix → "python_types.FunctionType".contains("types.FunctionType") = true)
+
+[[taint_sink]]
+id = "SK_DESER724B"
+vulnerability_id = "DESER724"
+description = "Deserialized code object passed to FunctionType() (direct import) — creates callable from untrusted bytecode."
+function_call = "FunctionType"
+vulnerable_parameter_index = 0
+is_method = false
+# Matches: from types import FunctionType; FunctionType(code, ...)
+
+[[taint_sink]]
+id = "SK_SSTI001"
+vulnerability_id = "SSTI001"
+description = "Tainted string passed to Flask render_template_string() — Jinja2 SSTI → RCE."
+function_call = "render_template_string"
+vulnerable_parameter_index = 0
+is_method = false
+
+# SK_SSTI002 removed: from_string() is too generic — fires on DeviceSpec.from_string(), etc.
+
+[[taint_sink]]
+id = "SK_ORMRAW001"
+vulnerability_id = "ORM002"
+description = "Tainted SQL string passed to Django QuerySet.raw() — SQL injection via ORM."
+function_call = "raw"
+vulnerable_parameter_index = 0
+is_method = true
+triggers_on = "sql_injectable"
+
+[[taint_sink]]
+id = "SK_ORMORDER001"
+vulnerability_id = "ORM002"
+description = "User-controlled field name in QuerySet.order_by() — Django ORM injection (CVE-2021-35042)."
+function_call = "order_by"
+vulnerable_parameter_index = 0
+is_method = true
+
+[[taint_sink]]
+id = "SK_ORMEXTRA001"
+vulnerability_id = "ORM002"
+description = "User-controlled SQL fragments in QuerySet.extra() — SQL injection via ORM."
+function_call = "extra"
+vulnerable_parameter_index = 0
+is_method = true
+triggers_on = "sql_injectable"
+
+[[taint_sink]]
+id = "SK_DESER725"
+vulnerability_id = "DESER725"
+description = "User-controlled data passed to jsonpickle.decode() — arbitrary Python object deserialization → RCE."
+function_call = "jsonpickle.decode"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_DESER726"
+vulnerability_id = "DESER726"
+description = "User-controlled data passed to dill.loads() — arbitrary Python object deserialization → RCE."
+function_call = "dill.loads"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_DESER_JOBLIB"
+vulnerability_id = "DESER_JOBLIB001"
+description = "User-controlled path passed to joblib.load() — arbitrary Python object deserialization → RCE."
+function_call = "joblib.load"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_MARKUP001"
+vulnerability_id = "PY105"
+description = "Tainted string passed to jinja2.Markup() — bypasses Jinja2 auto-escaping, XSS risk."
+function_call = "Markup"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_ORM_VALUES001"
+vulnerability_id = "ORM002"
+description = "User-controlled field name in QuerySet.values() — CVE-2024-42005 Django ORM injection."
+function_call = "values"
+vulnerable_parameter_index = 0
+is_method = true
+
+[[taint_sink]]
+id = "SK_ORM_VALUES_LIST001"
+vulnerability_id = "ORM002"
+description = "User-controlled field name in QuerySet.values_list() — column name injection."
+function_call = "values_list"
+vulnerable_parameter_index = 0
+is_method = true
+
+[[taint_sink]]
+id = "SK_PATH_READ001"
+vulnerability_id = "PATH813"
+description = "Tainted path receiver for read_text() — arbitrary file read via path traversal."
+function_call = "read_text"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_PATH_READ002"
+vulnerability_id = "PATH813"
+description = "Tainted path receiver for read_bytes() — arbitrary file read via path traversal."
+function_call = "read_bytes"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_PATH_WRITE001"
+vulnerability_id = "PATH813"
+description = "Tainted path receiver for write_text() — arbitrary file write via path traversal."
+function_call = "write_text"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_PATH_WRITE002"
+vulnerability_id = "PATH813"
+description = "Tainted path receiver for write_bytes() — arbitrary file write via path traversal."
+function_call = "write_bytes"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_PATH_UNLINK001"
+vulnerability_id = "PATH813"
+description = "Tainted path receiver for unlink() — attacker-controlled file deletion."
+function_call = "unlink"
+vulnerable_receiver = true
+is_method = true
+
+[[taint_sink]]
+id = "SK_SSRF_HTTPX001"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL passed to httpx async client — SSRF risk."
+function_call = "httpx.AsyncClient.get"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF_HTTPX002"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL passed to httpx async client — SSRF risk."
+function_call = "httpx.AsyncClient.post"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF_AIOHTTP001"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL passed to aiohttp ClientSession.get() — SSRF risk."
+function_call = "aiohttp.ClientSession.get"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF_AIOHTTP002"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL passed to aiohttp ClientSession.post() — SSRF risk."
+function_call = "aiohttp.ClientSession.post"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_TMPL_PATH001"
+vulnerability_id = "PATH813"
+description = "User-controlled string in Django render() template name — path traversal loads arbitrary templates."
+function_call = "render"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_IMG_EVAL001"
+vulnerability_id = "PY001"
+description = "User-controlled expression in PIL.ImageMath.eval() — arbitrary Python code execution (CVE-2023-50447)."
+function_call = "ImageMath.eval"
+vulnerable_parameter_index = 0
+is_method = false
+
+# SK_FILE_WRITE001 removed: write() is too generic (HTTP response writes, cache writes, etc.)
+
+[[taint_sink]]
+id = "SK_REDIRECT001"
+vulnerability_id = "OPEN_REDIRECT001"
+description = "User-controlled URL in Flask redirect() — open redirect / SSRF."
+function_call = "redirect"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_REDIRECT002"
+vulnerability_id = "OPEN_REDIRECT001"
+description = "User-controlled URL in Django HttpResponseRedirect() — open redirect."
+function_call = "HttpResponseRedirect"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_PLAIN_PWD001"
+vulnerability_id = "PLAIN_PWD001"
+description = "Tainted value stored as 'password' in Django ORM create() — plaintext password stored in database."
+function_call = "create"
+is_method = true
+vulnerable_keyword = "password"
+
+[[taint_sink]]
+id = "SK_COOKIE_JAR001"
+vulnerability_id = "COOKIE_FILE001"
+description = "Attacker-controlled path loaded as cookie jar — cookie injection into HTTP sessions."
+function_call = "MozillaCookieJar"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_EXEC_MODULE001"
+vulnerability_id = "IMPORT825"
+description = "User-controlled path reaches exec_module() — arbitrary code execution via dynamic import."
+function_call = "exec_module"
+vulnerable_parameter_index = 0
+is_method = true
+
+[[taint_sink]]
+id = "SK_SPEC_FILE001"
+vulnerability_id = "IMPORT825"
+description = "User-controlled path passed to spec_from_file_location() — loads arbitrary Python file as module."
+function_call = "importlib.util.spec_from_file_location"
+vulnerable_parameter_index = 1
+is_method = false
+
+# SSRF sinks — HTTP client functions where the URL argument is tainted
+[[taint_sink]]
+id = "SK_SSRF001"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in httpx.stream() — SSRF: attacker can redirect to internal services or file:// URIs."
+function_call = "httpx.stream"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF002"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in httpx.get() — SSRF risk."
+function_call = "httpx.get"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF003"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in httpx.post() — SSRF risk."
+function_call = "httpx.post"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF004"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in httpx.request() — SSRF risk."
+function_call = "httpx.request"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF005"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in requests.get() — SSRF risk."
+function_call = "requests.get"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF006"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in requests.post() — SSRF risk."
+function_call = "requests.post"
+vulnerable_parameter_index = 0
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF007"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in requests.request() — SSRF risk."
+function_call = "requests.request"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_SSRF008"
+vulnerability_id = "SSRF_001"
+description = "User-controlled URL in urllib.request.urlopen() — SSRF risk."
+function_call = "urllib.request.urlopen"
+vulnerable_parameter_index = 0
+is_method = false
+
+# LOG741 taint sinks — only fire when tainted data reaches a logging call.
+# This replaces the pattern rule (which fired on any logging call with %s format).
+# Internal objects (proto, op_name, config) are never tainted → no FPs.
+
+[[taint_sink]]
+id = "SK_LOG741_INFO"
+vulnerability_id = "LOG741"
+description = "User-controlled data in logging.info() — log injection risk."
+function_call = "logging.info"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_LOG741_WARN"
+vulnerability_id = "LOG741"
+description = "User-controlled data in logging.warning() — log injection risk."
+function_call = "logging.warning"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_LOG741_ERROR"
+vulnerability_id = "LOG741"
+description = "User-controlled data in logging.error() — log injection risk."
+function_call = "logging.error"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_LOG741_DEBUG"
+vulnerability_id = "LOG741"
+description = "User-controlled data in logging.debug() — log injection risk."
+function_call = "logging.debug"
+vulnerable_parameter_index = 1
+is_method = false
+
+[[taint_sink]]
+id = "SK_LOG741_CRITICAL"
+vulnerability_id = "LOG741"
+description = "User-controlled data in logging.critical() — log injection risk."
+function_call = "logging.critical"
+vulnerable_parameter_index = 1
+is_method = false
 
 # -------------------------------------------
 # SECTION: Injection (OWASP A03:2021)
@@ -32,6 +854,7 @@ description = "Command Injection detected via Taint Analysis."
 severity = "Critical"
 confidence = "High"
 remediation = "User-controlled data reached a command execution function without sanitization. Use 'shlex.quote()' to escape arguments or avoid passing user input to shell commands entirely."
+# No ast_match — triggered only by taint engine
 # NOTE: This rule has no 'pattern' or 'ast_match'. It is triggered ONLY by the taint engine.
 
 [[rule]]
@@ -47,8 +870,7 @@ id = "PY103"
 description = "Use of os.system is a command injection risk."
 severity = "High"
 remediation = "Avoid 'os.system'. Use the 'subprocess' module with command and arguments as a list."
-ast_match = "Call(func.value.id=os, func.attr=system)"
-file_pattern = "*.py"
+# No ast_match — triggered only by taint engine
 
 [[rule]]
 id = "PY101"
@@ -56,8 +878,10 @@ description = "Potential SQL injection via string formatting in database query."
 severity = "Critical"
 confidence = "High"
 remediation = "Use parameterized queries (e.g., cursor.execute('SELECT * FROM users WHERE name = ?', (name,))) instead of string formatting."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+# Exclude migration files: ORM DDL in migrations uses cursor.execute() with developer-controlled
+# schema parameters (table names, column names) that are not user input.
+exclude_file_pattern = "*/migrations/*,*/alembic/*,*/backends/*"
 
 [[rule]]
 id = "PY104"
@@ -69,27 +893,35 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "PY105"
-description = "Potential XSS vulnerability with mark_safe or Markup."
-severity = "Medium"
-remediation = "Ensure that data passed to 'mark_safe' or 'Markup' is from a trusted source or has been properly sanitized."
-pattern = "(mark_safe|Markup)\\s*\\("
-file_pattern = "*.py"
+description = "User-controlled data passed to mark_safe() or Markup() — potential XSS."
+severity = "High"
+confidence = "High"
+remediation = "Never pass user-controlled data to mark_safe() or Markup(). Sanitize with django.utils.html.escape() first."
+# No pattern — triggered only by taint engine (SK_PY105 / SK_PY105B)
 
 [[rule]]
 id = "PY106"
 description = "Use of subprocess.run with shell=True is a command injection risk."
 severity = "High"
 remediation = "Avoid shell=True with subprocess.run. Pass commands as a list instead of a string."
-ast_match = "Call(func.value.id=subprocess, func.attr=run)"
+# Only fire when shell=True is explicitly passed — not for every subprocess.run call
+ast_match = "Call(func.value.id=subprocess, func.attr=run, keywords.*.arg=shell, keywords.*.value.value=True)"
 file_pattern = "*.py"
 
 [[rule]]
 id = "PY107"
-description = "Unsafe deserialization with 'yaml.load'."
+description = "Unsafe deserialization with 'yaml.load' — no Loader specified."
 severity = "High"
-remediation = "Use 'yaml.safe_load()' instead of 'yaml.load()'."
+confidence = "Medium"
+remediation = "Pass Loader=yaml.SafeLoader or use yaml.safe_load(). For ruamel.yaml, use YAML(typ='safe') or YAML(typ='rt') (round-trip is safe by default)."
 ast_match = "Call(func.value.id=yaml, func.attr=load)"
 file_pattern = "*.py"
+# Exclude when any Loader= is explicitly passed.
+# Note: ruamel.yaml's YAML() (round-trip) and YAML(typ="safe"/"rt"/"base") are all safe.
+# This rule may produce FPs when the variable named 'yaml' was assigned from ruamel's
+# YAML() constructor (not the PyYAML module). YAML(typ="unsafe") is caught by RUAMEL_UNSAFE001.
+exclude_pattern = "Loader\\s*=|YAML\\s*\\(\\s*\\)\\s*\\.\\s*load|typ\\s*=\\s*[\"'](safe|rt|base)[\"']"
+file_content_exclude = "from ruamel\\.yaml|import ruamel"
 
 # -------------------------------------------
 # SECTION: Cryptographic Failures (OWASP A02:2021)
@@ -97,11 +929,18 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "PY201"
-description = "Use of weak hashing algorithm MD5."
+description = "Use of weak hashing algorithm MD5 — do not use for passwords or security-sensitive hashing."
 severity = "Medium"
-remediation = "Use a stronger hashing algorithm like SHA-256 or a password-specific hashing function like bcrypt."
+remediation = "For passwords use bcrypt/argon2. For checksums/integrity: SHA-256 is preferred but MD5 is acceptable if not security-critical."
 ast_match = "Call(func.value.id=hashlib, func.attr=md5)"
 file_pattern = "*.py"
+# Exclude non-password MD5 uses:
+#   hexdigest / 0x7FFFFFFF  — deterministic int seed (sharding, seeding)
+#   checksum / integrity    — explicit file-integrity context
+#   hash_id / hash_file     — variable/function names indicating identity hash, not auth
+#   legacy                  — explicitly marked legacy/deprecated code path
+#   update(                 — incremental MD5 building (checksums use .update(), passwords don't)
+exclude_pattern = "hexdigest|checksum|integrity|fingerprint|digest\\(\\)|0x7FFFFFFF|int.*md5|md5.*int|hash_id|hash.*file|file.*hash|_hash|legacy|nonce|update\\s*\\(|hasher|algorithm"
 
 [[rule]]
 id = "PY202"
@@ -110,6 +949,9 @@ severity = "Medium"
 remediation = "Use a stronger hashing algorithm like SHA-256."
 ast_match = "Call(func.value.id=hashlib, func.attr=sha1)"
 file_pattern = "*.py"
+# SHA1 for cache keys, template keys, content addressing is not a security vulnerability.
+# Only flag when SHA1 is used for passwords or authentication tokens.
+exclude_pattern = "cache|key|template|content|join\\(|etag|checksum|digest|signature|chunk|fingerprint|function|framework|hasher"
 
 [[rule]]
 id = "PY203"
@@ -147,6 +989,7 @@ severity = "High"
 remediation = "Use a safer serialization format like JSON if deserializing untrusted data."
 ast_match = "Call(func.value.id=pickle, func.attr=loads)"
 file_pattern = "*.py"
+exclude_file_pattern = "*/cache/backends/*"
 
 [[rule]]
 id = "PY301"
@@ -158,11 +1001,22 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "PY302"
-description = "Use of 'yaml.load()' is insecure. Use 'yaml.safe_load()'."
+description = "Use of 'yaml.load()' with no Loader — unsafe with PyYAML; allows !!python/object RCE."
 severity = "High"
-remediation = "Always use 'yaml.safe_load()' to prevent arbitrary code execution from malicious YAML."
-pattern = "^\\s*[^#]*yaml\\.load" # This regex ignores comment lines
+confidence = "Medium"
+remediation = "Use yaml.safe_load() or pass Loader=yaml.SafeLoader. For ruamel.yaml, YAML(typ='safe') or the default YAML() round-trip are both safe; only YAML(typ='unsafe') is dangerous."
+pattern = "yaml\\.load[^a-zA-Z_]"
 file_pattern = "*.py"
+# Exclude:
+#   Comment lines                  — not executable
+#   yaml.safe_load()               — explicitly safe
+#   Any Loader= argument           — explicit loader choice
+#   ruamel.yaml safe modes         — YAML() round-trip and typ="safe"/"rt"/"base" are safe
+#   Inline YAML().load()           — ruamel inline construction is round-trip (safe)
+# Note: does not fully distinguish PyYAML (module) from ruamel YAML instance named 'yaml'.
+# Use RUAMEL_UNSAFE001 for ruamel's explicitly unsafe YAML(typ="unsafe") pattern.
+exclude_pattern = "^\\s*#|Loader\\s*=|yaml\\.safe_load|YAML\\s*\\(\\s*\\)\\s*\\.\\s*load|typ\\s*=\\s*[\"'](safe|rt|base)[\"']"
+file_content_exclude = "from ruamel\\.yaml|import ruamel"
 
 [[rule]]
 id = "PY303"
@@ -187,10 +1041,28 @@ severity = "Critical"
 ast_match = "Call(func.id=exec)"
 
 [[rule]]
-id = "PY306"  
-description = "Unsafe pickle.loads() can execute arbitrary code"
-severity = "High"
-ast_match = "Call(func.value.id=pickle, func.attr=loads)"
+id = "SANDBOX307"
+description = "Python sandbox escape via object.__subclasses__() — traverses full class hierarchy to retrieve dangerous classes (subprocess.Popen, etc.) without any import."
+severity = "Critical"
+confidence = "High"
+remediation = "Remove __subclasses__() calls that operate on the root object class or traverse __mro__ to reach it. Legitimate code calls __subclasses__() on a specific known class, never on object or via MRO root traversal."
+pattern = "object\\s*\\.\\s*__subclasses__\\s*\\(|__mro__\\s*\\[\\s*-?\\d+\\s*\\]\\s*\\.\\s*__subclasses__\\s*\\("
+file_pattern = "*.py"
+# Matches:
+#   object.__subclasses__()                     — direct root traversal
+#   some.__mro__[-1].__subclasses__()           — MRO-based root traversal
+# Does NOT match:
+#   cls.__subclasses__()      — legitimate: find subclasses of a specific known class
+#   Model.__subclasses__()    — legitimate: ORM model registry
+
+[[rule]]
+id = "SANDBOX308"
+description = "Python sandbox escape via __init__.__globals__ — accesses the global namespace of a function object, bypassing import restrictions."
+severity = "Critical"
+confidence = "High"
+remediation = "Never access __globals__ on function objects. This is exclusively used to escape restricted execution environments."
+pattern = "__init__\\s*\\.\\s*__globals__|__func__\\s*\\.\\s*__globals__"
+file_pattern = "*.py"
 
 # -------------------------------------------
 # SECTION: Security Misconfiguration (OWASP A05:2021)
@@ -204,14 +1076,6 @@ confidence = "Low"
 remediation = "Use a production-ready WSGI server like Gunicorn or uWSGI instead of 'app.run()'."
 pattern = "app\\.run\\(host=.*0\\.0\\.0\\.0"
 file_pattern = "*.py"
-
-[[rule]]
-id = "G402"
-description = "Django DEBUG mode is enabled in a settings file."
-severity = "High"
-remediation = "Ensure DEBUG is set to False in production settings."
-pattern = "^\\s*DEBUG\\s*=\\s*True"
-file_pattern = "*settings*.py"
 
 [[rule]]
 id = "G403"
@@ -249,6 +1113,21 @@ confidence = "Medium"
 remediation = "Store credentials in environment variables or a secrets management system."
 pattern = "(?i)(password|secret|api_key|token|authkey|bearer|cred|credentials)\\s*[:=]\\s*[\"']\\w{8,}[\"']"
 file_pattern = "*.py"
+# UPPER_CASE_CONSTANTS = "value" are module-level DeveloperDefined constants, not secrets.
+# But uppercase variables whose NAMES are explicit secrets (SECRET_KEY, API_KEY etc.)
+# are caught by G101B below. Exclude only if not a known-secret name.
+exclude_pattern = "^\\s*[A-Z][A-Z0-9_]+\\s*="
+
+[[rule]]
+id = "G101B"
+description = "Hardcoded secret in uppercase constant — secret key, API key, token, or password assigned directly in code."
+severity = "High"
+confidence = "High"
+remediation = "Store secrets in environment variables: SECRET_KEY = os.environ.get('SECRET_KEY') or use a secrets manager."
+pattern = "(?i)\\b(SECRET[_\\s]?KEY|API[_\\s]?KEY|API[_\\s]?SECRET|ACCESS[_\\s]?KEY|ACCESS[_\\s]?SECRET|AUTH[_\\s]?TOKEN|AUTH[_\\s]?KEY|PRIVATE[_\\s]?KEY|CLIENT[_\\s]?SECRET|APP[_\\s]?SECRET|APP[_\\s]?KEY|SIGNING[_\\s]?KEY|ENCRYPTION[_\\s]?KEY|MASTER[_\\s]?KEY)\\s*=\\s*[\"'][^\"']{16,}[\"']"
+file_pattern = "*.py"
+# Safe: reading from environment or config system — not a hardcoded secret
+exclude_pattern = "os\\.environ|getenv|config\\(|env\\(|settings\\.|vault|secrets\\."
 
 [[rule]]
 id = "G102"
@@ -265,6 +1144,12 @@ severity = "High"
 remediation = "Ensure all users and service accounts have strong, non-empty passwords."
 pattern = "(?i)(password|passwd|pass)\\s*[:=]\\s*[\"']\\s*[\"']"
 file_pattern = "*.py"
+# Exclude:
+#   Function parameter defaults: def login(passwd='') — optional API param
+#   Comment lines
+#   Chained initialization: login = account = password = '' — variable init, not a credential
+exclude_pattern = "^\\s*def\\s|^\\s*#|\\w+\\s*=\\s*\\w+\\s*="
+exclude_file_pattern = "*global_settings*"
 
 [[rule]]
 id = "G104"
@@ -354,56 +1239,23 @@ severity = "Medium"
 confidence = "Medium"
 remediation = "Dynamic code execution can be dangerous. Validate all inputs and consider safer alternatives."
 pattern = "\\bexec\\b\\s*\\("
+# Exclude: function definitions (def exec(...), async def exec(...))
+# Exclude: comment lines
+# Exclude: method calls .exec(...) — taint-driven SK_PY507 handles those
+# Exclude: backtick-wrapped exec() in docstrings/prose
+# Exclude: quoted "exec()" or 'exec()' — documentation text, not actual calls
+exclude_pattern = "^\\s*(?:async\\s+)?def\\s|^\\s*#|\\.exec\\s*\\(|`exec\\(|\"exec\\(\\)\"|'exec\\(\\)'"
 file_pattern = "*.py"
-
-[[rule]]
-id = "SEC502"
-description = "Subprocess Popen with shell=True detected."
-severity = "Medium"
-confidence = "Medium"
-remediation = "Using shell=True with subprocess.Popen can lead to command injection. Use argument lists instead."
-ast_match = "Call(func.value.id=subprocess, func.attr=Popen, keywords.*.arg=shell, keywords.*.value.value=True)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PY503"
-description = "Shell command execution with user-controllable input."
-severity = "Low"
-confidence = "Medium"
-remediation = "Avoid using shell=True with subprocess calls. Use argument arrays for safer command execution."
-pattern = "subprocess\\.(Popen|call)\\(.*shell\\s*=\\s*True"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SEC504"
-description = "Reading sensitive system file /etc/passwd."
-severity = "Low"
-remediation = "Accessing system password files should be done with proper authorization checks."
-pattern = "open\\s*\\(\\s*['\\\"]/etc/passwd"
-file_pattern = "*.sh"
-
-[[rule]]
-id = "PY505"
-description = "File reading operation using open().read() pattern."
-severity = "High"
-remediation = "Ensure file access controls and validate file paths to prevent unauthorized access."
-ast_match = "Attribute(attr=read, value.func.id=open)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "JS506"
-description = "JavaScript eval() function usage detected."
-severity = "Medium"
-remediation = "Avoid using eval() in JavaScript. Use JSON.parse() for data or safer alternatives."
-pattern = "eval\\s*\\("
-file_pattern = "*.js"
 
 [[rule]]
 id = "PY507"
-description = "Method call to exec function detected."
+description = "Tainted data passed to .exec() method — potential code or SQL injection."
 severity = "Critical"
-remediation = "Method-based exec calls can execute arbitrary code. Validate inputs and use safer alternatives."
-pattern = "\\.exec\\s*\\("
+confidence = "High"
+remediation = "Validate inputs before passing to .exec(). Use parameterized queries for SQL execution."
+# No pattern — triggered only by taint engine.
+# Pattern-based detection of .exec() generates 100% FPs: fires on ORM sessions
+# (Session.exec(select(...))), docstring code examples, and function definitions.
 file_pattern = "*.py"
 
 [[rule]]
@@ -416,28 +1268,12 @@ pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "JS509"
-description = "Dynamic function creation using Function constructor."
-severity = "Low"
-remediation = "Function constructor can execute arbitrary code. Use predefined functions or validate inputs."
-pattern = "new\\s+Function\\s*\\("
-file_pattern = "*.js"
-
-[[rule]]
 id = "CFG510"
 description = "AWS access key detected in configuration."
 severity = "Low"
 remediation = "Store AWS credentials securely using IAM roles or environment variables."
 pattern = "aws_access_key_id\\s*[:=]\\s*['\\\"][A-Za-z0-9/+=]{16,}"
 file_pattern = "*.ini"
-
-[[rule]]
-id = "PY511"
-description = "JSON deserialization without validation."
-severity = "High"
-remediation = "Validate JSON data before processing and implement schema validation."
-ast_match = "Call(func.value.id=json, func.attr=loads)"
-file_pattern = "*.py"
 
 [[rule]]
 id = "WEB512"
@@ -448,14 +1284,6 @@ pattern = "Authorization\\s*:\\s*\\bBearer\\b"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "DJG513"
-description = "Django CSRF protection bypass detected."
-severity = "Low"
-remediation = "Do not use csrf_exempt decorator unless absolutely necessary and with proper justification."
-pattern = "csrf_exempt"
-file_pattern = "*.py"
-
-[[rule]]
 id = "WEB514"
 description = "X-Frame-Options set to allow framing."
 severity = "Medium"
@@ -464,69 +1292,11 @@ pattern = "X-Frame-Options\\s*:\\s*ALLOW"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "PY515"
-description = "Code compilation using compile() function."
-severity = "High"
-remediation = "Dynamic code compilation can be dangerous. Validate all inputs and consider static alternatives."
-ast_match = "Call(func.attr=compile)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DOM516"
-description = "DOM manipulation using document.write()."
-severity = "Medium"
-remediation = "Use safer DOM manipulation methods like createElement() and appendChild()."
-pattern = "document\\.write\\s*\\("
-file_pattern = "*.js"
-
-[[rule]]
-id = "XSS517"
-description = "InnerHTML assignment detected."
-severity = "Low"
-remediation = "Using innerHTML can lead to XSS vulnerabilities. Use textContent or createElement instead."
-pattern = "innerHTML\\s*="
-file_pattern = "*.html"
-
-[[rule]]
-id = "PY518"
-description = "Subprocess execution with shell parameter enabled."
-severity = "High"
-confidence = "Medium"
-remediation = "Disable shell parameter or validate all inputs to prevent command injection."
-ast_match = "Call(func.value.id=subprocess, func.attr=Popen, keywords.*.arg=shell, keywords.*.value.value=True)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "TIME519"
-description = "JavaScript setTimeout with string parameter."
-severity = "Low"
-remediation = "Pass function references to setTimeout instead of string code."
-pattern = "setTimeout\\s*\\(\\s*['\\\"]"
-file_pattern = "*.js"
-
-[[rule]]
-id = "DB520"
-description = "Mongoose query construction detected."
-severity = "Medium"
-remediation = "Use parameterized queries to prevent NoSQL injection attacks."
-pattern = "mongoose\\.query\\s*\\("
-file_pattern = "*.js"
-
-[[rule]]
 id = "SER522"
 description = "Object serialization function detected."
 severity = "Low"
 remediation = "Ensure serialized data comes from trusted sources to prevent deserialization attacks."
-pattern = "\\bserialize\\b\\s*\\("
-file_pattern = "*.py"
-
-[[rule]]
-id = "NODE525"
-description = "Node.js child_process module import."
-severity = "Low"
-remediation = "Child process execution can be dangerous. Validate all inputs and limit functionality."
-pattern = "require\\s*\\(.*child_process"
-file_pattern = "*.js"
+# No ast_match/pattern — triggered only by taint engine (SK007)
 
 [[rule]]
 id = "FILE526"
@@ -570,23 +1340,6 @@ pattern = "verify\\s*:\\s*false"
 file_pattern = "*.y*ml"
 
 [[rule]]
-id = "CRYPTO532"
-description = "Deprecated SSL/TLS protocol version usage."
-severity = "Medium"
-remediation = "Use TLS 1.2 or higher. Avoid deprecated SSL and early TLS versions."
-pattern = "ssl\\.PROTOCOL_(SSLv2|SSLv3|TLSv1|TLSv1_1)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PERM568"
-description = "File permission change to world-writable detected."
-severity = "High"
-confidence = "Medium"
-remediation = "Avoid setting world-writable permissions. Use more restrictive file access controls."
-pattern = "chmod\\s+777"
-file_pattern = "*.sh"
-
-[[rule]]
 id = "WEB575"
 description = "Content Security Policy allows unsafe inline execution."
 severity = "High"
@@ -601,17 +1354,7 @@ description = "String formatting in SQL query execution."
 severity = "Critical"
 confidence = "Medium"
 remediation = "Use parameterized queries instead of string formatting to prevent SQL injection."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FUNC596"
-description = "JavaScript Function constructor usage."
-severity = "Critical"
-confidence = "Medium"
-remediation = "Avoid Function constructor as it can execute arbitrary code. Use predefined functions."
-pattern = "new\\s+Function\\s*\\("
-file_pattern = "*.js"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "SHELL602"
@@ -632,40 +1375,12 @@ pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "JSON612"
-description = "JSON parsing without input validation."
-severity = "High"
-confidence = "Medium"
-remediation = "Implement JSON schema validation and sanitize input data before parsing."
-ast_match = "Call(func.value.id=json, func.attr=loads)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "YAML619"
-description = "Shell execution in subprocess with dynamic input."
-severity = "High"
-confidence = "Medium"
-remediation = "Use argument lists with subprocess to prevent command injection attacks."
-pattern = "subprocess\\.(Popen|call)\\(.*shell\\s*=\\s*True"
-file_pattern = "*.py"
-
-[[rule]]
 id = "SHELL631"
 description = "SQL injection vulnerability in database query."
 severity = "Critical"
 confidence = "Medium"
 remediation = "Use parameterized queries with placeholders instead of string concatenation."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
-
-[[rule]]
-id = "JS635"
-description = "Dynamic function creation in JavaScript."
-severity = "High"
-confidence = "Medium"
-remediation = "Avoid Function constructor to prevent code injection. Use predefined function references."
-pattern = "new\\s+Function\\s*\\("
-file_pattern = "*.js"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "CSP640"
@@ -677,40 +1392,12 @@ pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "SHELL645"
-description = "Dynamic code compilation with user input."
-severity = "High"
-confidence = "Medium"
-remediation = "Avoid compile() function with untrusted input. Use static code analysis instead."
-ast_match = "Call(func.attr=compile)"
-file_pattern = "*.py"
-
-[[rule]]
 id = "PERM650"
 description = "SQL query with potential injection vulnerability."
 severity = "Critical"
 confidence = "Medium"
 remediation = "Implement prepared statements and parameterized queries to prevent SQL injection."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
-
-[[rule]]
-id = "JS655"
-description = "Dynamic function constructor in JavaScript code."
-severity = "High"
-confidence = "Medium"
-remediation = "Replace Function constructor with safer alternatives to prevent code injection."
-pattern = "new\\s+Function\\s*\\("
-file_pattern = "*.js"
-
-[[rule]]
-id = "SHELL660"
-description = "Process execution with shell parameter enabled."
-severity = "High"
-confidence = "Medium"
-remediation = "Use subprocess without shell parameter and pass arguments as a list."
-pattern = "subprocess\\.(Popen|call)\\(.*shell\\s*=\\s*True"
-file_pattern = "*.py"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "CSP665"
@@ -722,40 +1409,12 @@ pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
 
 [[rule]]
-id = "SHELL670"
-description = "Code compilation function usage."
-severity = "High"
-confidence = "Medium"
-remediation = "Avoid dynamic code compilation. Consider static analysis or predefined code patterns."
-ast_match = "Call(func.attr=compile)"
-file_pattern = "*.py"
-
-[[rule]]
 id = "SHELL675"
 description = "Database query with string interpolation."
 severity = "Critical"
 confidence = "Medium"
 remediation = "Use ORM methods or prepared statements instead of string formatting in SQL queries."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PERM679"
-description = "Subprocess call with shell execution enabled."
-severity = "High"
-confidence = "Medium"
-remediation = "Disable shell parameter in subprocess calls to prevent command injection."
-ast_match = "Call(func.value.id=subprocess, func.attr=Popen, keywords.*.arg=shell, keywords.*.value.value=True)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DOM683"
-description = "DOM write operation using document.write."
-severity = "High"
-confidence = "Medium"
-remediation = "Use modern DOM manipulation methods instead of document.write to prevent XSS."
-pattern = "document\\.write\\s*\\("
-file_pattern = "*.js"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "SHELL689"
@@ -763,8 +1422,7 @@ description = "Process creation with shell command execution."
 severity = "High"
 confidence = "Medium"
 remediation = "Use process execution without shell to avoid command injection vulnerabilities."
-pattern = "subprocess\\.(Popen|call)\\(.*shell\\s*=\\s*True"
-file_pattern = "*.py"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "SQL693"
@@ -772,26 +1430,7 @@ description = "String formatting in database execute statement."
 severity = "Critical"
 confidence = "Medium"
 remediation = "Implement parameterized queries to eliminate SQL injection risks."
-pattern = "\\.(execute|executemany)\\s*\\(\\s*f?[\"'].*SELECT.*(FROM|UPDATE|DELETE).*%s.*[\"']"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DOM697"
-description = "Direct DOM manipulation using document.write method."
-severity = "High"
-confidence = "Medium"
-remediation = "Use createElement and appendChild methods for safer DOM manipulation."
-pattern = "document\\.write\\s*\\("
-file_pattern = "*.js"
-
-[[rule]]
-id = "PERM702"
-description = "File permission modification to world-accessible."
-severity = "High"
-confidence = "Medium"
-remediation = "Set appropriate file permissions. Avoid 777 permissions on production systems."
-pattern = "chmod\\s+777"
-file_pattern = "*.sh"
+# No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
 
 [[rule]]
 id = "NET705"
@@ -804,12 +1443,21 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "CRYPTO708"
-description = "Weak cryptographic key generation detected."
+description = "Weak cryptographic key generation — non-CSPRNG used to generate tokens, keys, or secrets."
 severity = "Medium"
 confidence = "Medium"
-remediation = "Use cryptographically secure random number generators for key generation."
-pattern = "random\\.(randint|random)\\("
+remediation = "Use secrets.token_hex(), secrets.token_urlsafe(), or secrets.choice() for security-sensitive values. The random module uses Mersenne Twister which is predictable and not cryptographically secure."
+# Extended to include random.choices/sample/randrange — all non-CSPRNG selection functions
+# commonly misused to generate API keys, OTPs, session tokens, and passwords.
+pattern = "random\\.(randint|random|choices|sample|randrange|choice)\\("
 file_pattern = "*.py"
+# Exclude non-cryptographic uses:
+#   np.random.*  — NumPy random, used for ML data generation/seeds, not key material
+#   len(...)     — load balancing / server selection
+#   range(...)   — list indexing
+#   choice/randbelow — selection, not key generation
+#   variable names suggesting non-security context (index, delay, seed for ML)
+exclude_pattern = "np\\.random\\.|numpy\\.random\\.|len\\(|range\\(|\\b(index|idx|pos|offset|delay|sleep_|sleep|wait|_n|num_|seed|shape|size|dim|batch|epoch)\\b|_time\\b|_delay\\b|_wait\\b|random\\.choice|randbelow|input_shape|array_ops|benchmark"
 
 [[rule]]
 id = "AUTH711"
@@ -819,15 +1467,6 @@ confidence = "High"
 remediation = "Implement proper authentication mechanisms without hardcoded credentials."
 pattern = "(?i)(username|user)\\s*[:=]\\s*[\"']admin[\"']"
 file_pattern = "*.py"
-
-[[rule]]
-id = "XSS714"
-description = "Cross-site scripting vulnerability in template rendering."
-severity = "High"
-confidence = "Medium"
-remediation = "Use template engines with automatic escaping or manually escape user input."
-pattern = "\\|safe\\b"
-file_pattern = "*.html"
 
 [[rule]]
 id = "LDAP717"
@@ -849,12 +1488,22 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "DESER723"
-description = "Unsafe deserialization of untrusted data."
+description = "Unsafe deserialization of untrusted data via marshal.loads()."
 severity = "Critical"
 confidence = "High"
-remediation = "Validate and sanitize data before deserialization or use safer formats."
+remediation = "Never deserialize marshal bytecode from untrusted sources. Use JSON/protobuf for data exchange. For model serialization, use SavedModel format instead of custom bytecode paths."
 ast_match = "Call(func.value.id=marshal, func.attr=loads)"
 file_pattern = "*.py"
+
+[[rule]]
+id = "DESER724"
+description = "Deserialized bytecode executed via types.FunctionType() — arbitrary code execution from untrusted marshal.loads() output."
+severity = "Critical"
+confidence = "High"
+remediation = "Never create functions from deserialized code objects. This is equivalent to pickle.loads() and allows full RCE. Use marshal only for trusted, developer-controlled bytecode in controlled build environments."
+file_pattern = "*.py"
+# No pattern — triggered only by taint engine (SK_DESER724):
+# marshal.loads(raw) → code is tainted → FunctionType(code, globals()) fires this rule.
 
 [[rule]]
 id = "PRIV726"
@@ -875,24 +1524,6 @@ pattern = "os\\.path\\.exists.*open\\("
 file_pattern = "*.py"
 
 [[rule]]
-id = "MEM732"
-description = "Memory exhaustion through unbounded data structure."
-severity = "Medium"
-confidence = "Low"
-remediation = "Implement size limits on data structures to prevent memory exhaustion."
-pattern = "\\[\\]\\s*\\*\\s*\\w+"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DIR735"
-description = "Directory traversal vulnerability in file path."
-severity = "High"
-confidence = "Medium"
-remediation = "Validate and sanitize file paths to prevent directory traversal attacks."
-pattern = "\\.\\./|\\.\\.\\\\|%2e%2e%2f"
-file_pattern = "*.py"
-
-[[rule]]
 id = "INFO738"
 description = "Information disclosure through error messages."
 severity = "Low"
@@ -903,12 +1534,15 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "LOG741"
-description = "Log injection vulnerability detected."
-severity = "Medium"
+description = "User-controlled data in log statement — log injection risk."
+severity = "Low"
 confidence = "Medium"
-remediation = "Sanitize user input before logging to prevent log injection attacks."
-pattern = "logging\\.(info|debug|warning|error)\\(.*%s"
+remediation = "Sanitize user input before logging. An attacker who controls log content can fake entries, inject ANSI escape codes, or corrupt log parsers."
 file_pattern = "*.py"
+# No pattern — triggered only by taint engine (SK_LOG741_*)
+# Only fires when data traced from request.GET/POST/CLI args/API responses
+# reaches a logging call. Internal framework objects and computed values
+# are never tainted → no false positives on framework internals.
 
 [[rule]]
 id = "SESS744"
@@ -916,7 +1550,8 @@ description = "Session fixation vulnerability in session handling."
 severity = "High"
 confidence = "Medium"
 remediation = "Regenerate session IDs after authentication to prevent fixation attacks."
-pattern = "session\\[.*\\]\\s*=.*request\\."
+# Writing data to a session is NOT session fixation. Only flag direct session key assignment from request.
+pattern = "session\\.session_key\\s*=.*request\\."
 file_pattern = "*.py"
 
 [[rule]]
@@ -957,12 +1592,15 @@ file_pattern = "*.py"
 
 [[rule]]
 id = "TIMING759"
-description = "Timing attack vulnerability in authentication."
+description = "Timing attack vulnerability in authentication — direct equality comparison of secret values."
 severity = "Medium"
 confidence = "Low"
-remediation = "Use constant-time comparison functions for sensitive operations."
+remediation = "Use hmac.compare_digest() or secrets.compare_digest() for all secret/hash comparisons."
 pattern = "password\\s*==\\s*.*"
 file_pattern = "*.py"
+# Exclude null/empty checks: `if password is None or password == ""` is a presence check,
+# not a secret comparison. Also exclude `password != ""` style guards.
+exclude_pattern = "is None|== \"\"|== ''|!= \"\"|!= ''|^\\s*#"
 
 [[rule]]
 id = "ENUM762"
@@ -974,31 +1612,16 @@ pattern = "User\\.objects\\.get\\(username="
 file_pattern = "*.py"
 
 [[rule]]
-id = "BRUTE765"
-description = "Missing brute force protection on authentication."
-severity = "Medium"
-confidence = "Low"
-remediation = "Implement rate limiting and account lockout mechanisms."
-pattern = "login_required"
-file_pattern = "*.py"
-
-[[rule]]
-id = "WEAK768"
-description = "Weak password policy implementation."
-severity = "Low"
-confidence = "Low"
-remediation = "Implement strong password requirements and validation."
-pattern = "len\\(password\\)\\s*<\\s*[1-6]"
-file_pattern = "*.py"
-
-[[rule]]
 id = "TOKEN771"
-description = "JWT token potentially without expiration time (Manual inspection suggested)."
+description = "JWT token created without expiration — tokens valid indefinitely if stolen."
 severity = "Medium"
-confidence = "Medium"
-remediation = "Set appropriate expiration times for JWT tokens."
+confidence = "Low"
+remediation = "Always include 'exp' claim in JWT payload: {'sub': user_id, 'exp': datetime.utcnow() + timedelta(hours=1)}."
+# jwt.encode() is the creation side — only flag when no 'exp' key is visible nearby.
+# jwt.decode() without verify is caught by JWT001.
 pattern = "jwt\\.encode\\s*\\("
 file_pattern = "*.py"
+exclude_pattern = "^\\s*#|[\"']exp[\"']|datetime|timedelta"
 
 [[rule]]
 id = "OAUTH774"
@@ -1008,6 +1631,8 @@ confidence = "Medium"
 remediation = "Include state parameter in OAuth flows to prevent CSRF attacks."
 pattern = "oauth.*authorize.*"
 file_pattern = "*.py"
+# Public OAuth authorization URLs in string literals are DeveloperDefined endpoints, not missing state params
+exclude_pattern = "[\"']https?://.*oauth.*authorize|client_id="
 
 [[rule]]
 id = "API777"
@@ -1028,24 +1653,6 @@ pattern = "Access-Control-Allow-Origin\\s*:\\s*\\*"
 file_pattern = "*.py"
 
 [[rule]]
-id = "CLICK783"
-description = "Potential Clickjacking vulnerability due to missing X-Frame-Options (Manual inspection suggested)."
-severity = "Medium"
-confidence = "Low"
-remediation = "Set X-Frame-Options header to DENY or SAMEORIGIN."
-pattern = "HttpResponse\\s*\\("
-file_pattern = "*.py"
-
-[[rule]]
-id = "MIME786"
-description = "MIME type sniffing vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Set X-Content-Type-Options header to nosniff."
-pattern = "HttpResponse\\(.*content_type="
-file_pattern = "*.py"
-
-[[rule]]
 id = "HTTPS789"
 description = "Missing HTTPS enforcement in security-sensitive context."
 severity = "High"
@@ -1053,6 +1660,9 @@ confidence = "Medium"
 remediation = "Enforce HTTPS for all security-sensitive operations."
 pattern = "SECURE_SSL_REDIRECT\\s*=\\s*False"
 file_pattern = "*settings*.py"
+# global_settings.py is a framework defaults file — False here is the intended default.
+# Deployments must override this in their project settings.
+exclude_file_pattern = "*global_settings*"
 
 [[rule]]
 id = "COOKIE792"
@@ -1071,6 +1681,8 @@ confidence = "High"
 remediation = "Change default administrative credentials before deployment."
 pattern = "(?i)(admin|administrator).*password.*password"
 file_pattern = "*.py"
+# "class AdminPasswordChangeForm" is a Python class declaration — DeveloperDefined name, not a credential
+exclude_pattern = "^\\s*class\\s+"
 
 [[rule]]
 id = "DEBUG798"
@@ -1087,8 +1699,12 @@ description = "Backup file with sensitive information accessible."
 severity = "Medium"
 confidence = "Low"
 remediation = "Secure backup files and exclude them from web-accessible directories."
-pattern = "\\.(bak|backup|old|tmp)$"
+# Require a real filename base (word char) before the backup extension — prevents
+# matching bare extension strings like '.bak', '*.old', '".bak"' in code comments,
+# docs, and build scripts that reference backup extensions without actual file paths.
+pattern = "['\"][^'\"]*\\w\\.(bak|backup|old)['\"]"
 file_pattern = "*"
+exclude_file_pattern = "*.sh,*.rst,*.md,*.txt"
 
 [[rule]]
 id = "CONFIG804"
@@ -1101,12 +1717,15 @@ file_pattern = "*settings*.py"
 
 [[rule]]
 id = "HASH807"
-description = "Use of insecure hash function for passwords."
-severity = "High"
-confidence = "High"
-remediation = "Use bcrypt, scrypt, or Argon2 for password hashing."
+description = "Use of SHA-256 for password hashing — prefer a KDF (bcrypt, scrypt, Argon2)."
+severity = "Medium"
+confidence = "Low"
+remediation = "For password storage use bcrypt, scrypt, or Argon2. SHA-256 without a salt/iteration factor is fast and vulnerable to brute force."
+# SHA-256 is strong for general purposes; only flag when context suggests password hashing
+# (e.g. variable name contains 'password'). Exclude pure integrity/fingerprinting uses.
 ast_match = "Call(func.value.id=hashlib, func.attr=sha256)"
 file_pattern = "*.py"
+exclude_pattern = "fingerprint|checksum|digest|integrity|hash_file|file_hash|sha256_file|content_hash|benchmark|test|sample|example|demo"
 
 [[rule]]
 id = "RAND810"
@@ -1114,8 +1733,23 @@ description = "Use of predictable random number generator."
 severity = "Medium"
 confidence = "Medium"
 remediation = "Use cryptographically secure random generators for security purposes."
-ast_match = "Call(func.value.id=random, func.attr=choice)"
+# No ast_match/pattern — triggered only by taint engine (SK008)
+
+[[rule]]
+id = "SSRF_001"
+description = "Server-Side Request Forgery — user-controlled URL in HTTP client request."
+severity = "High"
+confidence = "High"
+remediation = "Validate URLs against an allowlist of trusted hosts/schemes before using in HTTP requests. Reject file://, internal IPs (10.x, 172.16-31.x, 192.168.x), and metadata endpoints (169.254.169.254)."
 file_pattern = "*.py"
+# No pattern — triggered only by taint engine (SK_SSRF001-SK_SSRF008)
+# Note: SSRF requires control of the HOST, not just path components.
+# 'https://api.example.com/v1/%s' % user_id  — NOT SSRF (host is literal)
+# r.json()["url"] flowing to httpx.stream()  — SSRF (full URL is attacker-controlled)
+# The taint engine correctly handles this: taint must reach the URL argument.
+# For CLI args (parse_args taint source) flowing into format strings where only
+# path params vary, the engine may produce FPs. Those cases need per-sink
+# host-vs-path discrimination — a future enhancement.
 
 [[rule]]
 id = "PATH813"
@@ -1125,15 +1759,22 @@ confidence = "Medium"
 remediation = "Validate and normalize file paths to prevent directory traversal."
 pattern = "os\\.path\\.join\\(.*\\.\\."
 file_pattern = "*.py"
+# Exclude safe package-root navigation patterns:
+#   os.path.join(__file__, '..', '..')  — finding package root from current file
+#   os.path.join(module.__file__, '..')  — navigating relative to installed module
+#   os.path.join(os.path.dirname(__file__), ..)  — standard Python package path
+exclude_pattern = "__file__|module\\.__file__|dirname\\(__file__\\)|abspath.*dirname"
 
 [[rule]]
 id = "SYMLINK816"
-description = "Symbolic link vulnerability in file operations."
+description = "Symbolic link vulnerability — user-controlled path in os.symlink()."
 severity = "Medium"
 confidence = "Low"
-remediation = "Check for symbolic links and validate target paths."
-pattern = "os\\.symlink\\("
+remediation = "Validate symlink target paths; never use untrusted input as a symlink source."
 file_pattern = "*.py"
+# Pattern removed — SYMLINK816 is now taint-driven only (see taint_sink SK_SYMLINK001).
+# Pattern-based matching produced 100% FPs (capability detection, static file management).
+# Only fires when the symlink source argument is HttpRequest-tainted.
 
 [[rule]]
 id = "PROC819"
@@ -1145,31 +1786,32 @@ ast_match = "Call(func.value.id=os, func.attr=popen)"
 file_pattern = "*.py"
 
 [[rule]]
-id = "ENV822"
-description = "Environment variable injection vulnerability."
-severity = "Medium"
-confidence = "Low"
-remediation = "Validate environment variables and use allow-lists where possible."
-pattern = "os\\.environ\\[.*\\+.*\\]"
-file_pattern = "*.py"
-
-[[rule]]
 id = "IMPORT825"
 description = "Dynamic import vulnerability allowing code execution."
 severity = "High"
 confidence = "Medium"
-remediation = "Avoid dynamic imports with user-controlled input."
+remediation = "Avoid dynamic imports with user-controlled input. Use importlib with validated module names."
 ast_match = "Call(func.id=__import__)"
 file_pattern = "*.py"
+# Exclude Python 2/3 compatibility shims (six, future) and stdlib-only imports.
+# These use __import__ with fixed or validated module names from the Python
+# standard library, not from user input.
+# Also exclude when the import name is from a known-safe source (self.LIB,
+# self.package) — these are class attributes set from validated plugin registries.
+exclude_pattern = "self\\.(LIB|package|base_class|module)|__import__\\(name\\)|six\\.|future\\."
 
 [[rule]]
 id = "GETATTR828"
-description = "Unsafe use of getattr with user input."
-severity = "Medium"
-confidence = "Medium"
-remediation = "Validate attribute names or use a whitelist of allowed attributes."
-ast_match = "Call(func.id=getattr)"
-file_pattern = "*.py"
+description = "User-controlled attribute name passed to getattr() — attacker may access arbitrary attributes."
+severity = "High"
+confidence = "High"
+remediation = "Validate attribute names against an allowlist before passing to getattr(). Never let user input control which attribute is accessed."
+# No ast_match — this rule is triggered ONLY by the taint engine (SK002).
+# Taint flow: request.* → variable → getattr(obj, variable)
+# Exclude ORM serializer patterns: getattr(obj, field.name) where field.name comes from
+# ORM model _meta (developer-defined schema), not user input. These generate high FP
+# rates in serializer/schema code across all ORM frameworks.
+exclude_file_pattern = "*pyct*,*serializer*,*schema*,*/pandas/core/*,pandas/core/*,*/pandas/io/*,pandas/io/*"
 
 [[rule]]
 id = "SETATTR831"
@@ -1177,8 +1819,7 @@ description = "Unsafe use of setattr with user input."
 severity = "Medium"
 confidence = "Medium"
 remediation = "Validate attribute names and values before setting."
-ast_match = "Call(func.id=setattr)"
-file_pattern = "*.py"
+# No ast_match/pattern — triggered only by taint engine (SK005)
 
 [[rule]]
 id = "DELATTR834"
@@ -1186,88 +1827,19 @@ description = "Unsafe use of delattr with user input."
 severity = "Medium"
 confidence = "Medium"
 remediation = "Validate attribute names before deletion."
-ast_match = "Call(func.id=delattr)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "HASATTR837"
-description = "Information disclosure through hasattr probing."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit attribute access or implement access controls."
-ast_match = "Call(func.id=hasattr)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "VARS840"
-description = "Information disclosure through vars() function."
-severity = "Low"
-confidence = "Low"
-remediation = "Avoid exposing internal object state through vars()."
-ast_match = "Call(func.id=vars)"
-file_pattern = "*.py"
+# No ast_match/pattern — triggered only by taint engine (SK006)
 
 [[rule]]
 id = "GLOBALS843"
-description = "Access to global namespace through globals()."
+description = "globals() used in code-execution context — exec/eval with global namespace."
 severity = "Medium"
 confidence = "Medium"
-remediation = "Restrict access to global namespace in untrusted contexts."
-ast_match = "Call(func.id=globals)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LOCALS846"
-description = "Access to local namespace through locals()."
-severity = "Low"
-confidence = "Low"
-remediation = "Be cautious when exposing local variables."
-ast_match = "Call(func.id=locals)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DIR849"
-description = "Information disclosure through dir() function."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit use of dir() in contexts accessible to untrusted users."
-ast_match = "Call(func.id=dir)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "TYPE852"
-description = "Type confusion vulnerability through type manipulation."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate object types before operations."
-ast_match = "Call(func.id=type)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISINSTANCE855"
-description = "Type checking bypass through isinstance manipulation."
-severity = "Low"
-confidence = "Low"
-remediation = "Use additional validation beyond isinstance checks."
-ast_match = "Call(func.id=isinstance)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REPR858"
-description = "Information disclosure through repr() function."
-severity = "Low"
-confidence = "Low"
-remediation = "Avoid using repr() on sensitive objects in user-facing contexts."
-ast_match = "Call(func.id=repr)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "STR861"
-description = "Potential information disclosure through str() conversion."
-severity = "Low"
-confidence = "Low"
-remediation = "Control string representations of sensitive objects."
-ast_match = "Call(func.id=str)"
+remediation = "Never pass globals() to exec/eval with untrusted code. Dynamic module attribute registration via globals()[name]=value is acceptable for plugin/codec loading."
+# Only matches exec/eval with globals() — the genuinely dangerous pattern.
+# Removed: globals()['key'] subscript assignment — this is standard Python for
+# dynamic module attribute registration (hashlib hash functions, plugin loaders,
+# codec registration) and generates high FP rates in framework code.
+pattern = "exec[\\s(].*globals\\s*\\(\\)|eval[\\s(].*globals\\s*\\(\\)"
 file_pattern = "*.py"
 
 [[rule]]
@@ -1276,872 +1848,163 @@ description = "Format string vulnerability in string formatting."
 severity = "Medium"
 confidence = "Medium"
 remediation = "Use safe string formatting methods and validate format strings."
-ast_match = "Call(func.attr=format)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FSTRING867"
-description = "Potential code injection through f-string formatting."
-severity = "Medium"
-confidence = "Low"
-remediation = "Validate and sanitize data used in f-string expressions."
-pattern = "f[\"'][^\"']*\\{.*\\}[^\"']*[\"']"
-file_pattern = "*.py"
+# No ast_match/pattern — triggered only by taint engine (SK009)
 
 [[rule]]
 id = "REGEX870"
-description = "Regular expression denial of service (ReDoS) vulnerability."
+description = "Regular expression denial of service (ReDoS) vulnerability — nested quantifiers."
 severity = "Medium"
 confidence = "Low"
-remediation = "Avoid nested quantifiers and catastrophic backtracking in regex."
-pattern = "re\\.(match|search|findall)\\(.*\\(.*\\+.*\\*"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SPLIT873"
-description = "Potential DoS through string split operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the number of splits or validate input size."
-pattern = "\\.split\\(.*maxsplit"
-file_pattern = "*.py"
-
-[[rule]]
-id = "JOIN876"
-description = "Memory exhaustion through string join operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate the size of collections before joining."
-ast_match = "Call(func.attr=join)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REPLACE879"
-description = "Potential DoS through string replace operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit replacement operations on large strings."
-ast_match = "Call(func.attr=replace)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DECODE882"
-description = "Encoding vulnerability in string decode operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Handle encoding errors properly and validate input."
-ast_match = "Call(func.attr=decode)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ENCODE885"
-description = "Information disclosure through string encoding."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful when encoding sensitive data."
-ast_match = "Call(func.attr=encode)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LOWER888"
-description = "Locale-dependent case conversion vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Use locale-independent case conversion for security comparisons."
-ast_match = "Call(func.attr=lower)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "UPPER891"
-description = "Locale-dependent case conversion vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Use locale-independent case conversion for security comparisons."
-ast_match = "Call(func.attr=upper)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "STRIP894"
-description = "Unicode normalization bypass in string stripping."
-severity = "Low"
-confidence = "Low"
-remediation = "Normalize Unicode strings before validation."
-ast_match = "Call(func.attr=strip)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "STARTSWITH897"
-description = "Bypass vulnerability in string prefix checking."
-severity = "Low"
-confidence = "Low"
-remediation = "Normalize and validate strings before prefix checks."
-ast_match = "Call(func.attr=startswith)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ENDSWITH900"
-description = "Bypass vulnerability in string suffix checking."
-severity = "Low"
-confidence = "Low"
-remediation = "Normalize and validate strings before suffix checks."
-ast_match = "Call(func.attr=endswith)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FIND903"
-description = "Logic error in string search operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Handle -1 return value from find() properly."
-ast_match = "Call(func.attr=find)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "INDEX906"
-description = "Exception handling bypass in string index operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Use find() instead of index() or handle exceptions properly."
-ast_match = "Call(func.attr=index)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "COUNT909"
-description = "DoS vulnerability through string count operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the size of strings used in count operations."
-ast_match = "Call(func.attr=count)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "TRANSLATE912"
-description = "Character encoding bypass through translate operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate translation tables and input strings."
-ast_match = "Call(func.attr=translate)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "MAKETRANS915"
-description = "Translation table manipulation vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate translation mappings for security contexts."
-ast_match = "Call(func.attr=maketrans)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CASEFOLD918"
-description = "Unicode normalization vulnerability in casefold operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode normalization effects in security contexts."
-ast_match = "Call(func.attr=casefold)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "EXPANDTABS921"
-description = "Tab expansion DoS vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit tab expansion or validate input size."
-ast_match = "Call(func.attr=expandtabs)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ZFILL924"
-description = "Memory exhaustion through zero-fill operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the width parameter in zfill operations."
-ast_match = "Call(func.attr=zfill)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CENTER927"
-description = "Memory exhaustion through string centering operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the width parameter in center operations."
-ast_match = "Call(func.attr=center)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LJUST930"
-description = "Memory exhaustion through string justification operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the width parameter in ljust operations."
-ast_match = "Call(func.attr=ljust)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "RJUST933"
-description = "Memory exhaustion through string justification operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit the width parameter in rjust operations."
-ast_match = "Call(func.attr=rjust)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PARTITION936"
-description = "Logic error in string partition operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate partition results and handle edge cases."
-ast_match = "Call(func.attr=partition)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "RPARTITION939"
-description = "Logic error in string reverse partition operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate rpartition results and handle edge cases."
-ast_match = "Call(func.attr=rpartition)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "RSPLIT942"
-description = "Logic error in reverse string split operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate rsplit results and handle maxsplit parameter."
-ast_match = "Call(func.attr=rsplit)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SPLITLINES945"
-description = "Line ending normalization vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of different line ending interpretations."
-ast_match = "Call(func.attr=splitlines)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SWAPCASE948"
-description = "Locale-dependent case swapping vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Avoid swapcase in security-sensitive contexts."
-ast_match = "Call(func.attr=swapcase)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "TITLE951"
-description = "Locale-dependent title casing vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Use consistent title casing for security comparisons."
-ast_match = "Call(func.attr=title)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CAPITALIZE954"
-description = "Locale-dependent capitalization vulnerability."
-severity = "Low"
-confidence = "Low"
-remediation = "Use consistent capitalization for security comparisons."
-ast_match = "Call(func.attr=capitalize)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LSTRIP957"
-description = "Unicode normalization bypass in left string stripping."
-severity = "Low"
-confidence = "Low"
-remediation = "Normalize Unicode strings before validation."
-ast_match = "Call(func.attr=lstrip)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "RSTRIP960"
-description = "Unicode normalization bypass in right string stripping."
-severity = "Low"
-confidence = "Low"
-remediation = "Normalize Unicode strings before validation."
-ast_match = "Call(func.attr=rstrip)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REMOVEPREFIX963"
-description = "Logic error in prefix removal operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate prefix removal and handle Unicode normalization."
-ast_match = "Call(func.attr=removeprefix)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REMOVESUFFIX966"
-description = "Logic error in suffix removal operations."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate suffix removal and handle Unicode normalization."
-ast_match = "Call(func.attr=removesuffix)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISALNUM969"
-description = "Unicode category bypass in alphanumeric checking."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode character categories in validation."
-ast_match = "Call(func.attr=isalnum)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISALPHA972"
-description = "Unicode category bypass in alphabetic checking."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode character categories in validation."
-ast_match = "Call(func.attr=isalpha)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISASCII975"
-description = "ASCII validation bypass with Unicode characters."
-severity = "Low"
-confidence = "Low"
-remediation = "Use proper Unicode handling for international support."
-ast_match = "Call(func.attr=isascii)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISDECIMAL978"
-description = "Unicode decimal category bypass in number validation."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode decimal categories beyond 0-9."
-ast_match = "Call(func.attr=isdecimal)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISDIGIT981"
-description = "Unicode digit category bypass in number validation."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode digit categories beyond 0-9."
-ast_match = "Call(func.attr=isdigit)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISIDENTIFIER984"
-description = "Python identifier validation bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate identifiers against allowed patterns."
-ast_match = "Call(func.attr=isidentifier)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISLOWER987"
-description = "Case checking bypass with Unicode characters."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode case categories."
-ast_match = "Call(func.attr=islower)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISNUMERIC990"
-description = "Unicode numeric category bypass in validation."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode numeric categories."
-ast_match = "Call(func.attr=isnumeric)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISPRINTABLE993"
-description = "Printable character validation bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode printable character definitions."
-ast_match = "Call(func.attr=isprintable)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISSPACE996"
-description = "Whitespace character validation bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode whitespace character definitions."
-ast_match = "Call(func.attr=isspace)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISTITLE999"
-description = "Title case validation bypass with Unicode."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode title case definitions."
-ast_match = "Call(func.attr=istitle)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ISUPPER1002"
-description = "Upper case validation bypass with Unicode."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of Unicode upper case definitions."
-ast_match = "Call(func.attr=isupper)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "BYTES1005"
-description = "Bytes object creation with user input."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate encoding when creating bytes from user input."
-ast_match = "Call(func.id=bytes)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "BYTEARRAY1008"
-description = "Mutable byte array creation with user input."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate encoding when creating bytearrays from user input."
-ast_match = "Call(func.id=bytearray)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "MEMORYVIEW1011"
-description = "Memory view creation exposing internal buffer."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful when exposing memory views of sensitive data."
-ast_match = "Call(func.id=memoryview)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ORD1014"
-description = "Character code point extraction."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate character input before extracting code points."
-ast_match = "Call(func.id=ord)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CHR1017"
-description = "Character creation from code point."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate code points to prevent Unicode injection."
-ast_match = "Call(func.id=chr)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "HEX1020"
-description = "Hexadecimal conversion exposing internal data."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful when converting sensitive data to hex."
-ast_match = "Call(func.attr=hex)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "OCT1023"
-description = "Octal conversion potentially exposing data."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate octal conversions in security contexts."
-ast_match = "Call(func.id=oct)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "BIN1026"
-description = "Binary conversion potentially exposing data."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate binary conversions in security contexts."
-ast_match = "Call(func.id=bin)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FLOAT1029"
-description = "Floating point precision issues in security calculations."
-severity = "Low"
-confidence = "Low"
-remediation = "Use decimal module for precise financial calculations."
-ast_match = "Call(func.id=float)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "COMPLEX1032"
-description = "Complex number usage in security contexts."
-severity = "Low"
-confidence = "Low"
-remediation = "Avoid complex numbers in security-sensitive calculations."
-ast_match = "Call(func.id=complex)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "BOOL1035"
-description = "Boolean conversion potentially hiding truthy/falsy behavior."
-severity = "Low"
-confidence = "Low"
-remediation = "Be explicit about boolean conversions in security checks."
-ast_match = "Call(func.id=bool)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "INT1038"
-description = "Integer conversion with potential overflow."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate integer conversions and handle overflow."
-ast_match = "Call(func.id=int)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LIST1041"
-description = "List creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit list sizes to prevent memory exhaustion."
-ast_match = "Call(func.id=list)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "TUPLE1044"
-description = "Tuple creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit tuple sizes to prevent memory exhaustion."
-ast_match = "Call(func.id=tuple)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SET1047"
-description = "Set creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit set sizes to prevent memory exhaustion."
-ast_match = "Call(func.id=set)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DICT1050"
-description = "Dictionary creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit dictionary sizes to prevent memory exhaustion."
-ast_match = "Call(func.id=dict)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FROZENSET1053"
-description = "Frozenset creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit frozenset sizes to prevent memory exhaustion."
-ast_match = "Call(func.id=frozenset)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "RANGE1056"
-description = "Range creation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate range parameters to prevent excessive iterations."
-ast_match = "Call(func.id=range)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ENUMERATE1059"
-description = "Enumeration with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider performance implications of enumerating large collections."
-ast_match = "Call(func.id=enumerate)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ZIP1062"
-description = "Zip operation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful when zipping large collections."
-ast_match = "Call(func.id=zip)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "MAP1065"
-description = "Map operation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider memory usage when mapping over large collections."
-ast_match = "Call(func.id=map)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "FILTER1068"
-description = "Filter operation with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider performance when filtering large collections."
-ast_match = "Call(func.id=filter)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REDUCE1071"
-description = "Reduce operation with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider performance when reducing large collections."
-pattern = "functools\\.reduce\\("
-file_pattern = "*.py"
-
-[[rule]]
-id = "SORTED1074"
-description = "Sorting operation with potential DoS impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Limit collection sizes before sorting to prevent DoS."
-ast_match = "Call(func.id=sorted)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "REVERSED1077"
-description = "Reverse operation with potential memory impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider memory usage when reversing large collections."
-ast_match = "Call(func.id=reversed)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SUM1080"
-description = "Sum operation with potential overflow or DoS."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate numeric ranges to prevent overflow or DoS."
-ast_match = "Call(func.id=sum)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "MAX1083"
-description = "Max operation with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider performance when finding max of large collections."
-ast_match = "Call(func.id=max)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "MIN1086"
-description = "Min operation with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Consider performance when finding min of large collections."
-ast_match = "Call(func.id=min)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ABS1089"
-description = "Absolute value operation with potential overflow."
-severity = "Low"
-confidence = "Low"
-remediation = "Handle potential overflow in absolute value calculations."
-ast_match = "Call(func.id=abs)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ROUND1092"
-description = "Rounding operation with potential precision loss."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of floating point precision issues in rounding."
-ast_match = "Call(func.id=round)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "POW1095"
-description = "Power operation with potential overflow or DoS."
-severity = "Medium"
-confidence = "Low"
-remediation = "Limit exponents to prevent computational DoS attacks."
-ast_match = "Call(func.id=pow)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "DIVMOD1098"
-description = "Division with modulo operation potential issues."
-severity = "Low"
-confidence = "Low"
-remediation = "Handle division by zero and validate operands."
-ast_match = "Call(func.id=divmod)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "LEN1101"
-description = "Length operation with potential performance impact."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware that len() on some objects can be expensive."
-ast_match = "Call(func.id=len)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ANY1104"
-description = "Any operation with potential short-circuit bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of short-circuit evaluation in security checks."
-ast_match = "Call(func.id=any)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ALL1107"
-description = "All operation with potential short-circuit bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware of short-circuit evaluation in security checks."
-ast_match = "Call(func.id=all)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ITER1110"
-description = "Iterator creation with potential memory issues."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful with iterators over large or infinite sequences."
-ast_match = "Call(func.id=iter)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "NEXT1113"
-description = "Next operation with potential StopIteration issues."
-severity = "Low"
-confidence = "Low"
-remediation = "Handle StopIteration exceptions properly."
-ast_match = "Call(func.id=next)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SLICE1116"
-description = "Slice operation with potential memory exhaustion."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate slice parameters to prevent excessive memory usage."
-ast_match = "Call(func.id=slice)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PROPERTY1119"
-description = "Property creation with potential access control bypass."
-severity = "Low"
-confidence = "Low"
-remediation = "Implement proper access controls in property getters/setters."
-ast_match = "Call(func.id=property)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "STATICMETHOD1122"
-description = "Static method bypassing instance access controls."
-severity = "Low"
-confidence = "Low"
-remediation = "Ensure static methods don't bypass intended access controls."
-ast_match = "Call(func.id=staticmethod)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CLASSMETHOD1125"
-description = "Class method with potential privilege escalation."
-severity = "Low"
-confidence = "Low"
-remediation = "Ensure class methods don't provide unintended access."
-ast_match = "Call(func.id=classmethod)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "SUPER1128"
-description = "Super call bypassing method resolution order."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful with super() calls in security-sensitive contexts."
-ast_match = "Call(func.id=super)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "CALLABLE1131"
-description = "Callable check with potential type confusion."
-severity = "Low"
-confidence = "Low"
-remediation = "Validate callable objects before invocation."
-ast_match = "Call(func.id=callable)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ID1134"
-description = "Object identity check with potential security implications."
-severity = "Low"
-confidence = "Low"
-remediation = "Be aware that object identity can be predictable."
-ast_match = "Call(func.id=id)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "HASH1137"
-description = "Hash operation with potential collision attacks."
-severity = "Low"
-confidence = "Low"
-remediation = "Use cryptographic hashes for security-sensitive applications."
-ast_match = "Call(func.id=hash)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "ASCII1140"
-description = "ASCII representation potentially exposing data."
-severity = "Low"
-confidence = "Low"
-remediation = "Be careful when converting sensitive objects to ASCII."
-ast_match = "Call(func.id=ascii)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "INPUT1143"
-description = "User input function with potential injection risks."
-severity = "Medium"
-confidence = "Medium"
-remediation = "Validate and sanitize all user input."
-ast_match = "Call(func.id=input)"
-file_pattern = "*.py"
-
-[[rule]]
-id = "PRINT1146"
-description = "Print statement potentially exposing sensitive data."
-severity = "Low"
-confidence = "Low"
-remediation = "Avoid printing sensitive information."
-ast_match = "Call(func.id=print)"
-file_pattern = "*.py"
+remediation = "Avoid nested quantifiers: (x+)+, (a*)+, (a+)* cause catastrophic backtracking."
+pattern = "re\\.(match|search|findall|compile)\\(.*\\([^)]*[+*][^)]*\\)([+*]|\\{[0-9])"
+file_pattern = "*.py"
+# Only flag when a capturing/non-capturing group itself has a quantifier INSIDE and OUTSIDE:
+# (a+)+  (a*)*  (a+)*  (a+){2,} → dangerous nested quantifiers
+# (\s+){key_name} → f-string brace after ), safe (brace not followed by digit)
+#
+# Safe pattern: (\\w+\\.)+\\w+  — matches dotted identifiers like "foo.bar.baz"
+# \\w+ only matches [a-zA-Z0-9_] so alternation between dot and word chars is non-overlapping
+# → no catastrophic backtracking. Exclude when inner group uses \\w or \\d only.
+exclude_pattern = "\\\\w\\+\\.\\)\\+|\\\\d\\+\\.\\)\\+|\\\\w\\+\\.\\)\\*"
 
 [[rule]]
 id = "OPEN1149"
-description = "File open operation with potential path traversal."
-severity = "Medium"
-confidence = "Medium"
-remediation = "Validate file paths and use appropriate file modes."
-ast_match = "Call(func.id=open)"
-file_pattern = "*.py"
+description = "User-controlled path passed to open() — potential path traversal or arbitrary file read/write."
+severity = "High"
+confidence = "High"
+remediation = "Validate and sanitize file paths. Use os.path.realpath() and verify the result stays within the expected directory."
+# No ast_match — triggered ONLY by taint engine (SK003).
+# Taint flow: request.* → variable → open(variable)
 
 [[rule]]
-id = "FORMAT1152"
-description = "Format function with potential format string attacks."
-severity = "Medium"
-confidence = "Low"
-remediation = "Validate format strings and use safe formatting methods."
-ast_match = "Call(func.id=format)"
+id = "SSTI001"
+description = "Server-Side Template Injection — user-controlled data used as Jinja2/Mako template string."
+severity = "Critical"
+confidence = "High"
+remediation = "Never pass user input as the template string. Use render_template() with a static file. Pass user data as template VARIABLES (context), not as the template source itself. For Jinja2, use SandboxedEnvironment if dynamic templates are required."
 file_pattern = "*.py"
+# Triggered by taint engine (SK_SSTI001: render_template_string, SK_SSTI002: env.from_string).
+# render_template_string(user_template) or env.from_string(user_template).render() → Jinja2 RCE.
+
+[[rule]]
+id = "ORM002"
+description = "Django ORM injection — user-controlled value in raw(), order_by(), or extra() QuerySet method."
+severity = "Critical"
+confidence = "High"
+remediation = "Never pass user input directly to raw(), order_by(), or extra(). For sorting, validate the field name against an explicit allowlist. For raw queries, use parameterized placeholders (%s). Avoid extra() entirely — use annotate() with Case/When instead."
+file_pattern = "*.py"
+# Triggered by taint engine: SK_ORMRAW001 (raw), SK_ORMORDER001 (order_by), SK_ORMEXTRA001 (extra).
+# CVE-2021-35042: order_by(user_input) allows column name injection.
+# CVE-2022-28346/28347: extra(**user_dict) allows SQL injection via crafted kwargs.
+
+[[rule]]
+id = "DESER725"
+description = "Insecure deserialization via jsonpickle.decode() — arbitrary Python object deserialization leading to RCE."
+severity = "Critical"
+confidence = "High"
+remediation = "Never pass untrusted data to jsonpickle.decode(). jsonpickle restores arbitrary Python objects including __reduce__ gadgets. Use json.loads() for safe data exchange. CVE-2020-22083, CVE-2024 (Splunk RCE)."
+pattern = "jsonpickle\\.decode\\s*\\("
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "DESER726"
+description = "Insecure deserialization via dill.loads() — arbitrary Python object deserialization leading to RCE."
+severity = "Critical"
+confidence = "High"
+remediation = "Never pass untrusted data to dill.loads(). dill extends pickle with support for lambdas and closures, enabling full RCE via crafted serialized payloads. Use json.loads() or protocol buffers for data exchange."
+pattern = "dill\\.loads\\s*\\("
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "TLS001"
+description = "TLS certificate verification disabled — connection is vulnerable to man-in-the-middle attacks."
+severity = "High"
+confidence = "High"
+remediation = "Remove verify=False. Always verify TLS certificates. If using a custom CA, pass verify='/path/to/ca-bundle.crt' instead of disabling verification. For urllib3, remove urllib3.disable_warnings(InsecureRequestWarning)."
+pattern = "\\bverify\\s*=\\s*False\\b|urllib3\\.disable_warnings\\s*\\(.*InsecureRequestWarning|TCPConnector\\s*\\(.*ssl\\s*=\\s*False|check_hostname\\s*=\\s*False"
+file_pattern = "*.py"
+# Exclude:
+#   Comment/docstring lines
+#   Array/indexer operations: _mgr.take(verify=False), indexer=..., verify=False
+#   Lines containing axis= (pandas internal indexer calls)
+#   Bare verify=False on its own line (fragment of a multi-line pandas call)
+#   Docstring text describing the verify parameter
+exclude_pattern = "^\\s*#|\\baxis\\s*=|_mgr\\.|_block|block_manager|Pass\\s+verify|^\\s+verify=False,?\\s*$|take\\s*\\(|indexer[^=]*verify|assumed|codes equal|parameter|description"
+
+[[rule]]
+id = "SSH001"
+description = "Paramiko host key validation disabled — SSH connection vulnerable to man-in-the-middle attacks."
+severity = "High"
+confidence = "High"
+remediation = "Use RejectPolicy() or load known_hosts with client.load_system_host_keys() or client.load_host_keys(). AutoAddPolicy blindly accepts any server's host key, enabling MITM attacks that intercept SSH sessions and credentials."
+pattern = "AutoAddPolicy\\s*\\(\\s*\\)"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "JWT001"
+description = "JWT signature verification disabled — tokens accepted without cryptographic validation."
+severity = "High"
+confidence = "High"
+remediation = "Never set verify_signature=False or algorithms=['none'] in jwt.decode(). Without signature verification, any attacker can forge arbitrary JWT claims (user ID, role, expiry). Always verify the signature with the correct key and algorithm."
+pattern = "verify_signature[\"']?\\s*:\\s*False|[\"']none[\"']\\s*.*algorithm|algorithms\\s*=\\s*\\[[\"']none[\"']"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "ZIPSLIP001"
+description = "Archive extraction without path validation — Zip Slip / Tar Slip arbitrary file write."
+severity = "High"
+confidence = "Low"
+remediation = "Before extractall(), validate every member path: reject entries containing '../' or absolute paths. Use a safe extraction helper that checks paths, or iterate members manually with extract() after validation."
+pattern = "\\.extractall\\s*\\("
+file_pattern = "*.py"
+# Exclude:
+#   filter= argument — Python 3.12+ safe extraction filter
+#   str.extractall() — pandas/polars string accessor for regex extraction (NOT archive)
+#   Series.str.extractall — same, string regex method
+exclude_pattern = "^\\s*#|filter\\s*=|str\\.extractall|strings.*extractall|accessor.*extractall|\\.str\\."
+# Low confidence: legitimate uses exist when archives are trusted/developer-controlled.
+
+[[rule]]
+id = "XXE001"
+description = "lxml XML parser with external entity resolution — XML External Entity (XXE) vulnerability."
+severity = "High"
+confidence = "Medium"
+remediation = "Use defusedxml.lxml, or create a safe parser: etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False). lxml's default XMLParser has resolve_entities=True, allowing XXE via crafted XML."
+pattern = "etree\\.(parse|fromstring|XML|HTML)\\s*\\("
+file_pattern = "*.py"
+# lxml's default parser resolves external entities. Attacker-controlled XML can read
+# arbitrary files (/etc/passwd) or trigger SSRF to internal services via entity references.
+exclude_pattern = "^\\s*#|defusedxml|resolve_entities\\s*=\\s*False"
+
+[[rule]]
+id = "ORM001"
+description = "SQLAlchemy text() with string formatting — SQL injection via ORM raw query escape hatch."
+severity = "Critical"
+confidence = "High"
+remediation = "Use bound parameters: text('SELECT * FROM users WHERE id = :id').bindparams(id=user_id). Never construct the SQL string with f-strings, %, or .format(). The text() function is for static SQL only."
+# \b (word boundary) prevents matching gettext(), pgettext(), ngettext():
+# in "gettext(" the 't' in "text" is preceded by 'e' (word char) — no boundary, no match.
+# in "text(" or "sa.text(" the 't' is preceded by non-word — boundary matches.
+pattern = "\\btext\\s*\\(\\s*f[\"']|\\btext\\s*\\(.*[\"']\\s*%|\\btext\\s*\\(.*\\.format\\s*\\("
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+# Exclude migration/backend files: f-strings in migrations contain hardcoded schema
+# identifiers, not user input. Backend files are ORM infrastructure, not application code.
+exclude_file_pattern = "*/migrations/*,*/alembic/*,*/backends/*"
+
+[[rule]]
+id = "FLASK001"
+description = "Flask application running with debug mode enabled — Werkzeug interactive debugger exposed."
+severity = "Critical"
+confidence = "High"
+remediation = "Never run Flask with debug=True in production. The Werkzeug debugger provides an authenticated Python REPL on every 500 error, allowing full RCE for anyone who can trigger an exception."
+pattern = "app\\.run\\s*\\(.*\\bdebug\\s*=\\s*True|app\\.debug\\s*=\\s*True|[\"']DEBUG[\"']\\s*:\\s*True"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
 
 [[rule]]
 id = "AI002"
@@ -2150,3 +2013,139 @@ severity = "High"
 remediation = "Remove hardcoded API keys and load them from environment variables or a secure secrets manager."
 pattern = "(?i)sk-ant-api[0-9]*-[A-Za-z0-9_-]{20,}"
 file_pattern = ".*\\.py"
+
+[[rule]]
+id = "PY306_CACHE"
+description = "pickle.loads() in cache backend — cache poisoning leads to remote code execution."
+severity = "Critical"
+confidence = "High"
+remediation = "Replace pickle-based cache serialization with JSON or msgpack. If pickle is required, authenticate the cache channel and use HMAC to verify payload integrity before deserializing."
+pattern = "pickle\\.loads\\s*\\("
+file_pattern = "*cache/backends/*.py"
+
+[[rule]]
+id = "SHELL_BYPASS001"
+description = "Explicit shell interpreter bypasses shell=False — functionally equivalent to shell injection."
+severity = "High"
+confidence = "High"
+remediation = "Never pass user-controlled data as the -c argument to bash/sh/cmd. Use subprocess with a list of arguments and shell=False, validating each element independently."
+pattern = "subprocess\\.(run|Popen|call)\\s*\\(\\s*\\[\\s*[\"'](bash|sh|zsh|cmd\\.exe|powershell)[\"']\\s*,\\s*[\"']-c[\"']"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "OPEN_REDIRECT001"
+description = "Unvalidated URL in redirect — open redirect enables phishing and OAuth token stealing."
+severity = "High"
+confidence = "Medium"
+remediation = "Validate redirect URLs against an allowlist of trusted domains. Use url_has_allowed_host_and_scheme() in Django or validate against a whitelist. Never redirect to a user-supplied URL without checking the host."
+file_pattern = "*.py"
+# No pattern — triggered only by taint engine (SK_REDIRECT001/002).
+# Taint flow: request.GET/POST['next'] → redirect()/HttpResponseRedirect()
+# Conditional sanitization (if is_safe_url(url): redirect(url)) is not detectable
+# by static taint analysis — url remains tainted through the conditional check.
+# Exclude Django's own framework files — they validate redirects with is_safe_url() /
+# url_has_allowed_host_and_scheme() before calling redirect(), but the call is safe.
+exclude_file_pattern = "*/django/contrib/*,django/contrib/*,*/django/views/*,django/views/*"
+
+[[rule]]
+id = "PLAIN_PWD001"
+description = "User-supplied password stored without hashing — plaintext password in database."
+severity = "Critical"
+confidence = "High"
+remediation = "Use Django's make_password() or set_password() before storing. Never assign request data directly to a password field: User.objects.create_user(password=request.POST['password']) hashes automatically; raw create(..., password=raw) does not."
+file_pattern = "*.py"
+# No pattern — triggered only by taint engine (SK_PLAIN_PWD001).
+# Taint flow: request.POST['password'] → Model.objects.create(password=tainted)
+
+[[rule]]
+id = "DJANGO_DEBUG001"
+description = "DEBUG=True in settings — full stack traces and internal state exposed to any HTTP client."
+severity = "Critical"
+confidence = "High"
+remediation = "Set DEBUG=False in production. Use environment variables: DEBUG = os.environ.get('DEBUG', 'False') == 'True'. Applies to Django, Flask, and any framework that respects a DEBUG flag."
+pattern = "^\\s*DEBUG\\s*=\\s*True"
+file_pattern = "*.py"
+# Catches DEBUG=True in both Django settings.py and Flask config files.
+# Flask app.run(debug=True) is covered separately by FLASK001.
+# Different from FLASK001: this is a settings file value, not runtime configuration.
+exclude_file_pattern = "*/tests/*,*/test_*.py"
+
+[[rule]]
+id = "RUAMEL_UNSAFE001"
+description = "ruamel.yaml loaded with typ='unsafe' — allows !!python/object gadget execution."
+severity = "Critical"
+confidence = "High"
+remediation = "Use YAML() (round-trip, safe by default) or YAML(typ='safe'). typ='unsafe' enables arbitrary Python object construction via YAML tags, equivalent to PyYAML's unsafe yaml.load()."
+pattern = "YAML\\s*\\(\\s*typ\\s*=\\s*[\"']unsafe[\"']\\s*\\)"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "ENV_URL001"
+description = "Environment variable used as HTTP endpoint URL — SSRF if the env var is attacker-controlled in CI/container environments."
+severity = "High"
+confidence = "Medium"
+remediation = "Validate env-var URLs against an allowlist of trusted domains before use. Never allow arbitrary HTTP endpoints via environment variables without scheme and host validation. Use a fixed default and only allow override to known-safe origins."
+file_pattern = "*.py"
+# Pattern: env var whose name contains URL used directly in HTTP calls.
+# Common pattern: SEMGREP_URL, API_URL, BASE_URL, ENDPOINT_URL etc.
+# The taint engine (SSRF_001) catches the downstream HTTP call when env-var URL propagates to requests/httpx.
+pattern = "os\\.environ(?:\\.get)?\\s*\\([\"'][A-Z_]*URL[A-Z_]*[\"']"
+exclude_pattern = "^\\s*#|allowlist|whitelist|validate|urlparse\\.scheme|startswith\\s*\\([\"']https"
+
+[[rule]]
+id = "COOKIE_FILE001"
+description = "Environment variable used as cookie file path — cookie injection into HTTP sessions."
+severity = "High"
+confidence = "High"
+remediation = "Never load a cookie jar from an env-var-specified path without validating the path is within an expected directory. Prefer in-memory session cookies over file-backed cookie jars for sensitive operations."
+file_pattern = "*.py"
+# No pattern — triggered by taint engine (SK_COOKIE_JAR001):
+# os.environ["SEMGREP_COOKIES_PATH"] → MozillaCookieJar(path) → cookies.load()
+# Allows attacker-controlled cookies to be injected into all HTTP requests.
+
+[[rule]]
+id = "ENV_GIT_URL001"
+description = "CI environment variable used to construct a git fetch URL — CI_JOB_TOKEN or credentials embedded in attacker-controlled URL."
+severity = "High"
+confidence = "High"
+remediation = "Validate that CI_MERGE_REQUEST_PROJECT_URL and similar CI env vars match the expected repository host before embedding credentials. Use allowlist: only reconstruct URLs for the known project host."
+file_pattern = "*.py"
+# Taint-driven via existing SSRF_001 and PY102 sinks:
+# os.environ["CI_MERGE_REQUEST_PROJECT_URL"] → urlsplit() → _replace(netloc=token@host) →
+# urlunsplit() → git_check_output(["git", "fetch", url]) — PY102 fires on tainted subprocess arg.
+# This rule provides higher-confidence CI-specific context for the same finding.
+pattern = "CI_MERGE_REQUEST_PROJECT_URL|CI_JOB_TOKEN.*git.*fetch|git.*fetch.*CI_"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "DESER_JOBLIB001"
+description = "Insecure deserialization via joblib.load() — loads arbitrary Python objects → RCE."
+severity = "Critical"
+confidence = "High"
+remediation = "Never load joblib files from untrusted sources. joblib uses pickle internally — any crafted .pkl/.joblib file can execute arbitrary code. Use SafeLoader or JSON for data exchange."
+pattern = "joblib\\.load\\s*\\("
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "DESER_NUMPY001"
+description = "numpy.load() with allow_pickle=True — arbitrary Python object deserialization → RCE."
+severity = "Critical"
+confidence = "High"
+remediation = "Use allow_pickle=False (default in NumPy 1.17+). Only load .npy/.npz files from trusted sources when pickle is required. Use JSON or HDF5 for cross-origin data exchange."
+pattern = "np\\.load\\s*\\(.*allow_pickle\\s*=\\s*True|numpy\\.load\\s*\\(.*allow_pickle\\s*=\\s*True"
+file_pattern = "*.py"
+exclude_pattern = "^\\s*#"
+
+[[rule]]
+id = "DESER_TORCH001"
+description = "torch.load() uses pickle by default — loading untrusted PyTorch model files → RCE."
+severity = "Critical"
+confidence = "High"
+remediation = "Use torch.load(..., weights_only=True) (PyTorch 2.0+) to restrict deserialization. Never load model files from untrusted sources. For model exchange, use ONNX or safetensors format."
+pattern = "torch\\.load\\s*\\("
+file_pattern = "*.py"
+# weights_only=True is the safe version — exclude it
+exclude_pattern = "^\\s*#|weights_only\\s*=\\s*True"

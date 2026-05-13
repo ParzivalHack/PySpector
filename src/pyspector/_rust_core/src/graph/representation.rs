@@ -23,7 +23,7 @@ impl BasicBlock {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ControlFlowGraph {
     pub blocks: HashMap<BlockId, BasicBlock>,
     pub entry: BlockId,

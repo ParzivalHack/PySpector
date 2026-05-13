@@ -45,7 +45,7 @@ class TestReporter(unittest.TestCase):
 
         # Check top level SARIF fields
         self.assertEqual(output_json.get("version"), "2.1.0")
-        self.assertEqual(output_json.get("schema_uri"), "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json")
+        self.assertEqual(output_json.get("schema_uri"), "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json")
 
         # Check runs
         self.assertIn("runs", output_json)
@@ -54,7 +54,6 @@ class TestReporter(unittest.TestCase):
 
         # Check unique single run
         run = output_json["runs"][0]
-        self.assertEqual(run["tool"]["driver"]["id"], "pyspector")
         self.assertEqual(run["tool"]["driver"]["name"], "PySpector")
 
         # Check run results

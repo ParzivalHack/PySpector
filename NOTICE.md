@@ -1,14 +1,12 @@
-## Repository Repurposed
+PySpector - Copyright © 2025-2026 Tommaso Bona
 
-This repository has been **repurposed**.  
-Originally, it contained a small experimental script with no real usage or community activity.  
+This product includes software developed by Tommaso Bona.
 
-As of 13/09/2025 (DD/MM/YYYY), the repository has been **reset and transformed** into a **new, professional project**: Pyspector, which is **completely different** from the original content.  
+Licensed under the Apache License,Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 
-The star count and forks have been preserved for continuity, but please note that they refer to the old repository state.  
+You may obtain a copy of the License at:
+http://www.apache.org/licenses/LICENSE-2.0  
 
-If you are here for **PySpector**, you are in the right place :)
-  
-The code, documentation, and roadmap you see now are **the new software**, actively maintained.  
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-Final note: some forks of this repository may still contain the old code, but they are unrelated to the current project.
+See the License for the specific language governing permissions and limitations under the License.
