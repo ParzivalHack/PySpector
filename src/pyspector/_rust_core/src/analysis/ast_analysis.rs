@@ -24,11 +24,6 @@ pub fn scan_ast(ast: &AstNode, file_path: &str, content: &str, ruleset: &RuleSet
 // Rules are already filtered for this file — no exclusion checks needed here.
 fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], issues: &mut Vec<Issue>) {
     for rule in rules.iter() {
-        // Respect global defaults + rule-level exclude_file_pattern
-        if rule.is_file_excluded(file_path, defaults) {
-            continue;
-        }
-
         if let Some(match_pattern) = &rule.ast_match {
             if check_node_match(node, match_pattern) {
                 let line_content = content.lines().nth(node.lineno.saturating_sub(1) as usize).unwrap_or("").to_string();
@@ -57,7 +52,7 @@ fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], iss
     // Recurse into children
     for child_list in node.children.values() {
         for child_node in child_list {
-            walk_ast(child_node, file_path, content, rules, defaults, issues);
+            walk_ast(child_node, file_path, content, rules, issues);
         }
     }
 }
