@@ -1,0 +1,11 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pyspector
+        name: PySpector SAST
+        entry: pyspector
+        args: ["scan", "."]
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
