@@ -23,6 +23,11 @@ fn build_from_statements(
     for stmt in stmts {
         match stmt.node_type.as_str() {
             "If" => {
+                // Add the If node to the current block so taint analysis can scan
+                // the condition for call-site taint (e.g. `if not plugin.initialize(config)`)
+                if let Some(block) = cfg.blocks.get_mut(&current_block_id) {
+                    block.statements.push(stmt.clone());
+                }
                 // Create blocks for the two branches and the merge point after the if/else
                 let if_body_block_id = cfg.add_block().id;
                 let merge_block_id = cfg.add_block().id;
@@ -55,6 +60,12 @@ fn build_from_statements(
                 current_block_id = merge_block_id;
             }
             "For" | "While" => {
+                // Add the For/While node to the current block so taint analysis
+                // can see the loop variable binding (target = iter element).
+                if let Some(block) = cfg.blocks.get_mut(&current_block_id) {
+                    block.statements.push(stmt.clone());
+                }
+
                 let loop_body_id = cfg.add_block().id;
                 let after_loop_id = cfg.add_block().id;
 
@@ -82,6 +93,31 @@ fn build_from_statements(
                 }
                 // A break creates a new, unconnected block after it to stop flow
                 current_block_id = cfg.add_block().id;
+            }
+            // With statement: add the With node itself (so taint analysis can handle
+            // `with X as y` bindings), then unfold the body into the same block so
+            // body statements are processed in sequence after `y` is tainted.
+            "With" => {
+                if let Some(block) = cfg.blocks.get_mut(&current_block_id) {
+                    block.statements.push(stmt.clone());
+                }
+                if let Some(body) = stmt.children.get("body") {
+                    current_block_id = build_from_statements(cfg, body, current_block_id, loop_exits);
+                }
+            }
+            // Try/except: unfold the body so taint flows through guarded calls.
+            // Exceptions are uncommon taint paths; we conservatively analyze the
+            // try-body as if it executes sequentially (no exception handling model).
+            "Try" | "TryStar" => {
+                if let Some(body) = stmt.children.get("body") {
+                    current_block_id = build_from_statements(cfg, body, current_block_id, loop_exits);
+                }
+                // Also process the else branch (runs when no exception)
+                if let Some(orelse) = stmt.children.get("orelse") {
+                    if !orelse.is_empty() {
+                        current_block_id = build_from_statements(cfg, orelse, current_block_id, loop_exits);
+                    }
+                }
             }
             // For all other statements, just add them to the current block
             _ => {

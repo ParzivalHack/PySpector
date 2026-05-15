@@ -1,26 +1,45 @@
 use crate::ast_parser::AstNode;
 use crate::issues::Issue;
-use crate::rules::{RuleSet, Rule};
+use crate::rules::{RuleSet, Rule, Defaults};
 
 // Main entry point for AST scanning
 pub fn scan_ast(ast: &AstNode, file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue> {
-    let mut issues = Vec::new();
+    // Pre-filter applicable rules ONCE per file — not per AST node.
+    // This is critical for performance: file_content_exclude runs a regex against
+    // the full file content. Calling it inside walk_ast meant it ran O(nodes × rules)
+    // times — 5M+ times for large files. Pre-filtering reduces this to O(rules) = ~100.
     let ast_rules: Vec<&Rule> = ruleset.rules.iter()
         .filter(|r| r.ast_match.is_some())
+        .filter(|r| !r.is_excluded(file_path, content, &ruleset.defaults))
         .collect();
-    
-    if ast_rules.is_empty() { return issues; }
 
+    if ast_rules.is_empty() { return Vec::new(); }
+
+    let mut issues = Vec::new();
     walk_ast(ast, file_path, content, &ast_rules, &mut issues);
     issues
 }
 
-// Recursively walks the AST, checking each node against the rules
+// Recursively walks the AST, checking each node against pre-filtered rules.
+// Rules are already filtered for this file — no exclusion checks needed here.
 fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], issues: &mut Vec<Issue>) {
     for rule in rules.iter() {
+        // Respect global defaults + rule-level exclude_file_pattern
+        if rule.is_file_excluded(file_path, defaults) {
+            continue;
+        }
+
         if let Some(match_pattern) = &rule.ast_match {
             if check_node_match(node, match_pattern) {
                 let line_content = content.lines().nth(node.lineno.saturating_sub(1) as usize).unwrap_or("").to_string();
+
+                // Respect line-level exclude_pattern on the matched line
+                if let Some(exclude) = &rule.exclude_pattern {
+                    if exclude.is_match(&line_content) {
+                        continue;
+                    }
+                }
+
                 issues.push(Issue::new(
                     rule.id.clone(),
                     rule.description.clone(),
@@ -38,7 +57,7 @@ fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], iss
     // Recurse into children
     for child_list in node.children.values() {
         for child_node in child_list {
-            walk_ast(child_node, file_path, content, rules, issues);
+            walk_ast(child_node, file_path, content, rules, defaults, issues);
         }
     }
 }
@@ -64,7 +83,7 @@ fn check_node_match(node: &AstNode, match_pattern: &str) -> bool {
             }
         }
     }
-    
+
     true
 }
 
@@ -99,6 +118,6 @@ fn node_has_property(node: &AstNode, path: &[&str], expected_value: &str) -> boo
             }
         }
     }
-    
+
     false
 }
