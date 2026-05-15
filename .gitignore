@@ -61,4 +61,9 @@ venv.bak/
 # IDEs
 .idea/
 .vscode/
+
+# Claude Code memory
+.claude/
+
+# Rust build artifacts
 target/
