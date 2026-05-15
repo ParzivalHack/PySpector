@@ -1,0 +1,32 @@
+# Rust artifacts
+target/
+**/*.rs.bk
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+
+# Git and IDEs
+.git
+.gitignore
+.idea/
+.vscode/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Packaging
+dist/
+build/
+*.egg-info/

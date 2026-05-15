@@ -4,3 +4,31 @@ requires = [
     "setuptools-rust>=1.0"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    "frontend/node_modules",
+    "src/pyspector.egg-info",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+disable_error_code = [
+    "arg-type",
+    "assignment",
+    "attr-defined",
+    "import-untyped",
+    "misc",
+    "var-annotated",
+]
+exclude = "(^frontend/node_modules/|^src/pyspector\\.egg-info/)"
