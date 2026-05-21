@@ -11,6 +11,8 @@ except ImportError:
 DEFAULT_CONFIG = {
     "exclude": [
         ".venv", "venv", ".git", "__pycache__", "build", "dist", "*.egg-info",
+        # Dependency / vendored directories
+        "node_modules", "bower_components", "vendor",
         # Add test fixture exclusions
         "*/tests/fixtures/*",
         "*/test/fixtures/*",
