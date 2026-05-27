@@ -314,8 +314,13 @@ id = "AI404"
 description = "Hugging Face authentication token is hardcoded in the source file."
 severity = "Critical"
 remediation = "Store Hugging Face tokens and other secrets in environment variables or a secrets management tool, not in source code."
-pattern = "token\\s*=\\s*[\"']hf_"
+# Real HF tokens are hf_ + ~34 alphanumeric chars. Require at least 16 consecutive
+# alphanumeric characters after `hf_` to drop placeholders like "hf_token", "hf_X",
+# "hf_xxx_your_token", and docstring examples like 'hf_....'.
+pattern = "token\\s*=\\s*[\"']hf_[A-Za-z0-9]{16,}"
 file_pattern = "*.py"
+# Doctest examples (>>> / ...) shouldn't fire even if they happen to use a long fake token.
+exclude_pattern = "^\\s*(>>>|\\.\\.\\.)\\s"
 
 [[rule]]
 id = "AI405"
