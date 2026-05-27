@@ -45,6 +45,15 @@ disabled_rule_ids = [
   "INFO738",      # traceback.print_exc() — information disclosure; needs prod-vs-test context
 ]
 
+# Shared placeholder/dummy-secret regex used by the format-specific secret rules
+# (G110..G133) and others. Edit ONE place; the literal `__SHARED_PLACEHOLDERS__`
+# sentinel inside any rule's `exclude_pattern` is string-substituted with this
+# value at rule-load time (see config.py:get_default_rules).
+#
+# What goes here: substrings/shapes that appear in every documentation example
+# or test-fixture credential and would otherwise generate FPs across many rules.
+exclude_pattern_placeholder = "(?i)EXAMPLE|FAKE|PLACEHOLDER|SAMPLE|x{10,}|0{10,}|1{10,}|abcdefghij|1234567890abcdef|AbCdEfGhIjKlMnOp|f3a8b2c1"
+
 # -------------------------------------------
 # SECTION: Taint Analysis Rules
 # -------------------------------------------
@@ -1113,10 +1122,13 @@ confidence = "Medium"
 remediation = "Store credentials in environment variables or a secrets management system."
 pattern = "(?i)(password|secret|api_key|token|authkey|bearer|cred|credentials)\\s*[:=]\\s*[\"']\\w{8,}[\"']"
 file_pattern = "*.py"
-# UPPER_CASE_CONSTANTS = "value" are module-level DeveloperDefined constants, not secrets.
-# But uppercase variables whose NAMES are explicit secrets (SECRET_KEY, API_KEY etc.)
-# are caught by G101B below. Exclude only if not a known-secret name.
-exclude_pattern = "^\\s*[A-Z][A-Z0-9_]+\\s*="
+# Exclusions:
+#  - UPPER_CASE_CONSTANTS = "value" (handled by G101B for known-secret names)
+#  - Placeholder values: YOUR_*, *_HERE/here, INSERT_*, EXAMPLE_*, your_*, replace_*, change_me, fake/dummy/sample/demo/test/todo
+#  - Common training-data placeholder names: my_password, root_password, server_api_key, api_key_secret
+#  - Lines that emit instructional output: print(...), click.echo(...), sys.stderr.write
+#  - Doctest examples: lines starting with ">>>" or "..."
+exclude_pattern = "^\\s*[A-Z][A-Z0-9_]+\\s*=|(?i)[\"'](your[_-]|insert[_-]|example[_-]|placeholder|change[_-]?me|replace[_-]?me|todo|fake|dummy|sample|demo|server_api_key|api_key_secret|my_password|root_password)|[\"'][^\"']*_here[\"']|[\"'][A-Z][A-Z0-9_]+_(KEY|TOKEN|SECRET|PASSWORD)[\"']|^\\s*(print|click\\.echo|sys\\.stderr)|^\\s*(>>>|\\.\\.\\.)\\s"
 
 [[rule]]
 id = "G101B"
@@ -1126,8 +1138,13 @@ confidence = "High"
 remediation = "Store secrets in environment variables: SECRET_KEY = os.environ.get('SECRET_KEY') or use a secrets manager."
 pattern = "(?i)\\b(SECRET[_\\s]?KEY|API[_\\s]?KEY|API[_\\s]?SECRET|ACCESS[_\\s]?KEY|ACCESS[_\\s]?SECRET|AUTH[_\\s]?TOKEN|AUTH[_\\s]?KEY|PRIVATE[_\\s]?KEY|CLIENT[_\\s]?SECRET|APP[_\\s]?SECRET|APP[_\\s]?KEY|SIGNING[_\\s]?KEY|ENCRYPTION[_\\s]?KEY|MASTER[_\\s]?KEY)\\s*=\\s*[\"'][^\"']{16,}[\"']"
 file_pattern = "*.py"
-# Safe: reading from environment or config system — not a hardcoded secret
-exclude_pattern = "os\\.environ|getenv|config\\(|env\\(|settings\\.|vault|secrets\\."
+# Exclusions:
+#  - Safe lookups: env, config, settings, vault, secrets store
+#  - Placeholder values: YOUR_*, *_HERE/here, INSERT_*, EXAMPLE_*, your_*, replace_*, change_me, fake/dummy/sample/demo/test
+#  - Uppercase placeholder names used as values (e.g. "YOUR_OPENAI_API_KEY")
+#  - Instructional `print(...)` / `click.echo(...)` lines
+#  - Doctest examples (>>> / ...)
+exclude_pattern = "os\\.environ|getenv|config\\(|env\\(|settings\\.|vault|secrets\\.|(?i)[\"'](your[_-]|insert[_-]|example[_-]|placeholder|change[_-]?me|replace[_-]?me|fake|dummy|sample|demo)|[\"'][^\"']*_here[\"']|[\"'][A-Z][A-Z0-9_]+_(KEY|TOKEN|SECRET|PASSWORD)[\"']|^\\s*(print|click\\.echo|sys\\.stderr)|^\\s*(>>>|\\.\\.\\.)\\s"
 
 [[rule]]
 id = "G102"
@@ -1136,6 +1153,10 @@ severity = "Critical"
 confidence = "High"
 remediation = "Load private keys from a secure, encrypted file or secrets manager."
 pattern = "-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"
+# Documentation files routinely contain example/sample key markers (CTF walkthroughs,
+# secret-detection knowledge bases, READMEs). Restrict G102 to source/key files; G102
+# in docs has a near-100% FP rate in our corpus.
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.ipynb"
 
 [[rule]]
 id = "G103"
@@ -1148,16 +1169,339 @@ file_pattern = "*.py"
 #   Function parameter defaults: def login(passwd='') — optional API param
 #   Comment lines
 #   Chained initialization: login = account = password = '' — variable init, not a credential
-exclude_pattern = "^\\s*def\\s|^\\s*#|\\w+\\s*=\\s*\\w+\\s*="
-exclude_file_pattern = "*global_settings*"
+#   UPPER_CASE module-level defaults: EMAIL_HOST_PASSWORD = "" / MAIL_PASSWORD = '' — these are
+#     Django/Flask settings meant to be overridden at runtime via env var; flagging them is FP.
+exclude_pattern = "^\\s*def\\s|^\\s*#|\\w+\\s*=\\s*\\w+\\s*=|^\\s*[A-Z][A-Z0-9_]+\\s*="
+exclude_file_pattern = "*global_settings*,*settings*.py,*config*.py"
 
 [[rule]]
 id = "G104"
 description = "JWT secret is hardcoded."
 severity = "Critical"
 remediation = "Load JWT secrets from environment variables or a secrets management system."
-pattern = "(?i)(jwt_secret|jwt_key)\\s*[:=]\\s*[\"'].+[\"']"
+# Value must be at least 16 chars (real secrets) to suppress short placeholder field-name
+# values like JSON_SER_KB_JWT_KEY = "kb_jwt".
+pattern = "(?i)(jwt_secret|jwt_key)\\s*[:=]\\s*[\"'][^\"']{16,}[\"']"
 file_pattern = "*.py"
+# Exclude placeholder/dev-secret values that explicitly tell the reader to replace them
+# or that are clearly demonstration material (CTF challenges, "do-not-share", "demo", etc.).
+exclude_pattern = "(?i)[\"'](your[_-]|change[_-]?(me|in[_-]?production)|default[_-]?secret|placeholder|example|replace|demo[_\\-]|do[_\\-]not[_\\-]share|never[_\\-]?(hardcode|use))"
+
+# -------------------------------------------
+# SECTION: Provider-specific high-precision secret patterns (G110+)
+# These rules detect literal credentials by format alone — they fire regardless
+# of the variable name, complementing G101/G101B which require named contexts.
+# -------------------------------------------
+
+# Shared exclusion for obvious placeholders: long runs of identical chars (xxx, 000), the
+# words EXAMPLE/FAKE/PLACEHOLDER/SAMPLE inside the value, and common dummy sequences.
+# Used across Tier-1 rules by repeating in each rule's exclude_pattern.
+
+[[rule]]
+id = "G110"
+description = "Hardcoded AWS access key ID detected (AKIA/ASIA/AIDA/AROA prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate the key immediately in the AWS IAM console. Use instance profiles, IAM roles, or environment credentials."
+pattern = "\\b(AKIA|ASIA|AIDA|AROA|AGPA|ANPA|ANVA|ASCA)[0-9A-Z]{16}\\b"
+# AKIAIOSFOLQUICKSTART is the well-known lakefs quickstart access key (documented in
+# their docker-compose examples). Treat as a known-public dev credential.
+exclude_pattern = "__SHARED_PLACEHOLDERS__|AKIAIOSFOLQUICKSTART"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G111"
+description = "Hardcoded GitHub token detected (PAT, OAuth, user-to-server, server-to-server, refresh, or fine-grained)."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke immediately at https://github.com/settings/tokens. Use a fine-grained PAT loaded from env."
+pattern = "\\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\\b|\\bgithub_pat_[A-Za-z0-9_]{82}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G112"
+description = "Hardcoded GitLab personal access token detected."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke in GitLab > Edit profile > Access Tokens; load from env or a vault."
+pattern = "\\bglpat-[A-Za-z0-9_\\-]{20}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G113"
+description = "Hardcoded Slack token detected (xox* bot/user/app/refresh token)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate the token in Slack app settings; load from env."
+pattern = "\\bxox[abprso]-[A-Za-z0-9-]{10,}\\b"
+# Catch "xoxb-your-slack-bot-token" style placeholders, plus runs of identical chars.
+exclude_pattern = "__SHARED_PLACEHOLDERS__|-your-|-here\\b|-token\\b|-replace-"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example"
+
+[[rule]]
+id = "G114"
+description = "Hardcoded Slack incoming-webhook URL detected."
+severity = "High"
+confidence = "High"
+remediation = "Webhook URLs are credentials — anyone with the URL can post to your channel. Rotate and store in env."
+pattern = "https://hooks\\.slack\\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G115"
+description = "Hardcoded Stripe secret/restricted key detected (sk_live_, sk_test_, rk_live_, rk_test_)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate the key in the Stripe dashboard immediately. Never commit live keys."
+pattern = "\\b(sk|rk)_(live|test)_[A-Za-z0-9]{24,}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G116"
+description = "Hardcoded Google API key detected (AIza prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate at GCP Console > APIs & Services > Credentials. Restrict by referrer/IP and load from env."
+pattern = "\\bAIza[A-Za-z0-9_\\-]{35}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G117"
+description = "Hardcoded OpenAI API key detected (sk- prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate at https://platform.openai.com/api-keys. Load via OPENAI_API_KEY env."
+pattern = "\\bsk-[A-Za-z0-9]{48}\\b|\\bsk-(proj|svcacct|admin|None)-[A-Za-z0-9_\\-]{20,}\\b"
+# Catch placeholders like sk-svcacct-your-embedding-key-here and -here suffixes.
+exclude_pattern = "__SHARED_PLACEHOLDERS__|-your-|-here\\b|-replace-|-key-here\\b|YOUR-?KEY|YOUR-?TOKEN"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example"
+
+[[rule]]
+id = "G118"
+description = "Hardcoded Anthropic/Claude API key detected (sk-ant-api03 prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate at https://console.anthropic.com/settings/keys. Load via ANTHROPIC_API_KEY env. Each leaked key gives full access to your Anthropic billing — rotate immediately."
+# Anthropic key formats:
+#   sk-ant-api03-<95 chars>  (production API keys; tail often "AA" from base64 padding)
+#   sk-ant-admin01-<95 chars>  (admin keys for org management)
+#   sk-ant-sid01-<95 chars>  (session keys, internal)
+# Accept 80–110 trailing chars to cover all variants and any future tweaks.
+pattern = "\\bsk-ant-(api|admin|sid)\\d{2}-[A-Za-z0-9_\\-]{80,110}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G119"
+description = "Hardcoded SendGrid API key detected (SG.x.y format)."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke and reissue at https://app.sendgrid.com/settings/api_keys."
+pattern = "\\bSG\\.[A-Za-z0-9_\\-]{22}\\.[A-Za-z0-9_\\-]{43}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G120"
+description = "Hardcoded PostHog API key detected (phc_ prefix, 40 chars)."
+severity = "High"
+confidence = "High"
+remediation = "Project keys can be public for client-side telemetry but personal API keys are not — verify and rotate accordingly."
+pattern = "\\bphc_[A-Za-z0-9]{40}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G121"
+description = "Database connection string contains embedded password."
+severity = "Critical"
+confidence = "High"
+remediation = "Use environment variables for credentials or a connection-string library that pulls from a vault."
+pattern = "(?i)\\b(postgres(?:ql)?|mysql|mongodb(?:\\+srv)?|mariadb|redis|rediss|amqp|amqps|mssql|oracle)://[^\\s:@\"'/]+:[^@\\s\"']{4,}@"
+# Exclude when the connection string is not a literal credential:
+#   - explicit placeholder words in the password portion (password, secret, changeme, …)
+#   - Python f-string interpolation in user or password: {var}, {self.x}, {obj.attr}
+#   - shell/env interpolation: ${VAR}, $(VAR), $VAR
+#   - angle-bracket placeholders: <USER>, <PASSWORD>
+#   - Jinja2 / Helm / cookiecutter templates: {{ var }}, {{var}}, {%…%}
+#   - Lines that build a regex over a URL: re.match/compile/search with a connection-string-shaped pattern
+#     (the f"…" detection misses regex strings because they use \1, capture groups, etc.)
+exclude_pattern = "(?i)://[^:]+:(password|passwd|pass|secret|changeme|change[_\\-]me|placeholder|example|\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://\\{\\{?[^}]+\\}\\}?:|^[^#]*\\bre\\.(match|compile|search|fullmatch)\\s*\\(|://[^:]+:[^@]+@(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|host\\.docker\\.internal|db|database|postgres(ql)?|mysql|mariadb|mongo(db)?|redis|rabbitmq|broker|kafka|memcached|amqp)[:/?#\"' \\t]"
+# Skip docs, env templates, and infrastructure templates (Helm, Jinja, cookiecutter).
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+
+[[rule]]
+id = "G121L"
+description = "Dev-default database connection string detected (localhost/container-name host with embedded credentials)."
+severity = "Low"
+confidence = "Low"
+remediation = "If this connection string ships to production, move credentials to env. For local-only dev defaults, this is informational — confirm the host is never reachable from prod."
+# Same connection-string shape as G121, but restricted to hostnames that strongly
+# suggest a local dev or docker-compose service: localhost, 127.0.0.1, ::1,
+# host.docker.internal, and common service names (db, postgres, mysql, mongo,
+# redis, rabbitmq, broker, kafka, memcached, amqp). These are still TPs
+# (literal hardcoded credentials) but at much lower priority — they're the
+# dominant FP class for the high-confidence G121 rule.
+pattern = "(?i)\\b(postgres(?:ql)?|mysql|mongodb(?:\\+srv)?|mariadb|redis|rediss|amqp|amqps|mssql|oracle)://[^\\s:@\"'/]+:[^@\\s\"']{4,}@(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|host\\.docker\\.internal|db|database|postgres(ql)?|mysql|mariadb|mongo(db)?|redis|rabbitmq|broker|kafka|memcached|amqp)[:/?#\"' \\t]"
+exclude_pattern = "(?i)://[^:]+:(\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://\\{\\{?[^}]+\\}\\}?:|^[^#]*\\bre\\.(match|compile|search|fullmatch)\\s*\\("
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+
+[[rule]]
+id = "G122"
+description = "Hardcoded JWT in source code (eyJ… three-part token)."
+severity = "High"
+confidence = "Medium"
+remediation = "JWTs in source typically grant access to a real account — rotate the issuer's signing key."
+pattern = "\\beyJ[A-Za-z0-9_\\-]{10,}\\.eyJ[A-Za-z0-9_\\-]{10,}\\.[A-Za-z0-9_\\-]{10,}\\b"
+exclude_pattern = "(?i)example|sample|placeholder|change[_\\-]?me"
+# No file_pattern restriction — JWTs appear in *.py, *.js, *.yaml, *.json, *.sh,
+# build configs, and many other source/config files. Doc-extension exclude still applies.
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.log,*.lock"
+
+[[rule]]
+id = "G123"
+description = "Basic-auth credentials embedded in URL (https://user:pass@…)."
+severity = "High"
+confidence = "Medium"
+remediation = "Never inline credentials in URLs — they leak via logs, Referer headers, and process listings."
+# Basic-auth password component cannot contain "/" (it ends the userinfo segment),
+# so requiring [^@\s"'/]{4,} between ":" and "@" eliminates the JS-stack-trace FP
+# class like "http://localhost:5173/node_modules/.vite/deps/@react.js?…:759:3) @ http://…"
+# where "5173/node_modules/.vite/deps/" was being parsed as the password.
+pattern = "https?://[^:/\\s\"']+:[^@\\s\"'/]{4,}@[^\\s\"']+"
+# Exclusions:
+#   - placeholders / env interpolation / template markers (same families as G121)
+#   - well-known schemes that put a literal in the user position: oauth2:, x-access-token:, token:
+exclude_pattern = "(?i)://[A-Za-z0-9._\\-]+:(pass(word)?|secret|changeme|change[_\\-]me|placeholder|example|\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://(oauth2|x-access-token|token):"
+# Skip docs, env templates, and log files (JS stack traces contain http://host:port/path@module FPs).
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.log,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+
+[[rule]]
+id = "G124"
+description = "Hardcoded NPM access token detected (npm_ prefix)."
+severity = "High"
+confidence = "High"
+remediation = "Revoke at https://www.npmjs.com/settings/<user>/tokens."
+pattern = "\\bnpm_[A-Za-z0-9]{36}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G125"
+description = "Hardcoded PyPI upload token detected (pypi-AgEIc… prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke at https://pypi.org/manage/account/token/."
+pattern = "\\bpypi-AgEIcHlwaS5vcmc[A-Za-z0-9_\\-]{50,}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G126"
+description = "Hardcoded Discord bot token detected."
+severity = "Critical"
+confidence = "High"
+remediation = "Reset at https://discord.com/developers/applications > Bot > Reset Token."
+pattern = "\\b[MN][A-Za-z0-9]{23}\\.[\\w\\-]{6}\\.[\\w\\-]{27}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+[[rule]]
+id = "G127"
+description = "Hardcoded Telegram bot token detected."
+severity = "High"
+confidence = "High"
+remediation = "Revoke via @BotFather → /revoke."
+pattern = "\\b\\d{8,10}:[A-Za-z0-9_\\-]{35}\\b"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+
+# -------------------------------------------
+# SECTION: Additional provider detectors (G128+)
+# These target providers whose tokens commonly leak into non-Python files
+# (.json, .yaml, .sh, .env). No file_pattern scoping — scan everything except docs.
+# -------------------------------------------
+
+[[rule]]
+id = "G128"
+description = "Hardcoded DigitalOcean token detected (dop_v1_/doo_v1_/dor_v1_ prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke at https://cloud.digitalocean.com/account/api/tokens. Load from env or use a vault."
+# DigitalOcean PAT formats:
+#   dop_v1_<64 hex>  Personal Access Token
+#   doo_v1_<64 hex>  OAuth token
+#   dor_v1_<64 hex>  Refresh token
+pattern = "\\b(dop|doo|dor)_v1_[a-f0-9]{64}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+
+[[rule]]
+id = "G129"
+description = "Hardcoded Doppler token detected (dp.pt./dp.st./dp.ct. prefix)."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke at https://dashboard.doppler.com/workplace/tokens or via the affected service's settings."
+# Doppler token formats:
+#   dp.pt.<43+ chars>   Personal token
+#   dp.st.<environment>.<43+ chars>  Service token
+#   dp.ct.<43+ chars>   CLI token
+#   dp.scim.<43+ chars> SCIM token
+#   dp.audit.<43+ chars> Audit log token
+#   dp.prov.<43+ chars> Provisioning token
+pattern = "\\bdp\\.(pt|st|ct|scim|audit|prov|sa)\\.[A-Za-z0-9_\\-]{30,}\\b"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+
+[[rule]]
+id = "G130"
+description = "Hardcoded Cloudflare API token or Origin CA key detected."
+severity = "Critical"
+confidence = "High"
+remediation = "Rotate at Cloudflare dashboard > My Profile > API Tokens. Load from env or a vault."
+# Cloudflare Origin CA Key (very distinctive shape):
+#   v1.0-<32 hex>-<146 hex>
+# Cloudflare API Tokens are 40 chars [A-Za-z0-9_-]; matched only when paired with
+# a "cloudflare" keyword on the same line to keep precision high.
+pattern = "\\bv1\\.0-[a-f0-9]{32}-[a-f0-9]{146}\\b|(?i)cloudflare[^\\n]{0,40}[\"'][A-Za-z0-9_\\-]{40}[\"']"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+
+[[rule]]
+id = "G131"
+description = "Hardcoded Heroku API key detected (UUID near 'heroku' keyword)."
+severity = "Critical"
+confidence = "Medium"
+remediation = "Rotate at https://dashboard.heroku.com/account > API Key > Regenerate API Key."
+# Heroku API keys are bare UUIDs, so we require a nearby "heroku" keyword on the line
+# to keep precision acceptable.
+pattern = "(?i)heroku[^\\n]{0,40}[\"'][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[\"']"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+
+[[rule]]
+id = "G132"
+description = "Hardcoded HubSpot private-app or developer API key detected."
+severity = "Critical"
+confidence = "High"
+remediation = "Revoke at https://app.hubspot.com/private-apps. Use a vault and env-based loading."
+# HubSpot Private App tokens (current):
+#   pat-(na1|na2|na3|eu1)-<UUID>
+# HubSpot Developer API keys (legacy) are bare UUIDs; require "hubspot" context.
+pattern = "\\bpat-(na1|na2|na3|eu1)-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\b|(?i)hubspot[^\\n]{0,40}[\"'][a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}[\"']"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+
+[[rule]]
+id = "G133"
+description = "Hardcoded Fastly API token detected (paired with 'fastly' keyword)."
+severity = "High"
+confidence = "Medium"
+remediation = "Revoke at https://manage.fastly.com/account/tokens. Load from env."
+# Fastly tokens are 32 chars [A-Za-z0-9_-], indistinguishable from many other random
+# 32-char strings → require nearby "fastly" keyword.
+pattern = "(?i)fastly[^\\n]{0,40}[\"'][A-Za-z0-9_\\-]{32}[\"']"
+exclude_pattern = "__SHARED_PLACEHOLDERS__"
+exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
 
 # -------------------------------------------
 # SECTION: IaC and Configuration File Security
