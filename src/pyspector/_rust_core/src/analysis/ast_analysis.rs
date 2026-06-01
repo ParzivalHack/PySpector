@@ -44,6 +44,7 @@ fn walk_ast(node: &AstNode, file_path: &str, content: &str, rules: &[&Rule], iss
                     rule.severity.clone(),
                     rule.confidence.clone(),
                     rule.remediation.clone(),
+                    rule.cwe.clone(),
                 ));
             }
         }

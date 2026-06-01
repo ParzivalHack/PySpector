@@ -205,22 +205,11 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
         iterations += 1;
         let mut summaries_changed = false;
         let mut current_pass_issues: Vec<Issue> = Vec::new();
-        
+
         // Analyze functions IN PARALLEL using Rayon.
         // Each function reads global_ctx (immutable snapshot of this iteration's state)
         // and returns (func_id, summary, call_sites, class_attrs).
         // Results are merged serially after all parallel analyses complete.
-        //
-        // Correctness: with parallel analysis, function B doesn't see call_site_taints
-        // produced by function A in the SAME iteration — it sees them in the NEXT
-        // iteration. This may require one extra iteration vs sequential but is safe.
-        //
-        // Lazy filter: iterations 2+ skip functions with no taint to propagate.
-        // A function has taint to propagate if:
-        //   (a) it's an HTTP/CLI entry point (has tainted params)
-        //   (b) it was called with tainted arguments (call_site_taint)
-        //   (c) it's in a file where class attributes have been tainted (class_attr_taint)
-        //       — e.g., self.output_dir set in __init__ propagates to all same-file methods
         let files_with_class_attr_taints: std::collections::HashSet<&str> = global_ctx.class_attr_taints
             .keys()
             .filter(|(_, _)| true)
@@ -288,8 +277,6 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
                     summaries_changed = true;
                 }
             }
-
-            // Issues from convergence loop are discarded — collected in final pass.
         }
 
         println!("[*] Iteration {} done in {:.2}s", iterations, t_iter.elapsed().as_secs_f64());
@@ -1928,6 +1915,7 @@ fn report_issue(ruleset: &RuleSet, vuln_id: &str, file_path: &str, stmt: &AstNod
             vuln_rule.severity.clone(),
             vuln_rule.confidence.clone(),
             vuln_rule.remediation.clone(),
+            vuln_rule.cwe.clone(),
         ));
     }
 }

@@ -30,6 +30,7 @@ setup(
         RustExtension(
             "pyspector._rust_core",
             path=cargo_toml_path,
+            debug=False,
         )
     ],
     python_requires=">=3.8",
