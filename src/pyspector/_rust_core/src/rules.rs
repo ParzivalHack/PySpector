@@ -43,6 +43,13 @@ pub struct Rule {
     /// Example: file_content_exclude = "from ruamel\\.yaml|import ruamel"
     #[serde(with = "serde_regex", default)]
     pub file_content_exclude: Option<regex::Regex>,
+    /// CWE identifier (e.g. "CWE-78" for command injection). Used for
+    /// cross-rule dedup: findings at the same (file, line) sharing the same
+    /// CWE collapse to the highest-severity one. Rules without a CWE set
+    /// keep the legacy per-rule dedup behaviour. Also surfaced in JSON/SARIF
+    /// output for downstream tooling.
+    #[serde(default)]
+    pub cwe: Option<String>,
 }
 
 impl Rule {

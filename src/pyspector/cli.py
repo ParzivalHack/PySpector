@@ -276,7 +276,7 @@ def get_python_file_asts(
                     ast_json = json.dumps(parsed_ast, cls=AstEncoder)
                     results.append(
                         {
-                            "file_path": str(display_path),
+                            "file_path": str(py_file.resolve()),
                             "content": content,
                             "ast_json": ast_json,
                         }

@@ -47,6 +47,7 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
                         rule.severity.clone(),
                         rule.confidence.clone(),
                         rule.remediation.clone(),
+                        rule.cwe.clone(),
                     ));
                 }
             }

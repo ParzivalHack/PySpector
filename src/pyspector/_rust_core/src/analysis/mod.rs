@@ -1,12 +1,23 @@
 use crate::ast_parser::PythonFile;
 use crate::graph::call_graph_builder;
-use crate::issues::Issue;
+use crate::issues::{Issue, Severity};
 use crate::rules::RuleSet;
 use rayon::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
+
+/// Numeric ordering of severities so we can pick the "worse" of two findings
+/// that fire at the same code location. Critical > High > Medium > Low.
+fn severity_rank(s: &Severity) -> u8 {
+    match s {
+        Severity::Critical => 4,
+        Severity::High => 3,
+        Severity::Medium => 2,
+        Severity::Low => 1,
+    }
+}
 
 mod ast_analysis;
 mod config_analysis;
@@ -99,11 +110,47 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
     println!("[+] Found {} issues from taint analysis", taint_issues.len());
     issues.extend(taint_issues);
     
-    // Remove duplicates
     let mut seen = HashSet::new();
     issues.retain(|issue| seen.insert(issue.get_fingerprint()));
 
-    println!("[*] Total issues after deduplication: {}", issues.len());
+    // Cross-rule dedup by CWE: at the same (file, line), rules sharing a CWE
+    // describe one vulnerability — keep the highest severity. Distinct CWEs
+    // stay distinct so `os.system(eval(x))` reports both CWE-78 and CWE-94.
+    let mut by_cwe_loc: HashMap<(String, usize, String), Issue> = HashMap::new();
+    let mut uncategorized: Vec<Issue> = Vec::new();
+    for issue in issues {
+        match &issue.cwe {
+            Some(cwe) => {
+                let key = (issue.file_path.clone(), issue.line_number, cwe.clone());
+                match by_cwe_loc.get(&key) {
+                    Some(existing) => {
+                        let new_rank = severity_rank(&issue.severity);
+                        let old_rank = severity_rank(&existing.severity);
+                        if new_rank > old_rank
+                            || (new_rank == old_rank && issue.rule_id < existing.rule_id)
+                        {
+                            by_cwe_loc.insert(key, issue);
+                        }
+                    }
+                    None => { by_cwe_loc.insert(key, issue); }
+                }
+            }
+            None => uncategorized.push(issue),
+        }
+    }
+    let merged = by_cwe_loc.len();
+    let mut issues: Vec<Issue> = by_cwe_loc.into_values().collect();
+    issues.extend(uncategorized);
+
+    let untagged = issues.len() - merged;
+    if untagged > 0 {
+        println!(
+            "[*] Total issues after deduplication: {} (CWE-tagged: {}, untagged: {})",
+            issues.len(), merged, untagged
+        );
+    } else {
+        println!("[*] Total issues after deduplication: {}", issues.len());
+    }
     issues
 }
 

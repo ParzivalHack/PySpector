@@ -151,6 +151,7 @@ description = "Prompt Injection via direct user input in LangChain template."
 severity = "Critical"
 remediation = "Do not construct prompt templates directly from user input. Use parameterized inputs and structured prompt formats like ChatPromptTemplate."
 # This rule is primarily triggered by taint analysis (see AISK01)
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI102"
@@ -159,6 +160,7 @@ severity = "High"
 remediation = "Avoid using f-strings to build prompts with untrusted data. Use the API's built-in parameterization features."
 pattern = "\\.(invoke|run|predict)\\s*\\(\\s*f[\"']"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI103"
@@ -166,6 +168,7 @@ description = "Direct execution of untrusted data in an LLM chain."
 severity = "Critical"
 remediation = "Ensure input passed to LLM chains is sanitized or constrained. Do not pass raw user input directly to chains that can execute tools."
 # This rule is primarily triggered by taint analysis (see AISK02)
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI104"
@@ -173,6 +176,7 @@ description = "SQL Injection risk through a LangChain SQLDatabaseChain agent."
 severity = "Critical"
 remediation = "The SQLDatabaseChain can execute arbitrary SQL. Do not expose it directly to user input without significant safeguards and prompt engineering."
 # This rule is primarily triggered by taint analysis (see AISK03)
+cwe = "CWE-89"
 
 [[rule]]
 id = "AI105"
@@ -180,6 +184,7 @@ description = "Indirect Prompt Injection via Python REPL tool in an agent."
 severity = "Critical"
 remediation = "The PythonAstREPLTool allows an LLM to execute Python code. This is extremely dangerous if the agent can be influenced by tainted data."
 # This rule is primarily triggered by taint analysis (see AISK10)
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI106"
@@ -188,6 +193,7 @@ severity = "High"
 remediation = "The `LLMMathChain` uses `eval()` internally. Avoid using it with any user-controllable input."
 ast_match = "Call(func.id=LLMMathChain)"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI107"
@@ -197,6 +203,7 @@ confidence = "Low"
 remediation = "Review the interpretation logic to ensure it properly handles adversarial inputs and does not inadvertently execute harmful instructions."
 pattern = "gradio\\.Interface\\s*\\(.*interpret_fn="
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "AI108"
@@ -209,6 +216,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: AI200 - Insecure Model Loading & Deserialization
 # -------------------------------------------
+cwe = "CWE-20"
 
 [[rule]]
 id = "AI201"
@@ -217,14 +225,17 @@ severity = "Critical"
 remediation = "Use a safer model format like SafeTensors ('safetensors.torch.load_file') instead of pickle for untrusted model files."
 ast_match = "Call(func.value.id=pickle, func.attr=load)"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "AI202"
 description = "Loading a PyTorch model from an untrusted source can be insecure."
 severity = "High"
-remediation = "Only load PyTorch models from trusted, verified sources. Scan models for malicious code before loading."
-pattern = "torch\\.load"
+remediation = "Only load PyTorch models from trusted sources. Prefer torch.load(..., weights_only=True) on PyTorch 2.0+."
+pattern = "torch\\.load\\s*\\("
+exclude_pattern = "^\\s*#|weights_only\\s*=\\s*True"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "AI203"
@@ -233,6 +244,7 @@ severity = "High"
 remediation = "Only load Keras models from trusted sources. H5 files can contain executable code."
 pattern = "keras\\.models\\.load_model"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "AI204"
@@ -241,6 +253,7 @@ severity = "High"
 remediation = "Joblib can use pickle under the hood. Treat .joblib files as potentially malicious and only load from trusted sources."
 pattern = "joblib\\.load"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "AI205"
@@ -253,6 +266,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: AI300 - Data Poisoning & Evasion
 # -------------------------------------------
+cwe = "CWE-502"
 
 [[rule]]
 id = "AI301"
@@ -261,6 +275,7 @@ severity = "High"
 remediation = "Download and verify training data from remote sources before use. Do not load it directly in training scripts."
 pattern = "pd\\.read_csv\\s*\\(\\s*[\"']https?://"
 file_pattern = "*.py"
+cwe = "CWE-345"
 
 [[rule]]
 id = "AI302"
@@ -271,6 +286,7 @@ remediation = "For critical applications, pin datasets to a specific commit hash
 # This pattern is now less specific but will not crash the engine.
 pattern = "load_dataset\\s*\\("
 file_pattern = "*.py"
+cwe = "CWE-345"
 
 [[rule]]
 id = "AI303"
@@ -284,6 +300,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: AI400 - Model Theft & Information Leakage
 # -------------------------------------------
+cwe = "CWE-20"
 
 [[rule]]
 id = "AI401"
@@ -292,6 +309,7 @@ severity = "High"
 remediation = "Ensure that making a Gradio interface public is intentional. Set 'share=False' for local-only development."
 pattern = "\\.launch\\(share=True\\)"
 file_pattern = "*.py"
+cwe = "CWE-16"
 
 [[rule]]
 id = "AI402"
@@ -300,6 +318,7 @@ severity = "Medium"
 remediation = "Disable or carefully manage verbose logging in production environments (e.g., `langchain.debug = False`)."
 pattern = "langchain\\.debug\\s*=\\s*True"
 file_pattern = "*.py"
+cwe = "CWE-200"
 
 [[rule]]
 id = "AI403"
@@ -308,6 +327,7 @@ severity = "High"
 remediation = "Ensure all model repositories and endpoints use HTTPS."
 pattern = "from_pretrained\\s*\\(\\s*[\"']http://"
 file_pattern = "*.py"
+cwe = "CWE-319"
 
 [[rule]]
 id = "AI404"
@@ -321,6 +341,7 @@ pattern = "token\\s*=\\s*[\"']hf_[A-Za-z0-9]{16,}"
 file_pattern = "*.py"
 # Doctest examples (>>> / ...) shouldn't fire even if they happen to use a long fake token.
 exclude_pattern = "^\\s*(>>>|\\.\\.\\.)\\s"
+cwe = "CWE-798"
 
 [[rule]]
 id = "AI405"
@@ -333,6 +354,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: AI500 - Over-reliance and Insecure Tool Use
 # -------------------------------------------
+cwe = "CWE-200"
 
 [[rule]]
 id = "AI501"
@@ -340,13 +362,14 @@ description = "Potential Server-Side Request Forgery (SSRF) in an LLM agent tool
 severity = "Critical"
 remediation = "If an LLM can control the URL passed to a network request tool, it can attack internal network services. Sanitize and validate all URLs."
 # This rule is primarily triggered by taint analysis (see AISK08)
+cwe = "CWE-918"
 
 [[rule]]
 id = "AI502"
 description = "Potential Local File Inclusion/Path Traversal in an LLM agent tool."
 severity = "Critical"
 remediation = "If an LLM can control the filename passed to a filesystem tool, it can read sensitive files. Sanitize and constrain file paths."
-# This rule is primarily triggered by taint analysis (see AISK09)
+cwe = "CWE-22"
 
 [[rule]]
 id = "AI503"
@@ -355,6 +378,7 @@ severity = "Critical"
 remediation = "Providing an LLM with direct, unsandboxed shell access is extremely dangerous and can lead to full system compromise."
 pattern = "ShellTool"
 file_pattern = "*.py"
+cwe = "CWE-78"
 
 [[rule]]
 id = "AI504"
@@ -363,3 +387,4 @@ severity = "Critical"
 remediation = "Avoid giving LLMs direct SQL execution capabilities. If necessary, use a view with limited permissions or a function with parameterized queries."
 pattern = "create_sql_agent"
 file_pattern = "*.py"
+cwe = "CWE-89"

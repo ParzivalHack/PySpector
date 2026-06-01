@@ -128,6 +128,7 @@ class Reporter:
             "issues": [
                 {
                     "rule_id": issue.rule_id,
+                    "cwe": issue.cwe,
                     "description": issue.description,
                     "file_path": issue.file_path,
                     "line_number": issue.line_number,
@@ -177,6 +178,7 @@ class Reporter:
                         "warning",
                     )
                 ),
+                properties={"tags": [f"external/cwe/{issue.cwe.lower()}"]} if issue.cwe else None,
             )
 
             rule_index_map[issue.rule_id] = len(rules)

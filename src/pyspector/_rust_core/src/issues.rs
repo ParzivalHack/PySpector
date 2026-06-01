@@ -30,12 +30,17 @@ pub struct Issue {
     pub confidence: String,
     #[pyo3(get)]
     pub remediation: String,
+    /// CWE identifier inherited from the rule (e.g. "CWE-502"). Used for
+    /// cross-rule dedup and downstream SARIF/JSON output.
+    #[pyo3(get)]
+    pub cwe: Option<String>,
 }
 
 // This new block exposes methods to Python
 #[pymethods]
 impl Issue {
     #[new] // This is the constructor exposed to Python
+    #[pyo3(signature = (rule_id, description, file_path, line_number, code, severity, confidence, remediation, cwe=None))]
     pub fn new(
         rule_id: String,
         description: String,
@@ -45,6 +50,7 @@ impl Issue {
         severity: Severity,
         confidence: String,
         remediation: String,
+        cwe: Option<String>,
     ) -> Self {
         Self {
             rule_id,
@@ -55,6 +61,7 @@ impl Issue {
             severity,
             confidence,
             remediation,
+            cwe,
         }
     }
 

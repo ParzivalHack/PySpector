@@ -865,6 +865,7 @@ confidence = "High"
 remediation = "User-controlled data reached a command execution function without sanitization. Use 'shlex.quote()' to escape arguments or avoid passing user input to shell commands entirely."
 # No ast_match — triggered only by taint engine
 # NOTE: This rule has no 'pattern' or 'ast_match'. It is triggered ONLY by the taint engine.
+cwe = "CWE-78"
 
 [[rule]]
 id = "PY001"
@@ -873,6 +874,7 @@ severity = "High"
 remediation = "Avoid 'eval()'. Use safer alternatives like 'ast.literal_eval' for data parsing."
 ast_match = "Call(func.id=eval)"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "PY103"
@@ -880,6 +882,7 @@ description = "Use of os.system is a command injection risk."
 severity = "High"
 remediation = "Avoid 'os.system'. Use the 'subprocess' module with command and arguments as a list."
 # No ast_match — triggered only by taint engine
+cwe = "CWE-78"
 
 [[rule]]
 id = "PY101"
@@ -891,6 +894,7 @@ remediation = "Use parameterized queries (e.g., cursor.execute('SELECT * FROM us
 # Exclude migration files: ORM DDL in migrations uses cursor.execute() with developer-controlled
 # schema parameters (table names, column names) that are not user input.
 exclude_file_pattern = "*/migrations/*,*/alembic/*,*/backends/*"
+cwe = "CWE-89"
 
 [[rule]]
 id = "PY104"
@@ -899,6 +903,7 @@ severity = "High"
 remediation = "Use a proper LDAP escaping library for any user-controlled data in LDAP queries."
 pattern = "\\.search_s\\s*\\(.*f[\"']"
 file_pattern = "*.py"
+cwe = "CWE-90"
 
 [[rule]]
 id = "PY105"
@@ -907,6 +912,7 @@ severity = "High"
 confidence = "High"
 remediation = "Never pass user-controlled data to mark_safe() or Markup(). Sanitize with django.utils.html.escape() first."
 # No pattern — triggered only by taint engine (SK_PY105 / SK_PY105B)
+cwe = "CWE-79"
 
 [[rule]]
 id = "PY106"
@@ -916,6 +922,7 @@ remediation = "Avoid shell=True with subprocess.run. Pass commands as a list ins
 # Only fire when shell=True is explicitly passed — not for every subprocess.run call
 ast_match = "Call(func.value.id=subprocess, func.attr=run, keywords.*.arg=shell, keywords.*.value.value=True)"
 file_pattern = "*.py"
+cwe = "CWE-78"
 
 [[rule]]
 id = "PY107"
@@ -935,6 +942,7 @@ file_content_exclude = "from ruamel\\.yaml|import ruamel"
 # -------------------------------------------
 # SECTION: Cryptographic Failures (OWASP A02:2021)
 # -------------------------------------------
+cwe = "CWE-502"
 
 [[rule]]
 id = "PY201"
@@ -950,6 +958,7 @@ file_pattern = "*.py"
 #   legacy                  — explicitly marked legacy/deprecated code path
 #   update(                 — incremental MD5 building (checksums use .update(), passwords don't)
 exclude_pattern = "hexdigest|checksum|integrity|fingerprint|digest\\(\\)|0x7FFFFFFF|int.*md5|md5.*int|hash_id|hash.*file|file.*hash|_hash|legacy|nonce|update\\s*\\(|hasher|algorithm"
+cwe = "CWE-327"
 
 [[rule]]
 id = "PY202"
@@ -961,6 +970,7 @@ file_pattern = "*.py"
 # SHA1 for cache keys, template keys, content addressing is not a security vulnerability.
 # Only flag when SHA1 is used for passwords or authentication tokens.
 exclude_pattern = "cache|key|template|content|join\\(|etag|checksum|digest|signature|chunk|fingerprint|function|framework|hasher"
+cwe = "CWE-327"
 
 [[rule]]
 id = "PY203"
@@ -969,6 +979,7 @@ severity = "High"
 remediation = "Use 'ssl.PROTOCOL_TLS' or higher. Avoid SSLv2, SSLv3, and TLSv1.0/1.1."
 pattern = "ssl\\.PROTOCOL_(SSLv2|SSLv3|TLSv1|TLSv1_1)"
 file_pattern = "*.py"
+cwe = "CWE-327"
 
 [[rule]]
 id = "PY204"
@@ -977,6 +988,7 @@ severity = "High"
 remediation = "Migrate from 'pycrypto' to a more secure and actively maintained library like 'pycryptodome'."
 pattern = "from\\s+Crypto|import\\s+Crypto"
 file_pattern = "*.py"
+cwe = "CWE-327"
 
 [[rule]]
 id = "PY205"
@@ -990,6 +1002,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: Insecure Deserialization & Design (OWASP A08:2021)
 # -------------------------------------------
+cwe = "CWE-327"
 
 [[rule]]
 id = "PY002"
@@ -999,6 +1012,7 @@ remediation = "Use a safer serialization format like JSON if deserializing untru
 ast_match = "Call(func.value.id=pickle, func.attr=loads)"
 file_pattern = "*.py"
 exclude_file_pattern = "*/cache/backends/*"
+cwe = "CWE-502"
 
 [[rule]]
 id = "PY301"
@@ -1007,6 +1021,7 @@ severity = "High"
 remediation = "Use a safer serialization format like JSON if deserializing untrusted data."
 ast_match = "Call(func.attr=load, func.value.id=pickle)"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "PY302"
@@ -1026,6 +1041,7 @@ file_pattern = "*.py"
 # Use RUAMEL_UNSAFE001 for ruamel's explicitly unsafe YAML(typ="unsafe") pattern.
 exclude_pattern = "^\\s*#|Loader\\s*=|yaml\\.safe_load|YAML\\s*\\(\\s*\\)\\s*\\.\\s*load|typ\\s*=\\s*[\"'](safe|rt|base)[\"']"
 file_content_exclude = "from ruamel\\.yaml|import ruamel"
+cwe = "CWE-502"
 
 [[rule]]
 id = "PY303"
@@ -1034,6 +1050,7 @@ severity = "High"
 remediation = "Use 'defusedxml.ElementTree' to parse untrusted XML data safely."
 pattern = "xml\\.etree\\.ElementTree\\.(parse|fromstring)"
 file_pattern = "*.py"
+cwe = "CWE-611"
 
 [[rule]]
 id = "PY304"
@@ -1042,12 +1059,14 @@ severity = "Medium"
 remediation = "Use 'tempfile.mkstemp()' instead of 'tempfile.mktemp()' for secure temporary file creation."
 pattern = "tempfile\\.mktemp"
 file_pattern = "*.py"
+cwe = "CWE-377"
 
 [[rule]]
 id = "PY305"
 description = "Use of exec() enables arbitrary code execution"
 severity = "Critical"
 ast_match = "Call(func.id=exec)"
+cwe = "CWE-94"
 
 [[rule]]
 id = "SANDBOX307"
@@ -1063,6 +1082,7 @@ file_pattern = "*.py"
 # Does NOT match:
 #   cls.__subclasses__()      — legitimate: find subclasses of a specific known class
 #   Model.__subclasses__()    — legitimate: ORM model registry
+cwe = "CWE-94"
 
 [[rule]]
 id = "SANDBOX308"
@@ -1076,6 +1096,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: Security Misconfiguration (OWASP A05:2021)
 # -------------------------------------------
+cwe = "CWE-94"
 
 [[rule]]
 id = "G401"
@@ -1085,6 +1106,7 @@ confidence = "Low"
 remediation = "Use a production-ready WSGI server like Gunicorn or uWSGI instead of 'app.run()'."
 pattern = "app\\.run\\(host=.*0\\.0\\.0\\.0"
 file_pattern = "*.py"
+cwe = "CWE-489"
 
 [[rule]]
 id = "G403"
@@ -1093,6 +1115,7 @@ severity = "High"
 remediation = "Ensure app.debug is False or the DEBUG config variable is False in production."
 pattern = "app\\.run\\(.*debug=True"
 file_pattern = "*.py"
+cwe = "CWE-489"
 
 [[rule]]
 id = "G404"
@@ -1101,6 +1124,7 @@ severity = "Critical"
 remediation = "Ensure 'django.middleware.csrf.CsrfViewMiddleware' is active in your MIDDLEWARE setting."
 pattern = "#.*CsrfViewMiddleware" # Simple check for commented-out middleware
 file_pattern = "*settings*.py"
+cwe = "CWE-352"
 
 [[rule]]
 id = "G405"
@@ -1113,6 +1137,7 @@ file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: Hardcoded Secrets (OWASP A07:2021)
 # -------------------------------------------
+cwe = "CWE-295"
 
 [[rule]]
 id = "G101"
@@ -1129,6 +1154,7 @@ file_pattern = "*.py"
 #  - Lines that emit instructional output: print(...), click.echo(...), sys.stderr.write
 #  - Doctest examples: lines starting with ">>>" or "..."
 exclude_pattern = "^\\s*[A-Z][A-Z0-9_]+\\s*=|(?i)[\"'](your[_-]|insert[_-]|example[_-]|placeholder|change[_-]?me|replace[_-]?me|todo|fake|dummy|sample|demo|server_api_key|api_key_secret|my_password|root_password)|[\"'][^\"']*_here[\"']|[\"'][A-Z][A-Z0-9_]+_(KEY|TOKEN|SECRET|PASSWORD)[\"']|^\\s*(print|click\\.echo|sys\\.stderr)|^\\s*(>>>|\\.\\.\\.)\\s"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G101B"
@@ -1145,6 +1171,7 @@ file_pattern = "*.py"
 #  - Instructional `print(...)` / `click.echo(...)` lines
 #  - Doctest examples (>>> / ...)
 exclude_pattern = "os\\.environ|getenv|config\\(|env\\(|settings\\.|vault|secrets\\.|(?i)[\"'](your[_-]|insert[_-]|example[_-]|placeholder|change[_-]?me|replace[_-]?me|fake|dummy|sample|demo)|[\"'][^\"']*_here[\"']|[\"'][A-Z][A-Z0-9_]+_(KEY|TOKEN|SECRET|PASSWORD)[\"']|^\\s*(print|click\\.echo|sys\\.stderr)|^\\s*(>>>|\\.\\.\\.)\\s"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G102"
@@ -1157,6 +1184,7 @@ pattern = "-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----"
 # secret-detection knowledge bases, READMEs). Restrict G102 to source/key files; G102
 # in docs has a near-100% FP rate in our corpus.
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.ipynb"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G103"
@@ -1173,20 +1201,38 @@ file_pattern = "*.py"
 #     Django/Flask settings meant to be overridden at runtime via env var; flagging them is FP.
 exclude_pattern = "^\\s*def\\s|^\\s*#|\\w+\\s*=\\s*\\w+\\s*=|^\\s*[A-Z][A-Z0-9_]+\\s*="
 exclude_file_pattern = "*global_settings*,*settings*.py,*config*.py"
+cwe = "CWE-258"
 
 [[rule]]
 id = "G104"
 description = "JWT secret is hardcoded."
 severity = "Critical"
 remediation = "Load JWT secrets from environment variables or a secrets management system."
-# Value must be at least 16 chars (real secrets) to suppress short placeholder field-name
-# values like JSON_SER_KB_JWT_KEY = "kb_jwt".
 pattern = "(?i)(jwt_secret|jwt_key)\\s*[:=]\\s*[\"'][^\"']{16,}[\"']"
 file_pattern = "*.py"
-# Exclude placeholder/dev-secret values that explicitly tell the reader to replace them
-# or that are clearly demonstration material (CTF challenges, "do-not-share", "demo", etc.).
 exclude_pattern = "(?i)[\"'](your[_-]|change[_-]?(me|in[_-]?production)|default[_-]?secret|placeholder|example|replace|demo[_\\-]|do[_\\-]not[_\\-]share|never[_\\-]?(hardcode|use))"
+cwe = "CWE-798"
 
+[[rule]]
+id = "YAML001"
+description = "yaml.load() without SafeLoader allows arbitrary code execution via untrusted YAML."
+severity = "Critical"
+confidence = "High"
+remediation = "Use yaml.safe_load() or yaml.load(..., Loader=yaml.SafeLoader)."
+pattern = "\\byaml\\.load\\s*\\([^)]*\\)"
+exclude_pattern = "Loader\\s*=\\s*(yaml\\.)?(SafeLoader|CSafeLoader|BaseLoader)|\\bsafe_load\\b"
+file_pattern = "*.py"
+cwe = "CWE-502"
+
+[[rule]]
+id = "FLASK_DEBUG001"
+description = "Flask/FastAPI application started with debug=True — exposes the Werkzeug debugger PIN and arbitrary code execution to anyone reaching the listening port."
+severity = "High"
+confidence = "High"
+remediation = "Never run debug=True in production. Use a separate dev-only entry point or gate via FLASK_ENV=development."
+pattern = "\\.run\\s*\\([^)]*debug\\s*=\\s*True"
+exclude_pattern = "(?i)test|example|sample|demo|tutorial"
+file_pattern = "*.py"
 # -------------------------------------------
 # SECTION: Provider-specific high-precision secret patterns (G110+)
 # These rules detect literal credentials by format alone — they fire regardless
@@ -1196,6 +1242,7 @@ exclude_pattern = "(?i)[\"'](your[_-]|change[_-]?(me|in[_-]?production)|default[
 # Shared exclusion for obvious placeholders: long runs of identical chars (xxx, 000), the
 # words EXAMPLE/FAKE/PLACEHOLDER/SAMPLE inside the value, and common dummy sequences.
 # Used across Tier-1 rules by repeating in each rule's exclude_pattern.
+cwe = "CWE-489"
 
 [[rule]]
 id = "G110"
@@ -1208,6 +1255,7 @@ pattern = "\\b(AKIA|ASIA|AIDA|AROA|AGPA|ANPA|ANVA|ASCA)[0-9A-Z]{16}\\b"
 # their docker-compose examples). Treat as a known-public dev credential.
 exclude_pattern = "__SHARED_PLACEHOLDERS__|AKIAIOSFOLQUICKSTART"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G111"
@@ -1218,6 +1266,7 @@ remediation = "Revoke immediately at https://github.com/settings/tokens. Use a f
 pattern = "\\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\\b|\\bgithub_pat_[A-Za-z0-9_]{82}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G112"
@@ -1228,6 +1277,7 @@ remediation = "Revoke in GitLab > Edit profile > Access Tokens; load from env or
 pattern = "\\bglpat-[A-Za-z0-9_\\-]{20}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G113"
@@ -1239,6 +1289,7 @@ pattern = "\\bxox[abprso]-[A-Za-z0-9-]{10,}\\b"
 # Catch "xoxb-your-slack-bot-token" style placeholders, plus runs of identical chars.
 exclude_pattern = "__SHARED_PLACEHOLDERS__|-your-|-here\\b|-token\\b|-replace-"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G114"
@@ -1249,6 +1300,7 @@ remediation = "Webhook URLs are credentials — anyone with the URL can post to 
 pattern = "https://hooks\\.slack\\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G115"
@@ -1259,6 +1311,7 @@ remediation = "Rotate the key in the Stripe dashboard immediately. Never commit 
 pattern = "\\b(sk|rk)_(live|test)_[A-Za-z0-9]{24,}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G116"
@@ -1269,6 +1322,7 @@ remediation = "Rotate at GCP Console > APIs & Services > Credentials. Restrict b
 pattern = "\\bAIza[A-Za-z0-9_\\-]{35}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G117"
@@ -1280,6 +1334,7 @@ pattern = "\\bsk-[A-Za-z0-9]{48}\\b|\\bsk-(proj|svcacct|admin|None)-[A-Za-z0-9_\
 # Catch placeholders like sk-svcacct-your-embedding-key-here and -here suffixes.
 exclude_pattern = "__SHARED_PLACEHOLDERS__|-your-|-here\\b|-replace-|-key-here\\b|YOUR-?KEY|YOUR-?TOKEN"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G118"
@@ -1295,6 +1350,7 @@ remediation = "Rotate at https://console.anthropic.com/settings/keys. Load via A
 pattern = "\\bsk-ant-(api|admin|sid)\\d{2}-[A-Za-z0-9_\\-]{80,110}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G119"
@@ -1304,6 +1360,7 @@ confidence = "High"
 remediation = "Revoke and reissue at https://app.sendgrid.com/settings/api_keys."
 pattern = "\\bSG\\.[A-Za-z0-9_\\-]{22}\\.[A-Za-z0-9_\\-]{43}\\b"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G120"
@@ -1313,6 +1370,7 @@ confidence = "High"
 remediation = "Project keys can be public for client-side telemetry but personal API keys are not — verify and rotate accordingly."
 pattern = "\\bphc_[A-Za-z0-9]{40}\\b"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G121"
@@ -1332,6 +1390,7 @@ pattern = "(?i)\\b(postgres(?:ql)?|mysql|mongodb(?:\\+srv)?|mariadb|redis|rediss
 exclude_pattern = "(?i)://[^:]+:(password|passwd|pass|secret|changeme|change[_\\-]me|placeholder|example|\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://\\{\\{?[^}]+\\}\\}?:|^[^#]*\\bre\\.(match|compile|search|fullmatch)\\s*\\(|://[^:]+:[^@]+@(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|host\\.docker\\.internal|db|database|postgres(ql)?|mysql|mariadb|mongo(db)?|redis|rabbitmq|broker|kafka|memcached|amqp)[:/?#\"' \\t]"
 # Skip docs, env templates, and infrastructure templates (Helm, Jinja, cookiecutter).
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G121L"
@@ -1348,6 +1407,7 @@ remediation = "If this connection string ships to production, move credentials t
 pattern = "(?i)\\b(postgres(?:ql)?|mysql|mongodb(?:\\+srv)?|mariadb|redis|rediss|amqp|amqps|mssql|oracle)://[^\\s:@\"'/]+:[^@\\s\"']{4,}@(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|::1|host\\.docker\\.internal|db|database|postgres(ql)?|mysql|mariadb|mongo(db)?|redis|rabbitmq|broker|kafka|memcached|amqp)[:/?#\"' \\t]"
 exclude_pattern = "(?i)://[^:]+:(\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://\\{\\{?[^}]+\\}\\}?:|^[^#]*\\bre\\.(match|compile|search|fullmatch)\\s*\\("
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G122"
@@ -1360,6 +1420,7 @@ exclude_pattern = "(?i)example|sample|placeholder|change[_\\-]?me"
 # No file_pattern restriction — JWTs appear in *.py, *.js, *.yaml, *.json, *.sh,
 # build configs, and many other source/config files. Doc-extension exclude still applies.
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.log,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G123"
@@ -1378,6 +1439,7 @@ pattern = "https?://[^:/\\s\"']+:[^@\\s\"'/]{4,}@[^\\s\"']+"
 exclude_pattern = "(?i)://[A-Za-z0-9._\\-]+:(pass(word)?|secret|changeme|change[_\\-]me|placeholder|example|\\{\\{?[^}]+\\}\\}?|\\$\\{[^}]+\\}|\\$\\([^)]+\\)|\\$[A-Za-z_][A-Za-z0-9_]*|%\\([^)]+\\)s|<[^>]+>)@|://(oauth2|x-access-token|token):"
 # Skip docs, env templates, and log files (JS stack traces contain http://host:port/path@module FPs).
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.log,*.env.example,*.env.template,*.env.sample,*.env.dist,env.example,*.tpl,*.j2,*.jinja,*.template,*cookiecutter*"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G124"
@@ -1387,6 +1449,7 @@ confidence = "High"
 remediation = "Revoke at https://www.npmjs.com/settings/<user>/tokens."
 pattern = "\\bnpm_[A-Za-z0-9]{36}\\b"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G125"
@@ -1396,6 +1459,7 @@ confidence = "High"
 remediation = "Revoke at https://pypi.org/manage/account/token/."
 pattern = "\\bpypi-AgEIcHlwaS5vcmc[A-Za-z0-9_\\-]{50,}\\b"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G126"
@@ -1405,6 +1469,7 @@ confidence = "High"
 remediation = "Reset at https://discord.com/developers/applications > Bot > Reset Token."
 pattern = "\\b[MN][A-Za-z0-9]{23}\\.[\\w\\-]{6}\\.[\\w\\-]{27}\\b"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G127"
@@ -1420,6 +1485,7 @@ exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex"
 # These target providers whose tokens commonly leak into non-Python files
 # (.json, .yaml, .sh, .env). No file_pattern scoping — scan everything except docs.
 # -------------------------------------------
+cwe = "CWE-798"
 
 [[rule]]
 id = "G128"
@@ -1434,6 +1500,7 @@ remediation = "Revoke at https://cloud.digitalocean.com/account/api/tokens. Load
 pattern = "\\b(dop|doo|dor)_v1_[a-f0-9]{64}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G129"
@@ -1451,6 +1518,7 @@ remediation = "Revoke at https://dashboard.doppler.com/workplace/tokens or via t
 pattern = "\\bdp\\.(pt|st|ct|scim|audit|prov|sa)\\.[A-Za-z0-9_\\-]{30,}\\b"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G130"
@@ -1465,6 +1533,7 @@ remediation = "Rotate at Cloudflare dashboard > My Profile > API Tokens. Load fr
 pattern = "\\bv1\\.0-[a-f0-9]{32}-[a-f0-9]{146}\\b|(?i)cloudflare[^\\n]{0,40}[\"'][A-Za-z0-9_\\-]{40}[\"']"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G131"
@@ -1477,6 +1546,7 @@ remediation = "Rotate at https://dashboard.heroku.com/account > API Key > Regene
 pattern = "(?i)heroku[^\\n]{0,40}[\"'][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[\"']"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G132"
@@ -1490,6 +1560,7 @@ remediation = "Revoke at https://app.hubspot.com/private-apps. Use a vault and e
 pattern = "\\bpat-(na1|na2|na3|eu1)-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\b|(?i)hubspot[^\\n]{0,40}[\"'][a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}[\"']"
 exclude_pattern = "__SHARED_PLACEHOLDERS__"
 exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
+cwe = "CWE-798"
 
 [[rule]]
 id = "G133"
@@ -1506,6 +1577,7 @@ exclude_file_pattern = "*.md,*.rst,*.html,*.txt,*.adoc,*.tex,*.lock"
 # -------------------------------------------
 # SECTION: IaC and Configuration File Security
 # -------------------------------------------
+cwe = "CWE-798"
 
 [[rule]]
 id = "DKR001"
@@ -1514,6 +1586,7 @@ severity = "High"
 remediation = "Use build-time arguments (ARG) with the --secret flag or a secrets management tool."
 pattern = "(?i)ENV\\s+(PASS|PASSWORD|SECRET|TOKEN|API_KEY)\\s+"
 file_pattern = "Dockerfile"
+cwe = "CWE-798"
 
 [[rule]]
 id = "DKR002"
@@ -1522,6 +1595,7 @@ severity = "Low"
 remediation = "Pin base images to a specific version digest for reproducible and secure builds."
 pattern = "FROM\\s+\\w+:latest"
 file_pattern = "Dockerfile"
+cwe = "CWE-16"
 
 [[rule]]
 id = "DKR003"
@@ -1530,6 +1604,7 @@ severity = "Critical"
 remediation = "Avoid mounting '/var/run/docker.sock' into containers."
 pattern = "/var/run/docker\\.sock"
 file_pattern = "docker-compose*.y*ml"
+cwe = "CWE-269"
 
 [[rule]]
 id = "K8S001"
@@ -1538,6 +1613,7 @@ severity = "Critical"
 remediation = "Set 'securityContext.privileged' to 'false' or remove it."
 pattern = "privileged:\\s*true"
 file_pattern = "*.y*ml"
+cwe = "CWE-250"
 
 [[rule]]
 id = "K8S002"
@@ -1546,6 +1622,7 @@ severity = "High"
 remediation = "Explicitly set 'securityContext.allowPrivilegeEscalation' to 'false'."
 pattern = "allowPrivilegeEscalation:\\s*true"
 file_pattern = "*.y*ml"
+cwe = "CWE-250"
 
 [[rule]]
 id = "TF001"
@@ -1554,6 +1631,7 @@ severity = "Critical"
 remediation = "Set the 'acl' property of 'aws_s3_bucket' to 'private', not 'public-read' or 'public-read-write'."
 pattern = "acl\\s*=\\s*\"(public-read|public-read-write)\""
 file_pattern = "*.tf"
+cwe = "CWE-732"
 
 [[rule]]
 id = "CFG001"
@@ -1566,6 +1644,7 @@ file_pattern = "*.ini"
 # -------------------------------------------
 # SECTION: ADDITIONAL SECURITY RULES
 # -------------------------------------------
+cwe = "CWE-798"
 
 [[rule]]
 id = "PY500"
@@ -1575,6 +1654,7 @@ confidence = "Medium"
 remediation = "Avoid dynamic code execution. Consider safer alternatives or validate input thoroughly."
 ast_match = "Call(func.attr=exec, func.value.id=builtins)"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "SEC501"
@@ -1590,6 +1670,7 @@ pattern = "\\bexec\\b\\s*\\("
 # Exclude: quoted "exec()" or 'exec()' — documentation text, not actual calls
 exclude_pattern = "^\\s*(?:async\\s+)?def\\s|^\\s*#|\\.exec\\s*\\(|`exec\\(|\"exec\\(\\)\"|'exec\\(\\)'"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "PY507"
@@ -1601,6 +1682,7 @@ remediation = "Validate inputs before passing to .exec(). Use parameterized quer
 # Pattern-based detection of .exec() generates 100% FPs: fires on ORM sessions
 # (Session.exec(select(...))), docstring code examples, and function definitions.
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "WEB508"
@@ -1610,6 +1692,7 @@ confidence = "Medium"
 remediation = "Remove unsafe-inline from CSP directives and use nonces or hashes instead."
 pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "CFG510"
@@ -1618,6 +1701,7 @@ severity = "Low"
 remediation = "Store AWS credentials securely using IAM roles or environment variables."
 pattern = "aws_access_key_id\\s*[:=]\\s*['\\\"][A-Za-z0-9/+=]{16,}"
 file_pattern = "*.ini"
+cwe = "CWE-798"
 
 [[rule]]
 id = "WEB512"
@@ -1626,6 +1710,7 @@ severity = "Medium"
 remediation = "Store authentication tokens securely and avoid hardcoding in configuration files."
 pattern = "Authorization\\s*:\\s*\\bBearer\\b"
 file_pattern = "*.conf"
+cwe = "CWE-798"
 
 [[rule]]
 id = "WEB514"
@@ -1634,6 +1719,7 @@ severity = "Medium"
 remediation = "Set X-Frame-Options to DENY or SAMEORIGIN to prevent clickjacking attacks."
 pattern = "X-Frame-Options\\s*:\\s*ALLOW"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "SER522"
@@ -1641,6 +1727,7 @@ description = "Object serialization function detected."
 severity = "Low"
 remediation = "Ensure serialized data comes from trusted sources to prevent deserialization attacks."
 # No ast_match/pattern — triggered only by taint engine (SK007)
+cwe = "CWE-502"
 
 [[rule]]
 id = "FILE526"
@@ -1649,6 +1736,7 @@ severity = "Medium"
 remediation = "Implement proper file access controls and validate file paths."
 ast_match = "Attribute(attr=read, value.id=open)"
 file_pattern = "*.py"
+cwe = "CWE-22"
 
 [[rule]]
 id = "PERM527"
@@ -1657,6 +1745,7 @@ severity = "High"
 remediation = "Use more restrictive permissions. Consider 644 for files and 755 for directories."
 pattern = "chmod\\s+777"
 file_pattern = "*.sh"
+cwe = "CWE-732"
 
 [[rule]]
 id = "FILE528"
@@ -1666,6 +1755,7 @@ confidence = "Medium"
 remediation = "Accessing /etc/passwd should be done through proper system APIs with authorization."
 pattern = "open\\s*\\(\\s*['\\\"]/etc/passwd"
 file_pattern = "*.py"
+cwe = "CWE-200"
 
 [[rule]]
 id = "TEMP529"
@@ -1674,6 +1764,7 @@ severity = "Low"
 remediation = "Use mktemp without -u flag or mkstemp for secure temporary file creation."
 pattern = "mktemp\\s+-u"
 file_pattern = "*.sh"
+cwe = "CWE-377"
 
 [[rule]]
 id = "SSL531"
@@ -1682,6 +1773,7 @@ severity = "Medium"
 remediation = "Enable certificate verification to prevent man-in-the-middle attacks."
 pattern = "verify\\s*:\\s*false"
 file_pattern = "*.y*ml"
+cwe = "CWE-295"
 
 [[rule]]
 id = "WEB575"
@@ -1691,6 +1783,7 @@ confidence = "Medium"
 remediation = "Remove unsafe-inline from CSP directives and implement nonce-based or hash-based CSP."
 pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "SQL586"
@@ -1699,6 +1792,7 @@ severity = "Critical"
 confidence = "Medium"
 remediation = "Use parameterized queries instead of string formatting to prevent SQL injection."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-89"
 
 [[rule]]
 id = "SHELL602"
@@ -1708,6 +1802,7 @@ confidence = "Medium"
 remediation = "Use subprocess with argument arrays instead of shell command strings."
 pattern = "subprocess\\.(Popen|call)\\(.*shell\\s*=\\s*True"
 file_pattern = "*.py"
+cwe = "CWE-78"
 
 [[rule]]
 id = "CODE607"
@@ -1717,6 +1812,7 @@ confidence = "Medium"
 remediation = "Implement strict CSP without unsafe-inline to prevent XSS attacks."
 pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "SHELL631"
@@ -1725,6 +1821,7 @@ severity = "Critical"
 confidence = "Medium"
 remediation = "Use parameterized queries with placeholders instead of string concatenation."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-89"
 
 [[rule]]
 id = "CSP640"
@@ -1734,6 +1831,7 @@ confidence = "Medium"
 remediation = "Configure CSP without unsafe-inline and unsafe-eval directives."
 pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "PERM650"
@@ -1742,6 +1840,7 @@ severity = "Critical"
 confidence = "Medium"
 remediation = "Implement prepared statements and parameterized queries to prevent SQL injection."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-89"
 
 [[rule]]
 id = "CSP665"
@@ -1751,6 +1850,7 @@ confidence = "Medium"
 remediation = "Use nonce or hash-based CSP instead of unsafe-inline directive."
 pattern = "Content-Security-Policy\\s*:\\s*.*unsafe-inline"
 file_pattern = "*.conf"
+cwe = "CWE-1021"
 
 [[rule]]
 id = "SHELL675"
@@ -1759,6 +1859,7 @@ severity = "Critical"
 confidence = "Medium"
 remediation = "Use ORM methods or prepared statements instead of string formatting in SQL queries."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-89"
 
 [[rule]]
 id = "SHELL689"
@@ -1767,6 +1868,7 @@ severity = "High"
 confidence = "Medium"
 remediation = "Use process execution without shell to avoid command injection vulnerabilities."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-78"
 
 [[rule]]
 id = "SQL693"
@@ -1775,6 +1877,7 @@ severity = "Critical"
 confidence = "Medium"
 remediation = "Implement parameterized queries to eliminate SQL injection risks."
 # No pattern — triggered by taint engine (SK_SQL001/SK_SQL002)
+cwe = "CWE-89"
 
 [[rule]]
 id = "NET705"
@@ -1784,6 +1887,7 @@ confidence = "Medium"
 remediation = "Enable SSL certificate verification to prevent man-in-the-middle attacks."
 pattern = "requests\\.(get|post|put|delete)\\(.*verify\\s*=\\s*False"
 file_pattern = "*.py"
+cwe = "CWE-295"
 
 [[rule]]
 id = "CRYPTO708"
@@ -1802,6 +1906,7 @@ file_pattern = "*.py"
 #   choice/randbelow — selection, not key generation
 #   variable names suggesting non-security context (index, delay, seed for ML)
 exclude_pattern = "np\\.random\\.|numpy\\.random\\.|len\\(|range\\(|\\b(index|idx|pos|offset|delay|sleep_|sleep|wait|_n|num_|seed|shape|size|dim|batch|epoch)\\b|_time\\b|_delay\\b|_wait\\b|random\\.choice|randbelow|input_shape|array_ops|benchmark"
+cwe = "CWE-338"
 
 [[rule]]
 id = "AUTH711"
@@ -1811,6 +1916,7 @@ confidence = "High"
 remediation = "Implement proper authentication mechanisms without hardcoded credentials."
 pattern = "(?i)(username|user)\\s*[:=]\\s*[\"']admin[\"']"
 file_pattern = "*.py"
+cwe = "CWE-798"
 
 [[rule]]
 id = "LDAP717"
@@ -1820,6 +1926,7 @@ confidence = "Medium"
 remediation = "Properly escape LDAP filter characters or use parameterized LDAP queries."
 pattern = "\\.search\\(.*filter.*%s"
 file_pattern = "*.py"
+cwe = "CWE-90"
 
 [[rule]]
 id = "XPATH720"
@@ -1829,6 +1936,7 @@ confidence = "Medium"
 remediation = "Use parameterized XPath queries or properly escape user input."
 pattern = "xpath\\(.*%s"
 file_pattern = "*.py"
+cwe = "CWE-643"
 
 [[rule]]
 id = "DESER723"
@@ -1838,6 +1946,7 @@ confidence = "High"
 remediation = "Never deserialize marshal bytecode from untrusted sources. Use JSON/protobuf for data exchange. For model serialization, use SavedModel format instead of custom bytecode paths."
 ast_match = "Call(func.value.id=marshal, func.attr=loads)"
 file_pattern = "*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "DESER724"
@@ -1848,6 +1957,7 @@ remediation = "Never create functions from deserialized code objects. This is eq
 file_pattern = "*.py"
 # No pattern — triggered only by taint engine (SK_DESER724):
 # marshal.loads(raw) → code is tainted → FunctionType(code, globals()) fires this rule.
+cwe = "CWE-94"
 
 [[rule]]
 id = "PRIV726"
@@ -1857,6 +1967,7 @@ confidence = "Medium"
 remediation = "Avoid executing setuid binaries or implement proper privilege checks."
 pattern = "os\\.setuid\\("
 file_pattern = "*.py"
+cwe = "CWE-269"
 
 [[rule]]
 id = "RACE729"
@@ -1866,6 +1977,7 @@ confidence = "Low"
 remediation = "Use atomic file operations or proper locking mechanisms."
 pattern = "os\\.path\\.exists.*open\\("
 file_pattern = "*.py"
+cwe = "CWE-362"
 
 [[rule]]
 id = "INFO738"
@@ -1875,6 +1987,7 @@ confidence = "Low"
 remediation = "Implement generic error messages that don't reveal system information."
 pattern = "traceback\\.print_exc\\("
 file_pattern = "*.py"
+cwe = "CWE-200"
 
 [[rule]]
 id = "LOG741"
@@ -1887,6 +2000,7 @@ file_pattern = "*.py"
 # Only fires when data traced from request.GET/POST/CLI args/API responses
 # reaches a logging call. Internal framework objects and computed values
 # are never tainted → no false positives on framework internals.
+cwe = "CWE-117"
 
 [[rule]]
 id = "SESS744"
@@ -1897,6 +2011,7 @@ remediation = "Regenerate session IDs after authentication to prevent fixation a
 # Writing data to a session is NOT session fixation. Only flag direct session key assignment from request.
 pattern = "session\\.session_key\\s*=.*request\\."
 file_pattern = "*.py"
+cwe = "CWE-384"
 
 [[rule]]
 id = "CSRF747"
@@ -1906,6 +2021,7 @@ confidence = "Medium"
 remediation = "Implement proper CSRF tokens for state-changing operations."
 pattern = "@csrf_exempt"
 file_pattern = "*.py"
+cwe = "CWE-352"
 
 [[rule]]
 id = "HTTP750"
@@ -1915,6 +2031,7 @@ confidence = "Medium"
 remediation = "Validate and sanitize HTTP headers to prevent response splitting."
 pattern = "HttpResponse\\(.*\\\\r\\\\n"
 file_pattern = "*.py"
+cwe = "CWE-113"
 
 [[rule]]
 id = "UPLOAD753"
@@ -1924,6 +2041,7 @@ confidence = "Medium"
 remediation = "Implement file type validation and size limits for uploads."
 pattern = "request\\.FILES\\[.*\\]\\.save\\("
 file_pattern = "*.py"
+cwe = "CWE-434"
 
 [[rule]]
 id = "CACHE756"
@@ -1933,6 +2051,7 @@ confidence = "Low"
 remediation = "Validate cache keys and implement proper cache invalidation."
 pattern = "cache\\.set\\(.*request\\."
 file_pattern = "*.py"
+cwe = "CWE-444"
 
 [[rule]]
 id = "TIMING759"
@@ -1945,6 +2064,7 @@ file_pattern = "*.py"
 # Exclude null/empty checks: `if password is None or password == ""` is a presence check,
 # not a secret comparison. Also exclude `password != ""` style guards.
 exclude_pattern = "is None|== \"\"|== ''|!= \"\"|!= ''|^\\s*#"
+cwe = "CWE-208"
 
 [[rule]]
 id = "ENUM762"
@@ -1954,6 +2074,7 @@ confidence = "Low"
 remediation = "Return identical responses for valid and invalid usernames."
 pattern = "User\\.objects\\.get\\(username="
 file_pattern = "*.py"
+cwe = "CWE-204"
 
 [[rule]]
 id = "TOKEN771"
@@ -1966,6 +2087,7 @@ remediation = "Always include 'exp' claim in JWT payload: {'sub': user_id, 'exp'
 pattern = "jwt\\.encode\\s*\\("
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#|[\"']exp[\"']|datetime|timedelta"
+cwe = "CWE-613"
 
 [[rule]]
 id = "OAUTH774"
@@ -1977,6 +2099,7 @@ pattern = "oauth.*authorize.*"
 file_pattern = "*.py"
 # Public OAuth authorization URLs in string literals are DeveloperDefined endpoints, not missing state params
 exclude_pattern = "[\"']https?://.*oauth.*authorize|client_id="
+cwe = "CWE-352"
 
 [[rule]]
 id = "API777"
@@ -1986,6 +2109,7 @@ confidence = "Low"
 remediation = "Implement rate limiting on API endpoints to prevent abuse."
 pattern = "@app\\.route.*methods.*POST"
 file_pattern = "*.py"
+cwe = "CWE-770"
 
 [[rule]]
 id = "CORS780"
@@ -1995,6 +2119,7 @@ confidence = "Medium"
 remediation = "Restrict CORS origins to trusted domains only."
 pattern = "Access-Control-Allow-Origin\\s*:\\s*\\*"
 file_pattern = "*.py"
+cwe = "CWE-942"
 
 [[rule]]
 id = "HTTPS789"
@@ -2007,6 +2132,7 @@ file_pattern = "*settings*.py"
 # global_settings.py is a framework defaults file — False here is the intended default.
 # Deployments must override this in their project settings.
 exclude_file_pattern = "*global_settings*"
+cwe = "CWE-319"
 
 [[rule]]
 id = "COOKIE792"
@@ -2016,6 +2142,7 @@ confidence = "Medium"
 remediation = "Set secure and httponly flags on sensitive cookies."
 pattern = "set_cookie\\(.*secure=False"
 file_pattern = "*.py"
+cwe = "CWE-1004"
 
 [[rule]]
 id = "ADMIN795"
@@ -2027,6 +2154,7 @@ pattern = "(?i)(admin|administrator).*password.*password"
 file_pattern = "*.py"
 # "class AdminPasswordChangeForm" is a Python class declaration — DeveloperDefined name, not a credential
 exclude_pattern = "^\\s*class\\s+"
+cwe = "CWE-798"
 
 [[rule]]
 id = "DEBUG798"
@@ -2036,6 +2164,7 @@ confidence = "Medium"
 remediation = "Disable debug mode and remove debug statements in production."
 pattern = "print\\(.*password\\|.*secret"
 file_pattern = "*.py"
+cwe = "CWE-489"
 
 [[rule]]
 id = "BACKUP801"
@@ -2049,6 +2178,7 @@ remediation = "Secure backup files and exclude them from web-accessible director
 pattern = "['\"][^'\"]*\\w\\.(bak|backup|old)['\"]"
 file_pattern = "*"
 exclude_file_pattern = "*.sh,*.rst,*.md,*.txt"
+cwe = "CWE-200"
 
 [[rule]]
 id = "CONFIG804"
@@ -2058,6 +2188,7 @@ confidence = "Low"
 remediation = "Change default configuration values before production deployment."
 pattern = "(?i)secret_key.*changeme"
 file_pattern = "*settings*.py"
+cwe = "CWE-16"
 
 [[rule]]
 id = "HASH807"
@@ -2070,6 +2201,7 @@ remediation = "For password storage use bcrypt, scrypt, or Argon2. SHA-256 witho
 ast_match = "Call(func.value.id=hashlib, func.attr=sha256)"
 file_pattern = "*.py"
 exclude_pattern = "fingerprint|checksum|digest|integrity|hash_file|file_hash|sha256_file|content_hash|benchmark|test|sample|example|demo"
+cwe = "CWE-327"
 
 [[rule]]
 id = "RAND810"
@@ -2078,6 +2210,7 @@ severity = "Medium"
 confidence = "Medium"
 remediation = "Use cryptographically secure random generators for security purposes."
 # No ast_match/pattern — triggered only by taint engine (SK008)
+cwe = "CWE-338"
 
 [[rule]]
 id = "SSRF_001"
@@ -2094,6 +2227,7 @@ file_pattern = "*.py"
 # For CLI args (parse_args taint source) flowing into format strings where only
 # path params vary, the engine may produce FPs. Those cases need per-sink
 # host-vs-path discrimination — a future enhancement.
+cwe = "CWE-918"
 
 [[rule]]
 id = "PATH813"
@@ -2108,6 +2242,7 @@ file_pattern = "*.py"
 #   os.path.join(module.__file__, '..')  — navigating relative to installed module
 #   os.path.join(os.path.dirname(__file__), ..)  — standard Python package path
 exclude_pattern = "__file__|module\\.__file__|dirname\\(__file__\\)|abspath.*dirname"
+cwe = "CWE-22"
 
 [[rule]]
 id = "SYMLINK816"
@@ -2119,6 +2254,7 @@ file_pattern = "*.py"
 # Pattern removed — SYMLINK816 is now taint-driven only (see taint_sink SK_SYMLINK001).
 # Pattern-based matching produced 100% FPs (capability detection, static file management).
 # Only fires when the symlink source argument is HttpRequest-tainted.
+cwe = "CWE-59"
 
 [[rule]]
 id = "PROC819"
@@ -2128,6 +2264,7 @@ confidence = "Medium"
 remediation = "Validate and sanitize all inputs to process execution functions."
 ast_match = "Call(func.value.id=os, func.attr=popen)"
 file_pattern = "*.py"
+cwe = "CWE-78"
 
 [[rule]]
 id = "IMPORT825"
@@ -2143,6 +2280,7 @@ file_pattern = "*.py"
 # Also exclude when the import name is from a known-safe source (self.LIB,
 # self.package) — these are class attributes set from validated plugin registries.
 exclude_pattern = "self\\.(LIB|package|base_class|module)|__import__\\(name\\)|six\\.|future\\."
+cwe = "CWE-94"
 
 [[rule]]
 id = "GETATTR828"
@@ -2156,6 +2294,7 @@ remediation = "Validate attribute names against an allowlist before passing to g
 # ORM model _meta (developer-defined schema), not user input. These generate high FP
 # rates in serializer/schema code across all ORM frameworks.
 exclude_file_pattern = "*pyct*,*serializer*,*schema*,*/pandas/core/*,pandas/core/*,*/pandas/io/*,pandas/io/*"
+cwe = "CWE-915"
 
 [[rule]]
 id = "SETATTR831"
@@ -2164,6 +2303,7 @@ severity = "Medium"
 confidence = "Medium"
 remediation = "Validate attribute names and values before setting."
 # No ast_match/pattern — triggered only by taint engine (SK005)
+cwe = "CWE-915"
 
 [[rule]]
 id = "DELATTR834"
@@ -2172,6 +2312,7 @@ severity = "Medium"
 confidence = "Medium"
 remediation = "Validate attribute names before deletion."
 # No ast_match/pattern — triggered only by taint engine (SK006)
+cwe = "CWE-915"
 
 [[rule]]
 id = "GLOBALS843"
@@ -2185,6 +2326,7 @@ remediation = "Never pass globals() to exec/eval with untrusted code. Dynamic mo
 # codec registration) and generates high FP rates in framework code.
 pattern = "exec[\\s(].*globals\\s*\\(\\)|eval[\\s(].*globals\\s*\\(\\)"
 file_pattern = "*.py"
+cwe = "CWE-94"
 
 [[rule]]
 id = "FORMAT864"
@@ -2193,6 +2335,7 @@ severity = "Medium"
 confidence = "Medium"
 remediation = "Use safe string formatting methods and validate format strings."
 # No ast_match/pattern — triggered only by taint engine (SK009)
+cwe = "CWE-134"
 
 [[rule]]
 id = "REGEX870"
@@ -2210,6 +2353,7 @@ file_pattern = "*.py"
 # \\w+ only matches [a-zA-Z0-9_] so alternation between dot and word chars is non-overlapping
 # → no catastrophic backtracking. Exclude when inner group uses \\w or \\d only.
 exclude_pattern = "\\\\w\\+\\.\\)\\+|\\\\d\\+\\.\\)\\+|\\\\w\\+\\.\\)\\*"
+cwe = "CWE-1333"
 
 [[rule]]
 id = "OPEN1149"
@@ -2217,8 +2361,7 @@ description = "User-controlled path passed to open() — potential path traversa
 severity = "High"
 confidence = "High"
 remediation = "Validate and sanitize file paths. Use os.path.realpath() and verify the result stays within the expected directory."
-# No ast_match — triggered ONLY by taint engine (SK003).
-# Taint flow: request.* → variable → open(variable)
+cwe = "CWE-22"
 
 [[rule]]
 id = "SSTI001"
@@ -2229,6 +2372,7 @@ remediation = "Never pass user input as the template string. Use render_template
 file_pattern = "*.py"
 # Triggered by taint engine (SK_SSTI001: render_template_string, SK_SSTI002: env.from_string).
 # render_template_string(user_template) or env.from_string(user_template).render() → Jinja2 RCE.
+cwe = "CWE-94"
 
 [[rule]]
 id = "ORM002"
@@ -2240,6 +2384,7 @@ file_pattern = "*.py"
 # Triggered by taint engine: SK_ORMRAW001 (raw), SK_ORMORDER001 (order_by), SK_ORMEXTRA001 (extra).
 # CVE-2021-35042: order_by(user_input) allows column name injection.
 # CVE-2022-28346/28347: extra(**user_dict) allows SQL injection via crafted kwargs.
+cwe = "CWE-89"
 
 [[rule]]
 id = "DESER725"
@@ -2250,6 +2395,7 @@ remediation = "Never pass untrusted data to jsonpickle.decode(). jsonpickle rest
 pattern = "jsonpickle\\.decode\\s*\\("
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-502"
 
 [[rule]]
 id = "DESER726"
@@ -2260,6 +2406,7 @@ remediation = "Never pass untrusted data to dill.loads(). dill extends pickle wi
 pattern = "dill\\.loads\\s*\\("
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-502"
 
 [[rule]]
 id = "TLS001"
@@ -2276,6 +2423,7 @@ file_pattern = "*.py"
 #   Bare verify=False on its own line (fragment of a multi-line pandas call)
 #   Docstring text describing the verify parameter
 exclude_pattern = "^\\s*#|\\baxis\\s*=|_mgr\\.|_block|block_manager|Pass\\s+verify|^\\s+verify=False,?\\s*$|take\\s*\\(|indexer[^=]*verify|assumed|codes equal|parameter|description"
+cwe = "CWE-295"
 
 [[rule]]
 id = "SSH001"
@@ -2286,6 +2434,7 @@ remediation = "Use RejectPolicy() or load known_hosts with client.load_system_ho
 pattern = "AutoAddPolicy\\s*\\(\\s*\\)"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-295"
 
 [[rule]]
 id = "JWT001"
@@ -2296,6 +2445,7 @@ remediation = "Never set verify_signature=False or algorithms=['none'] in jwt.de
 pattern = "verify_signature[\"']?\\s*:\\s*False|[\"']none[\"']\\s*.*algorithm|algorithms\\s*=\\s*\\[[\"']none[\"']"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-345"
 
 [[rule]]
 id = "ZIPSLIP001"
@@ -2311,6 +2461,7 @@ file_pattern = "*.py"
 #   Series.str.extractall — same, string regex method
 exclude_pattern = "^\\s*#|filter\\s*=|str\\.extractall|strings.*extractall|accessor.*extractall|\\.str\\."
 # Low confidence: legitimate uses exist when archives are trusted/developer-controlled.
+cwe = "CWE-22"
 
 [[rule]]
 id = "XXE001"
@@ -2323,6 +2474,7 @@ file_pattern = "*.py"
 # lxml's default parser resolves external entities. Attacker-controlled XML can read
 # arbitrary files (/etc/passwd) or trigger SSRF to internal services via entity references.
 exclude_pattern = "^\\s*#|defusedxml|resolve_entities\\s*=\\s*False"
+cwe = "CWE-611"
 
 [[rule]]
 id = "ORM001"
@@ -2339,6 +2491,7 @@ exclude_pattern = "^\\s*#"
 # Exclude migration/backend files: f-strings in migrations contain hardcoded schema
 # identifiers, not user input. Backend files are ORM infrastructure, not application code.
 exclude_file_pattern = "*/migrations/*,*/alembic/*,*/backends/*"
+cwe = "CWE-89"
 
 [[rule]]
 id = "FLASK001"
@@ -2349,6 +2502,7 @@ remediation = "Never run Flask with debug=True in production. The Werkzeug debug
 pattern = "app\\.run\\s*\\(.*\\bdebug\\s*=\\s*True|app\\.debug\\s*=\\s*True|[\"']DEBUG[\"']\\s*:\\s*True"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-489"
 
 [[rule]]
 id = "AI002"
@@ -2357,6 +2511,7 @@ severity = "High"
 remediation = "Remove hardcoded API keys and load them from environment variables or a secure secrets manager."
 pattern = "(?i)sk-ant-api[0-9]*-[A-Za-z0-9_-]{20,}"
 file_pattern = ".*\\.py"
+cwe = "CWE-798"
 
 [[rule]]
 id = "PY306_CACHE"
@@ -2366,6 +2521,7 @@ confidence = "High"
 remediation = "Replace pickle-based cache serialization with JSON or msgpack. If pickle is required, authenticate the cache channel and use HMAC to verify payload integrity before deserializing."
 pattern = "pickle\\.loads\\s*\\("
 file_pattern = "*cache/backends/*.py"
+cwe = "CWE-502"
 
 [[rule]]
 id = "SHELL_BYPASS001"
@@ -2376,6 +2532,7 @@ remediation = "Never pass user-controlled data as the -c argument to bash/sh/cmd
 pattern = "subprocess\\.(run|Popen|call)\\s*\\(\\s*\\[\\s*[\"'](bash|sh|zsh|cmd\\.exe|powershell)[\"']\\s*,\\s*[\"']-c[\"']"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-78"
 
 [[rule]]
 id = "OPEN_REDIRECT001"
@@ -2391,6 +2548,7 @@ file_pattern = "*.py"
 # Exclude Django's own framework files — they validate redirects with is_safe_url() /
 # url_has_allowed_host_and_scheme() before calling redirect(), but the call is safe.
 exclude_file_pattern = "*/django/contrib/*,django/contrib/*,*/django/views/*,django/views/*"
+cwe = "CWE-601"
 
 [[rule]]
 id = "PLAIN_PWD001"
@@ -2401,6 +2559,7 @@ remediation = "Use Django's make_password() or set_password() before storing. Ne
 file_pattern = "*.py"
 # No pattern — triggered only by taint engine (SK_PLAIN_PWD001).
 # Taint flow: request.POST['password'] → Model.objects.create(password=tainted)
+cwe = "CWE-256"
 
 [[rule]]
 id = "DJANGO_DEBUG001"
@@ -2414,6 +2573,7 @@ file_pattern = "*.py"
 # Flask app.run(debug=True) is covered separately by FLASK001.
 # Different from FLASK001: this is a settings file value, not runtime configuration.
 exclude_file_pattern = "*/tests/*,*/test_*.py"
+cwe = "CWE-489"
 
 [[rule]]
 id = "RUAMEL_UNSAFE001"
@@ -2424,6 +2584,7 @@ remediation = "Use YAML() (round-trip, safe by default) or YAML(typ='safe'). typ
 pattern = "YAML\\s*\\(\\s*typ\\s*=\\s*[\"']unsafe[\"']\\s*\\)"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-502"
 
 [[rule]]
 id = "ENV_URL001"
@@ -2437,6 +2598,7 @@ file_pattern = "*.py"
 # The taint engine (SSRF_001) catches the downstream HTTP call when env-var URL propagates to requests/httpx.
 pattern = "os\\.environ(?:\\.get)?\\s*\\([\"'][A-Z_]*URL[A-Z_]*[\"']"
 exclude_pattern = "^\\s*#|allowlist|whitelist|validate|urlparse\\.scheme|startswith\\s*\\([\"']https"
+cwe = "CWE-918"
 
 [[rule]]
 id = "COOKIE_FILE001"
@@ -2448,6 +2610,7 @@ file_pattern = "*.py"
 # No pattern — triggered by taint engine (SK_COOKIE_JAR001):
 # os.environ["SEMGREP_COOKIES_PATH"] → MozillaCookieJar(path) → cookies.load()
 # Allows attacker-controlled cookies to be injected into all HTTP requests.
+cwe = "CWE-1004"
 
 [[rule]]
 id = "ENV_GIT_URL001"
@@ -2462,6 +2625,7 @@ file_pattern = "*.py"
 # This rule provides higher-confidence CI-specific context for the same finding.
 pattern = "CI_MERGE_REQUEST_PROJECT_URL|CI_JOB_TOKEN.*git.*fetch|git.*fetch.*CI_"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-918"
 
 [[rule]]
 id = "DESER_JOBLIB001"
@@ -2472,6 +2636,7 @@ remediation = "Never load joblib files from untrusted sources. joblib uses pickl
 pattern = "joblib\\.load\\s*\\("
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-502"
 
 [[rule]]
 id = "DESER_NUMPY001"
@@ -2482,14 +2647,15 @@ remediation = "Use allow_pickle=False (default in NumPy 1.17+). Only load .npy/.
 pattern = "np\\.load\\s*\\(.*allow_pickle\\s*=\\s*True|numpy\\.load\\s*\\(.*allow_pickle\\s*=\\s*True"
 file_pattern = "*.py"
 exclude_pattern = "^\\s*#"
+cwe = "CWE-502"
 
 [[rule]]
 id = "DESER_TORCH001"
 description = "torch.load() uses pickle by default — loading untrusted PyTorch model files → RCE."
 severity = "Critical"
 confidence = "High"
-remediation = "Use torch.load(..., weights_only=True) (PyTorch 2.0+) to restrict deserialization. Never load model files from untrusted sources. For model exchange, use ONNX or safetensors format."
+remediation = "Use torch.load(..., weights_only=True) (PyTorch 2.0+) to restrict deserialization. Never load model files from untrusted sources."
 pattern = "torch\\.load\\s*\\("
 file_pattern = "*.py"
-# weights_only=True is the safe version — exclude it
 exclude_pattern = "^\\s*#|weights_only\\s*=\\s*True"
+cwe = "CWE-502"
