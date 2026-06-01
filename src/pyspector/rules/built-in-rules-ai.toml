@@ -256,6 +256,15 @@ file_pattern = "*.py"
 cwe = "CWE-502"
 
 [[rule]]
+id = "AI206"
+description = "Hugging Face model loading enables remote repository code execution."
+severity = "High"
+remediation = "Avoid `trust_remote_code=True` for untrusted model repositories. Prefer models that do not require custom code, or pin and audit the exact repository revision before enabling remote code."
+ast_match = "Call(func.attr=from_pretrained, keywords.*.arg=trust_remote_code, keywords.*.value.value=True)"
+file_pattern = "*.py"
+cwe = "CWE-94"
+
+[[rule]]
 id = "AI205"
 description = "Loading a model using `tf.keras.models.load_model` with `compile=False` can still pose a risk if the model architecture itself is malicious."
 severity = "Medium"
