@@ -23,7 +23,7 @@ setup(
     description="A high-performance, security-focused static analysis tool for Python, powered by Rust.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license="MIT",
+    license="Apache-2.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     rust_extensions=[
@@ -33,7 +33,7 @@ setup(
             debug=False,
         )
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=[
         "click>=8.0",
         "toml>=0.10",
