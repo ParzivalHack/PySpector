@@ -51,11 +51,6 @@ To get the project running on your local machine, you'll need to set up a few th
     python3.14 -m venv venv
     .\venv\Scripts\Activate.ps1
     ```
-    
-    If using a different Python 3.14 installation path, you may need:
-    ```powershell
-    .\venv\bin\Activate.ps1
-    ```
 
 3.  **Install the Project in Editable Mode**: This is the most important step. This command will compile the Rust engine and install the Python package in a way that lets you make changes without reinstalling.
     ```bash
