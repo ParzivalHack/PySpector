@@ -27,8 +27,8 @@ To get the project running on your local machine, you'll need to set up a few th
 
 ### Prerequisites
 
-1.  **Python**: You'll need Python 3.8 or newer (recommended Python3.12).
-2.  **Rust**: The core engine of PySpector is written in Rust. The best way to install it is via [rustup](https://rustup.rs/).
+1.  **Python**: Python 3.9 or newer is required (Python 3.14 is recommended). You can check your Python version by running `python --version`.
+2.  **Rust**: The core engine of PySpector is written in Rust. Install it via [rustup](https://rustup.rs/) and verify with `rustc --version` and `cargo --version`.
 
 ### Development Setup
 
@@ -38,17 +38,23 @@ To get the project running on your local machine, you'll need to set up a few th
     cd PySpector
     ```
 
-2.  **Create a Python3.12 Virtual Environment**:
+2.  **Create a Python 3.14 Virtual Environment**:
+
+    **On Linux/macOS (Bash)**:
     ```bash
-    python3.12 -m venv venvname
+    python3.14 -m venv venv
+    source venv/bin/activate
     ```
-Then:
+
+    **On Windows (PowerShell)**:
+    ```powershell
+    python3.14 -m venv venv
+    .\venv\Scripts\Activate.ps1
     ```
-    source venvname/bin/activate
-    ```
-or, if on Windows:
-    ```
-    .\venvname\Bin\Activate.ps1
+    
+    If using a different Python 3.14 installation path, you may need:
+    ```powershell
+    .\venv\bin\Activate.ps1
     ```
 
 3.  **Install the Project in Editable Mode**: This is the most important step. This command will compile the Rust engine and install the Python package in a way that lets you make changes without reinstalling.
@@ -56,10 +62,69 @@ or, if on Windows:
     pip install -e .
     ```
 
-4.  **Run it!**: You should now be able to run PySpector directly.
+4.  **Verify the Installation**: You should now be able to run PySpector directly.
     ```bash
     pyspector --help
     ```
+
+---
+
+## 🧪 Testing and Development
+
+Before submitting a PR, please ensure your code passes tests and adheres to code quality standards.
+
+### Running Tests
+
+Run the unit tests using Python's unittest framework:
+```bash
+python -m unittest discover tests/unit -v
+```
+
+Or run a specific test file:
+```bash
+python -m unittest tests.unit.test_ai_rules -v
+```
+
+### Code Quality
+
+The project uses **Ruff** for linting and code formatting. Install it if not already included:
+```bash
+pip install ruff
+```
+
+**Check for linting issues**:
+```bash
+ruff check src/
+```
+
+**Auto-format your code**:
+```bash
+ruff format src/
+```
+
+**Fix common issues automatically**:
+```bash
+ruff check --fix src/
+```
+
+### Type Checking
+
+The project uses **MyPy** for type checking. Ensure your code has proper type hints:
+```bash
+mypy src/
+```
+
+### Before Submitting a PR
+
+Run this checklist to ensure your changes are ready:
+
+1. **Install in editable mode**: `pip install -e .` (compiles Rust engine)
+2. **Run all tests**: `python -m unittest discover tests/unit -v`
+3. **Check linting**: `ruff check src/`
+4. **Format code**: `ruff format src/`
+5. **Run type checks**: `mypy src/`
+
+Fix any issues found before pushing your changes.
 
 ---
 
