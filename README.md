@@ -27,7 +27,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [How It Works](#how-it-works)
 - [Performance Benchmarks](#performance-benchmarks)
 - [Usage](#usage)
-- [Plugin System](#plugin-system-new-feature)
+- [Plugin System](#plugin-system)
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
@@ -482,9 +482,9 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 ## Frequently Asked Questions
 
 <details>
-<summary>Does PySpector replace tools like Bandit or Semgrep?</summary>
+<summary>Why is my scan slow?</summary>
 
-PySpector is designed to complement existing SAST tools. Its Rust core focuses on graph-based, flow-sensitive taint analysis, while traditional linters and rule engines can still be useful for style checks, broad policy coverage, and organization-specific rules.
+If your scan is slow, it's probably because you aren't using PySpector, but rather something else (xD). Jokes apart, scan speed reduces as the codebase grows (so, for example, a 500k LoC codebase will take more time to get scanned, than a 10k LoC one), but recent benchmarks still demonstrate that PySpector is faster than other Python SASTs  
 
 </details>
 
@@ -498,7 +498,7 @@ Yes. PySpector includes a Rust analysis core, so local installation from source 
 <details>
 <summary>What can I scan?</summary>
 
-Use `pyspector scan` with a local Python file, a local project directory, or a public Git repository URL:
+You can use `pyspector scan` with a local Python file, a local project directory, or a public Git repository URL:
 
 ```bash
 pyspector scan ./my-python-project
@@ -508,7 +508,7 @@ pyspector scan --url https://github.com/username/repo.git
 </details>
 
 <details>
-<summary>How do I choose the report format?</summary>
+<summary>How can I choose the report format?</summary>
 
 Use `-f` to select the output format and `-o` to write the report to a file. For example:
 
@@ -530,7 +530,7 @@ pyspector scan ./my-python-project -f json -o report.json
 pyspector triage report.json
 ```
 
-Inside the TUI, mark findings as ignored and save the baseline. Future scans can use that baseline so reviewed findings do not keep reappearing.
+Inside the TUI, mark findings as ignored (by pressing `i` inside the TUI) and save the baseline (with `s`). Future scans can use that baseline so already reviewed findings do not keep reappearing.
 
 </details>
 
