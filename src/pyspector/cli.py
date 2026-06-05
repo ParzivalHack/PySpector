@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import sys
+import threading
 import warnings
 from importlib.metadata import version as _pkg_version, PackageNotFoundError
 from pathlib import Path
@@ -79,6 +80,14 @@ _BANNER = r"""
                 o                        |
              __/>                       / \
 """
+
+
+_SEV_COLOR: Dict[str, str] = {
+    "CRITICAL": "bright_red",
+    "HIGH":     "red",
+    "MEDIUM":   "yellow",
+    "LOW":      "blue",
+}
 
 
 @contextlib.contextmanager
@@ -366,6 +375,73 @@ def execute_plugins(
                     fg="red",
                 )
             )
+
+
+def _scan_to_issues(
+    scan_path:      Path,
+    config_path:    Optional[Path],
+    severity_level: str,
+    ai_scan:        bool,
+    syntax_warnings: bool = False,
+    debug:          bool  = False,
+    cache:          Optional[IncrementalAstCache] = None,
+) -> List:
+    """Run a scan and return the filtered issue list. Used by watch mode."""
+    config         = load_config(config_path)
+    rules_toml_str = get_default_rules(ai_scan)
+
+    if cache is None:
+        cache = get_cache(scan_path)
+
+    baseline_path = (
+        scan_path / ".pyspector_baseline.json"
+        if scan_path.is_dir()
+        else scan_path.parent / ".pyspector_baseline.json"
+    )
+    ignored_fingerprints: set = set()
+    if baseline_path.exists():
+        try:
+            with baseline_path.open("r") as f:
+                ignored_fingerprints = set(
+                    json.load(f).get("ignored_fingerprints", [])
+                )
+        except json.JSONDecodeError:
+            pass
+
+    python_files_data = get_python_file_asts(
+        scan_path,
+        enable_syntax_warnings=syntax_warnings,
+        debug=debug,
+        exclude=list(config.get("exclude", [])),
+        cache=cache,
+    )
+
+    with _silence_fd1(not debug):
+        raw_issues = run_scan(
+            str(scan_path.resolve()), rules_toml_str, config, python_files_data
+        )
+
+    severity_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+    min_sev = severity_map[severity_level.upper()]
+
+    return [
+        issue for issue in raw_issues
+        if severity_map[str(issue.severity).split(".")[-1].upper()] >= min_sev
+        and issue.get_fingerprint() not in ignored_fingerprints
+    ]
+
+
+def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
+    """Format one issue as a compact single-line string for watch-mode diffs."""
+    sev = str(issue.severity).split(".")[-1].upper()
+    return (
+        click.style(f"  {tag:<10}", fg=tag_color, bold=True)
+        + "  "
+        + click.style(f"[{sev}]", fg=_SEV_COLOR.get(sev, "white"))
+        + f"  {issue.rule_id}"
+        + f"  {issue.file_path}:{issue.line_number}"
+        + f"  `{issue.code.strip()[:60]}`"
+    )
 
 
 # --- Main CLI Logic ---
@@ -1118,7 +1194,205 @@ def remove(plugin_name: str, force: bool):
         click.echo(click.style(f"Error removing plugin: {e}", fg="red"))
 
 
+@click.command(
+    help=(
+        "Watch a directory or file and re-scan on every .py change.\n\n"
+        "Runs a full initial scan on startup, then re-scans whenever a\n"
+        ".py file is created, modified, or deleted. Only new and resolved\n"
+        "findings are printed after each re-scan."
+    )
+)
+@click.argument(
+    "path",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True,
+        readable=True, path_type=Path,
+    ),
+)
+@click.option(
+    "-s", "--severity", "severity_level",
+    type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+    default="LOW", show_default=True,
+    help="Minimum severity level to report.",
+)
+@click.option(
+    "--ai", "ai_scan", is_flag=True, default=False,
+    help="Enable specialized scanning for AI/LLM vulnerabilities.",
+)
+@click.option(
+    "-c", "--config", "config_path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to a pyspector.toml config file.",
+)
+@click.option(
+    "--debounce", default=1.0, show_default=True, metavar="SECONDS",
+    help="Wait this many seconds after the last change before re-scanning.",
+)
+@click.option(
+    "--debug", is_flag=True, default=False,
+    help="Show verbose progress output.",
+)
+def watch_command(
+    path:           Path,
+    severity_level: str,
+    ai_scan:        bool,
+    config_path:    Optional[Path],
+    debounce:       float,
+    debug:          bool,
+) -> None:
+    """Continuous watch mode: re-scan on every .py file change."""
+    try:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+    except ImportError:
+        click.echo(
+            "Error: 'watchdog' is required for watch mode.\n"
+            "Install it with:  pip install 'watchdog>=3.0'"
+        )
+        sys.exit(1)
+
+    _print_banner()
+    click.echo(f"[*] Watch mode  —  " + click.style(str(path), bold=True))
+    click.echo(
+        f"    Severity : {severity_level}"
+        f"  |  AI rules : {'on' if ai_scan else 'off'}"
+        f"  |  Debounce : {debounce}s"
+        f"  |  Ctrl+C to stop\n"
+    )
+
+    _DIVIDER      = "─" * 62
+    _BOLD_DIVIDER = "─" * 62
+
+    # ── Shared mutable state (accessed from background timer threads) ─────
+    cache   = get_cache(path)
+    # Use containers so nested functions can mutate without `nonlocal`
+    _state:   Dict[str, Any] = {"prev_fps": {}}  # fingerprint -> issue
+    _changed: set             = set()
+    _lock                     = threading.Lock()
+    _pending: List            = [None]            # [Optional[threading.Timer]]
+
+    # ── Initial full scan ─────────────────────────────────────────────────
+    click.echo("[~] Running initial scan...")
+    try:
+        initial = _scan_to_issues(
+            path, config_path, severity_level, ai_scan, debug=debug, cache=cache
+        )
+    except Exception as exc:
+        click.echo(f"[!] Initial scan failed: {exc}")
+        initial = []
+
+    _state["prev_fps"] = {iss.get_fingerprint(): iss for iss in initial}
+
+    if initial:
+        click.echo(f"\n[!] Initial scan: {len(initial)} issue(s) found:")
+        click.echo(Reporter(initial, "console").generate())
+    else:
+        click.echo("[+] Initial scan: clean — no issues found.")
+
+    click.echo("\n[*] Watching for changes...\n")
+
+    # ── Re-scan + diff ────────────────────────────────────────────────────
+    def _do_rescan() -> None:
+        with _lock:
+            changed_snapshot = set(_changed)
+            _changed.clear()
+            _pending[0] = None
+
+        ts = time.strftime("%H:%M:%S")
+        if changed_snapshot:
+            names = sorted(Path(p).name for p in changed_snapshot)
+            label = ", ".join(names[:3]) + (
+                f" (+{len(names) - 3} more)" if len(names) > 3 else ""
+            )
+        else:
+            label = "re-scan"
+
+        click.echo(_BOLD_DIVIDER)
+        click.echo(f"[{ts}] " + click.style(label, bold=True))
+        click.echo(_BOLD_DIVIDER)
+
+        try:
+            new_issues = _scan_to_issues(
+                path, config_path, severity_level, ai_scan, debug=debug, cache=cache
+            )
+        except Exception as exc:
+            click.echo(f"  [!] Scan error: {exc}")
+            click.echo(_DIVIDER + "\n")
+            return
+
+        new_fps  = {iss.get_fingerprint(): iss for iss in new_issues}
+        prev_fps = _state["prev_fps"]
+
+        appeared = [iss for fp, iss in new_fps.items()  if fp not in prev_fps]
+        resolved = [iss for fp, iss in prev_fps.items() if fp not in new_fps]
+
+        if not appeared and not resolved:
+            click.echo("  No change in findings.")
+        else:
+            for iss in appeared:
+                click.echo(_fmt_watch_issue(iss, "NEW", "red"))
+            for iss in resolved:
+                click.echo(_fmt_watch_issue(iss, "RESOLVED", "green"))
+
+        n_new = len(appeared)
+        n_res = len(resolved)
+        total = len(new_issues)
+        click.echo(_DIVIDER)
+        click.echo(
+            f"  {click.style(f'Active: {total}', bold=True)}"
+            f"  ·  +{n_new} new"
+            f"  ·  -{n_res} resolved\n"
+        )
+
+        _state["prev_fps"] = new_fps
+
+    # ── Debounce scheduler ────────────────────────────────────────────────
+    def _schedule(file_path: str) -> None:
+        with _lock:
+            _changed.add(file_path)
+            if _pending[0] is not None:
+                _pending[0].cancel()
+            t = threading.Timer(debounce, _do_rescan)
+            _pending[0] = t
+            t.start()
+
+    # ── Watchdog handler: only cares about .py files ──────────────────────
+    class _PyHandler(FileSystemEventHandler):
+        def _dispatch(self, event) -> None:
+            if event.is_directory:
+                return
+            for attr in ("src_path", "dest_path"):
+                p = getattr(event, attr, "")
+                if p and p.endswith(".py"):
+                    _schedule(p)
+                    return
+
+        def on_modified(self, event) -> None: self._dispatch(event)
+        def on_created(self,  event) -> None: self._dispatch(event)
+        def on_deleted(self,  event) -> None: self._dispatch(event)
+        def on_moved(self,    event) -> None: self._dispatch(event)
+
+    watch_root = str(path if path.is_dir() else path.parent)
+    observer   = Observer()
+    observer.schedule(_PyHandler(), path=watch_root, recursive=True)
+    observer.start()
+
+    try:
+        while observer.is_alive():
+            observer.join(timeout=1.0)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        with _lock:
+            if _pending[0] is not None:
+                _pending[0].cancel()
+        observer.stop()
+        observer.join()
+        click.echo("\n[*] Watch mode stopped.")
+
+
 # Add commands to the CLI group
 cli.add_command(run_scan_command, name="scan")
 cli.add_command(triage_command,   name="triage")
+cli.add_command(watch_command,    name="watch")
 cli.add_command(plugin)
