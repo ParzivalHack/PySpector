@@ -69,3 +69,6 @@ venv.bak/
 target/
 .vscode/target/
 Cargo.lock
+
+# PySpector incremental AST cache (generated, never version-controlled)
+.pyspector_cache/

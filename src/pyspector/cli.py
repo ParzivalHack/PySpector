@@ -13,6 +13,8 @@ from importlib.metadata import version as _pkg_version, PackageNotFoundError
 from pathlib import Path
 from typing import Optional, Dict, Any, List, cast
 
+from .ast_cache import IncrementalAstCache, get_cache
+from ._ast_encode import AstEncoder
 from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
@@ -47,11 +49,6 @@ def get_startup_note():
     except Exception:
         pass
     return random.choice(fallbacks)
-
-_list = list
-_tuple = tuple
-_ast_AST = ast.AST
-
 
 def _dbg(debug: bool, msg: str = "", **style_kwargs) -> None:
     """Emit *msg* via click.echo only when --debug is enabled.
@@ -129,47 +126,6 @@ def _print_banner() -> None:
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
 
 
-_ast_iter_fields = ast.iter_fields
-
-# --- Helper function for AST serialization ---
-class AstEncoder(json.JSONEncoder):
-    def default(self, node):
-        if isinstance(node, _ast_AST):
-            fields = {
-                "node_type": node.__class__.__name__,
-                "lineno": getattr(node, 'lineno', -1),
-                "col_offset": getattr(node, 'col_offset', -1),
-            }
-            child_nodes = {}
-            simple_fields = {}
-            for field, value in _ast_iter_fields(node):
-                if type(value).__name__ == 'list':
-                    if value and all(isinstance(n, _ast_AST) for n in value):
-                        child_nodes[field] = value
-                    else:
-                        simple_fields[field] = str(value) if value else []
-                elif isinstance(value, _ast_AST):
-                    child_nodes[field] = [value]
-                else:
-                    if isinstance(value, bytes):
-                        simple_fields[field] = value.decode('utf-8', errors='replace')
-                    elif isinstance(value, int) and value.bit_length() > 14000:
-                        simple_fields[field] = 0
-                    elif isinstance(value, (int, float, str, bool)) or value is None:
-                        simple_fields[field] = value
-                    else:
-                        simple_fields[field] = str(value)
-
-            fields["children"] = child_nodes
-            fields["fields"] = simple_fields
-            return fields
-        elif isinstance(node, bytes):
-            return node.decode('utf-8', errors='replace')
-        elif hasattr(node, '__dict__'):
-            return str(node)
-        return super().default(node)
-
-
 def should_skip_file(file_path: Path) -> bool:
     """Determine if a file should be skipped during AST parsing."""
     path_str = str(file_path)
@@ -220,6 +176,7 @@ def get_python_file_asts(
     _stats_meta: Optional[Dict[str, int]] = None,
     debug: bool = False,
     exclude: Optional[List[str]] = None,
+    cache: Optional[IncrementalAstCache] = None,
 ) -> List[Dict[str, Any]]:
     """
     Recursively finds Python files and returns their content and AST.
@@ -232,6 +189,11 @@ def get_python_file_asts(
             ``{'skipped': N, 'errors': N}`` for use by StatsCollector.
             Defaults to None (no tracking).  Backward-compatible: callers
             that do not pass this argument are unaffected.
+        cache: Optional incremental AST cache. When supplied (and syntax
+            warnings are not being promoted to errors), the cached AST JSON
+            is reused instead of re-running ast.parse + json.dumps. The cache
+            suppresses SyntaxWarning internally, so it is bypassed whenever
+            ``enable_syntax_warnings`` is True to preserve that diagnostic.
     """
     if _stats_meta is not None:
         _stats_meta['skipped'] = 0
@@ -272,8 +234,11 @@ def get_python_file_asts(
 
                 try:
                     content = py_file.read_text(encoding="utf-8")
-                    parsed_ast = ast.parse(content, filename=str(py_file))
-                    ast_json = json.dumps(parsed_ast, cls=AstEncoder)
+                    if cache is not None and not enable_syntax_warnings:
+                        ast_json = cache.get_ast_json(py_file, content)
+                    else:
+                        parsed_ast = ast.parse(content, filename=str(py_file))
+                        ast_json = json.dumps(parsed_ast, cls=AstEncoder)
                     results.append(
                         {
                             "file_path": str(py_file.resolve()),
@@ -722,6 +687,9 @@ def _execute_scan(
 
     _dbg(debug, f"[*] Starting PySpector scan on '{scan_path}'...")
 
+    # ── AST Cache ─────────────────────────────────────────────────────────
+    cache = get_cache(scan_path)
+
     # ── Load Baseline ─────────────────────────────────────────────────────
     baseline_path = (
         scan_path / ".pyspector_baseline.json"
@@ -758,6 +726,7 @@ def _execute_scan(
         _stats_meta=ast_stats_meta,
         debug=debug,
         exclude=list(config.get("exclude", [])),
+        cache=cache,
     )
     _dbg(debug, f"[*] Successfully parsed {len(python_files_data)} Python files in {time.time()-t_parse:.2f}s")
 
