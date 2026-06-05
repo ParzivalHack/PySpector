@@ -31,6 +31,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
+- [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Quick Demo
 
@@ -477,3 +478,84 @@ For continuous monitoring, you can schedule regular scans of your projects using
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
+
+## Frequently Asked Questions
+
+<details>
+<summary>Does PySpector replace tools like Bandit or Semgrep?</summary>
+
+PySpector is designed to complement existing SAST tools. Its Rust core focuses on graph-based, flow-sensitive taint analysis, while traditional linters and rule engines can still be useful for style checks, broad policy coverage, and organization-specific rules.
+
+</details>
+
+<details>
+<summary>Do I need Rust installed to use PySpector?</summary>
+
+Yes. PySpector includes a Rust analysis core, so local installation from source requires the Rust toolchain. Install Rust with [rustup](https://rustup.rs/), then verify the setup with `cargo --version` before installing or building PySpector.
+
+</details>
+
+<details>
+<summary>What can I scan?</summary>
+
+Use `pyspector scan` with a local Python file, a local project directory, or a public Git repository URL:
+
+```bash
+pyspector scan ./my-python-project
+pyspector scan --url https://github.com/username/repo.git
+```
+
+</details>
+
+<details>
+<summary>How do I choose the report format?</summary>
+
+Use `-f` to select the output format and `-o` to write the report to a file. For example:
+
+```bash
+pyspector scan ./my-python-project -f json -o report.json
+pyspector scan ./my-python-project -f html -o report.html
+pyspector scan ./my-python-project -f sarif -o report.sarif
+```
+
+</details>
+
+<details>
+<summary>How should I handle false positives?</summary>
+
+Generate a JSON report, then open the triage TUI:
+
+```bash
+pyspector scan ./my-python-project -f json -o report.json
+pyspector triage report.json
+```
+
+Inside the TUI, mark findings as ignored and save the baseline. Future scans can use that baseline so reviewed findings do not keep reappearing.
+
+</details>
+
+<details>
+<summary>Are plugins safe to run?</summary>
+
+Only trusted plugins are executed automatically. PySpector validates plugin source, records a checksum when you trust a plugin, and warns you if the file changes later. Review third-party plugin code before running `pyspector plugin trust` or installing a plugin with `--trust`.
+
+</details>
+
+<details>
+<summary>When should I use the AI and supply-chain modes?</summary>
+
+Use `--ai` when scanning projects that integrate with LLMs or AI agents. Use `--supply-chain` when you want dependency checks for known CVEs:
+
+```bash
+pyspector scan ./my-python-project --ai
+pyspector scan ./my-python-project --supply-chain
+```
+
+</details>
+
+<details>
+<summary>How can I integrate PySpector into CI?</summary>
+
+For CI pipelines, generate SARIF with `-f sarif` and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use `./scripts/setup_hooks.sh` to install the provided pre-commit hook.
+
+</details>
