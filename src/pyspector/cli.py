@@ -1,28 +1,70 @@
 from __future__ import annotations
-import click
-import time
-import json
+
 import ast
 import contextlib
+import json
 import os
+import random
 import subprocess
-import tempfile
 import sys
+import tempfile
 import threading
+import time
 import warnings
-from importlib.metadata import version as _pkg_version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Optional, Dict, Any, List, cast
-
-from .ast_cache import IncrementalAstCache, get_cache
-from ._ast_encode import AstEncoder
-from .config import load_config, get_default_rules
-from .reporting import Reporter
-from .triage import run_triage_tui
-from .plugin_system import get_plugin_manager, PluginSecurity
-from .stats import StatsCollector
-import requests
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
+
+import click
+import requests
+
+from ._ast_encode import AstEncoder
+from .ast_cache import IncrementalAstCache, get_cache
+from .config import get_default_rules, load_config
+from .plugin_system import PluginSecurity, get_plugin_manager
+from .reporting import Reporter
+from .stats import StatsCollector
+from .triage import run_triage_tui
+
+
+class _ScanHelpGroup(click.Group):
+    """Show primary scan arguments in root help without changing dispatch."""
+
+    def format_options(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        super().format_options(ctx, formatter)
+        self._format_scan_options(ctx, formatter)
+
+    def _format_scan_options(
+        self,
+        ctx: click.Context,
+        formatter: click.HelpFormatter,
+    ) -> None:
+        scan_cmd = self.commands.get("scan")
+        if scan_cmd is None:
+            return
+
+        rows = [
+            (
+                "PATH",
+                "File or directory to scan. Omit when using --url or --wizard.",
+            )
+        ]
+
+        with click.Context(scan_cmd, info_name="scan", parent=ctx) as scan_ctx:
+            for param in scan_cmd.get_params(scan_ctx):
+                if not isinstance(param, click.Option):
+                    continue
+                record = param.get_help_record(scan_ctx)
+                if record is not None:
+                    rows.append(record)
+
+        formatter.write_paragraph()
+        formatter.write_heading("Scan arguments and options")
+        formatter.write_text("Use these with `pyspector scan ...`.")
+        formatter.write_dl(rows)
+
 
 # Import the Rust core from its new location
 try:
@@ -30,8 +72,6 @@ try:
 except ImportError:
     click.echo(click.style("Error: PySpector's core engine module not found.", fg="red"))
     exit(1)
-
-import random
 
 def get_startup_note():
     """Fetches a tech joke or returns a fallback if offline."""
@@ -446,7 +486,7 @@ def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
 
 # --- Main CLI Logic ---
 
-@click.group()
+@click.group(cls=_ScanHelpGroup)
 def cli():
     """
     PySpector: A high-performance, security-focused static analysis tool
@@ -1242,8 +1282,8 @@ def watch_command(
 ) -> None:
     """Continuous watch mode: re-scan on every .py file change."""
     try:
-        from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
     except ImportError:
         click.echo(
             "Error: 'watchdog' is required for watch mode.\n"
@@ -1252,7 +1292,7 @@ def watch_command(
         sys.exit(1)
 
     _print_banner()
-    click.echo(f"[*] Watch mode  —  " + click.style(str(path), bold=True))
+    click.echo("[*] Watch mode  —  " + click.style(str(path), bold=True))
     click.echo(
         f"    Severity : {severity_level}"
         f"  |  AI rules : {'on' if ai_scan else 'off'}"
