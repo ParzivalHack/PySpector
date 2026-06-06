@@ -447,11 +447,71 @@ def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
 # --- Main CLI Logic ---
 
 @click.group()
-def cli():
+@click.option('--ai', 'ai_scan', is_flag=True, default=False,
+              help="Enable the specialized ruleset for AI/LLM vulnerability scanning.")
+@click.option('-s', '--severity', 'severity_level',
+              type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+              default='LOW', show_default=True,
+              help="Minimum severity level to report.")
+@click.option('-f', '--format', 'report_format',
+              type=click.Choice(['console', 'json', 'sarif', 'html']),
+              default='console', show_default=True,
+              help="Output format: console, json, sarif, or html.")
+@click.option('-c', '--config', 'config_path',
+              type=click.Path(path_type=Path),
+              help="Path to a pyspector.toml configuration file.")
+@click.option('-o', '--output', 'output_file',
+              type=click.Path(path_type=Path),
+              help="Path to write the report to (default: stdout).")
+@click.option('-u', '--url', 'repo_url', type=str,
+              help="URL of a public GitHub or GitLab repository to clone and scan.")
+@click.option('--supply-chain', is_flag=True, default=False,
+              help="Check project dependencies against the OSV database for known CVEs.")
+@click.option('--stats', 'show_stats', is_flag=True, default=False,
+              help="Print a performance and findings statistics table after the scan.")
+@click.option('--debug', is_flag=True, default=False,
+              help="Show all informational/progress messages.")
+@click.option('--wizard', is_flag=True, default=False,
+              help="Launch interactive guided scan mode — ideal for first-time users.")
+@click.pass_context
+def cli(
+    ctx: click.Context,
+    ai_scan: bool,
+    severity_level: str,
+    report_format: str,
+    config_path: Optional[Path],
+    output_file: Optional[Path],
+    repo_url: Optional[str],
+    supply_chain: bool,
+    show_stats: bool,
+    debug: bool,
+    wizard: bool,
+):
     """
     PySpector: A high-performance, security-focused static analysis tool
     for Python, powered by Rust.
     """
+    ctx.ensure_object(dict)
+    ctx.default_map = {
+        'scan': {
+            'ai_scan':        ai_scan,
+            'severity_level': severity_level,
+            'report_format':  report_format,
+            'config_path':    config_path,
+            'output_file':    output_file,
+            'repo_url':       repo_url,
+            'supply_chain':   supply_chain,
+            'show_stats':     show_stats,
+            'debug':          debug,
+            'wizard':         wizard,
+        },
+        'watch': {
+            'ai_scan':        ai_scan,
+            'severity_level': severity_level,
+            'config_path':    config_path,
+            'debug':          debug,
+        },
+    }
 
 
 def run_wizard():
