@@ -511,7 +511,10 @@ def run_wizard():
 
 
 @click.command(
-    help="Scan a directory, file, or remote Git repository for vulnerabilities."
+    help=(
+        "Scan a file, directory, or remote Git repository for vulnerabilities.\n\n"
+        "PATH: local file or directory to scan. Omit PATH and use --url to scan a remote repo."
+    )
 )
 @click.argument(
     'path',
@@ -520,38 +523,41 @@ def run_wizard():
         readable=True, path_type=Path
     ),
     required=False,
+    metavar='[PATH]',
 )
 @click.option('-u', '--url', 'repo_url', type=str,
-              help="URL of a public GitHub/GitLab repository to clone and scan.")
+              help="URL of a public GitHub or GitLab repository to clone and scan.")
 @click.option('-c', '--config', 'config_path',
               type=click.Path(exists=True, path_type=Path),
-              help="Path to a pyspector.toml config file.")
+              help="Path to a pyspector.toml config file (overrides defaults).")
 @click.option('-o', '--output', 'output_file',
               type=click.Path(path_type=Path),
-              help="Path to write the report to.")
+              help="Path to write the report to (default: print to stdout).")
 @click.option('-f', '--format', 'report_format',
               type=click.Choice(['console', 'json', 'sarif', 'html']),
               default='console',
-              help="Format of the report.")
+              show_default=True,
+              help="Output format: console, json, sarif, or html.")
 @click.option('-s', '--severity', 'severity_level',
               type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
               default='LOW',
+              show_default=True,
               help="Minimum severity level to report.")
 @click.option('--ai', 'ai_scan', is_flag=True, default=False,
-              help="Enable specialized scanning for AI/LLM vulnerabilities.")
+              help="Enable the specialized ruleset for AI/LLM vulnerability scanning.")
 @click.option('--plugin', 'plugins', multiple=True,
-              help="Load and execute a plugin (can be specified multiple times)")
+              help="Name of a trusted plugin to run after the scan (repeatable).")
 @click.option('--plugin-config', 'plugin_config_file',
               type=click.Path(exists=True, path_type=Path),
-              help="Path to plugin configuration JSON file")
+              help="Path to a JSON file containing per-plugin configuration.")
 @click.option('--list-plugins', 'list_plugins', is_flag=True,
-              help="List available plugins and exit")
+              help="List all available plugins and exit.")
 @click.option('--supply-chain', is_flag=True, default=False,
-              help="Scan dependencies for known CVE vulnerabilities.")
+              help="Check project dependencies against the OSV database for known CVEs.")
 @click.option('--syntax-warnings', is_flag=True, default=False,
-              help="Treat SyntaxWarning as errors during parsing.")
+              help="Treat Python SyntaxWarnings as errors and exclude affected files.")
 @click.option('--wizard', is_flag=True,
-              help="Interactive guided scan for first-time users")
+              help="Launch interactive guided scan mode — ideal for first-time users.")
 @click.option('--stats', 'show_stats', is_flag=True, default=False,
               help=(
                   "Print a detailed performance and findings statistics table "
