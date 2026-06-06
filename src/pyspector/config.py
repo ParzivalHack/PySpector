@@ -1,13 +1,16 @@
 import re
+from copy import deepcopy
 from pathlib import Path
-import toml # type: ignore
-import click # type: ignore
+
+import click  # type: ignore
+import toml  # type: ignore
+
 try:
     # Python 3.9+
     import importlib.resources as pkg_resources
 except ImportError:
     # Fallback for older Python versions
-    import importlib_resources as pkg_resources # type: ignore
+    import importlib_resources as pkg_resources  # type: ignore
 
 # Sentinel placed inside any rule's `exclude_pattern` to inherit the shared
 # placeholder regex declared at [defaults].exclude_pattern_placeholder. The
@@ -42,12 +45,12 @@ def load_config(config_path: Path) -> dict:
         try:
             with config_path.open('r') as f:
                 user_config = toml.load(f).get('tool', {}).get('pyspector', {})
-                config = DEFAULT_CONFIG.copy()
+                config = deepcopy(DEFAULT_CONFIG)
                 config.update(user_config)
                 return config
         except Exception as e:
             click.echo(click.style(f"Warning: Could not parse config file '{config_path}'. Using defaults. Error: {e}", fg="yellow"))
-    return DEFAULT_CONFIG
+    return deepcopy(DEFAULT_CONFIG)
 
 def get_default_rules(ai_scan: bool = False) -> str:
     """Loads the built-in TOML rules file from package resources.
