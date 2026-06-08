@@ -554,6 +554,17 @@ pyspector scan ./my-python-project --supply-chain
 </details>
 
 <details>
+<summary>How do I enable debug output?</summary>
+
+Use `--debug` to print verbose internal details during analysis, which is useful for troubleshooting false positives or unexpected results:
+
+```bash
+pyspector scan ./my-python-project --debug
+```
+
+</details>
+
+<details>
 <summary>How can I integrate PySpector into CI?</summary>
 
 For CI pipelines, generate SARIF with `-f sarif` and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use `./scripts/setup_hooks.sh` to install the provided pre-commit hook.
