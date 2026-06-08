@@ -56,7 +56,17 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.14 ven
   # Download Python 3.14
   python3.14 -m venv venv
   source venv/bin/activate
-  ```
+```
+<details>
+<summary>How do I use the `watch` command for continuous monitoring?</summary>
+
+The `watch` command monitors your project in real-time and automatically re-runs SAST analysis whenever a file changes — ideal for local development workflows that need instant security feedback: `pyspector watch ./my-python-project [--severity high]`
+
+</details>
+
+<details>
+<summary>How can I integrate PySpector into CI?</summary>
+```
 
 - **Windows (PowerShell)**:
 
