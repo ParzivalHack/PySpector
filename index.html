@@ -1199,31 +1199,15 @@
 						</li>
 					</ul>
 				</div>
-
 				<div>
-					<div class="menu-group-label">Tools</div>
+					<div class="menu-group-label">Plugin & System</div>
 					<ul class="menu-list">
-						<li
-							class="menu-item"
-							id="nav-playground"
-						>
-							<a href="#api-playground"
-								><span>API Playground</span>
-								<span class="sidebar-badge badge-crit">LIVE</span></a
-							>
-						</li>
 						<li
 							class="menu-item"
 							id="nav-quickstart"
 						>
 							<a href="#quickstart"><span>Quick Start CLI</span></a>
 						</li>
-					</ul>
-				</div>
-
-				<div>
-					<div class="menu-group-label">Plugin & System</div>
-					<ul class="menu-list">
 						<li
 							class="menu-item"
 							id="nav-plugins"
@@ -1537,106 +1521,6 @@
 									Stable performance across different project types and sizes
 								</div>
 							</div>
-						</div>
-					</div>
-				</section>
-
-				<!-- API Playground Section (Styling styled exactly like the screenshot's scanner) -->
-				<section
-					id="api-playground"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget scan-config-widget">
-						<div class="widget-title">New Scan Configuration</div>
-
-						<div class="input-row">
-							<div class="input-field-group">
-								<label
-									class="input-label"
-									for="repo-url"
-									>Target Repository URL</label
-								>
-								<input
-									type="text"
-									id="repo-url"
-									class="text-input"
-									placeholder="Enter a public GitHub repository (e.g. https://github.com/pallets/flask.git)"
-									value="https://github.com/psf/requests.git"
-								/>
-								<span class="input-subtext"
-									>Enter a local path or a GitHub repository URL ending in
-									.git</span
-								>
-							</div>
-
-							<div>
-								<button
-									class="btn primary"
-									id="scan-btn"
-									onclick="runScan()"
-									style="height: 40px; padding: 0 24px;"
-								>
-									<span id="btn-text">Run Scan</span>
-									<span
-										id="btn-spinner"
-										style="display:none;"
-										>⏳ Scanning...</span
-									>
-								</button>
-							</div>
-						</div>
-
-						<div class="checkbox-row">
-							<label class="checkbox-label">
-								<input
-									type="checkbox"
-									id="enable-ai"
-								/>
-								<span>AI Scan (LLM Ruleset)</span>
-							</label>
-							<label class="checkbox-label">
-								<input
-									type="checkbox"
-									id="enable-supply"
-									checked
-								/>
-								<span>Supply Chain Vulnerabilities</span>
-							</label>
-							<label class="checkbox-label">
-								<input
-									type="checkbox"
-									id="json-output"
-									checked
-								/>
-								<span>JSON Output Format</span>
-							</label>
-						</div>
-
-						<div
-							id="error-message"
-							class="error-box"
-							style="display:none;"
-						></div>
-
-						<!-- Code Output Terminal -->
-						<div class="playground-output-box">
-							<div class="output-header">
-								<span>Scan Results Console</span>
-								<button
-									class="copy-btn"
-									id="copy-btn"
-									onclick="copyResults()"
-									style="display:none;"
-								>
-									Copy Output
-								</button>
-							</div>
-							<pre
-								class="output-terminal"
-								id="scan-results"
-							>
-Results will appear here when you hit "Run Scan"...</pre
-							>
 						</div>
 					</div>
 				</section>
@@ -2067,157 +1951,6 @@ class MyPlugin(PySpectorPlugin):
 			    headerTitle.textContent = titleMap[navId];
 			  }
 			});
-
-			// API SCANNER LOGIC (PRESERVED & EXPANDED WITH STAT DYNAMIC COUNTERS)
-			async function runScan() {
-			  const repoUrl = document.getElementById('repo-url').value.trim();
-			  const enableAi = document.getElementById('enable-ai').checked;
-			  const jsonOutput = document.getElementById('json-output').checked;
-			  const resultsElement = document.getElementById('scan-results');
-			  const errorElement = document.getElementById('error-message');
-			  const scanBtn = document.getElementById('scan-btn');
-			  const btnSpinner = document.getElementById('btn-spinner');
-			  const copyBtn = document.getElementById('copy-btn');
-
-			  // Validation
-			  if (!repoUrl) {
-			    showError('Please enter a repository URL');
-			    return;
-			  }
-
-			  if (!repoUrl.match(/^https?:\/\/(github\.com|gitlab\.com)\/.+\.git$/)) {
-			    showError('Please enter a valid GitHub or GitLab repository URL (must end with .git)');
-			    return;
-			  }
-
-			  // Reset UI & stats
-			  errorElement.style.display = 'none';
-			  resultsElement.innerHTML = '<code>⏳ Initializing remote scanner container...\n⚡ Invoking Rust parallel analysis core...\n🎯 Propagating taint flows... please wait...</code>';
-			  copyBtn.style.display = 'none';
-			  scanBtn.disabled = true;
-			  btnSpinner.style.display = 'inline';
-
-			  const statsGrid = document.querySelector('.stats-summary-grid');
-			  if (statsGrid) {
-			    statsGrid.style.display = 'none';
-			  }
-
-			  updateStatsCounters(0, 0, 0, 0, 0, 0);
-
-			  try {
-			    const response = await fetch(API_URL, {
-			      method: 'POST',
-			      headers: {
-			        'Content-Type': 'application/json',
-			      },
-			      body: JSON.stringify({
-			        url: repoUrl,
-			        ai: enableAi,
-			        json_output: jsonOutput
-			      })
-			    });
-
-			    if (!response.ok) {
-			      const errorText = await response.text();
-			      throw new Error(`Scan failed: ${errorText}`);
-			    }
-
-			    const contentType = response.headers.get('content-type');
-			    let results;
-			    let rawJson = null;
-
-			    if (contentType && contentType.includes('application/json')) {
-			      rawJson = await response.json();
-			      results = JSON.stringify(rawJson, null, 2);
-			    } else {
-			      results = await response.text();
-			      try {
-			        rawJson = JSON.parse(results);
-			      } catch(e) {}
-			    }
-
-			    resultsElement.textContent = results;
-			    copyBtn.style.display = 'block';
-
-			    // Parse findings from JSON to update stats dynamically
-			    if (jsonOutput) {
-			      if (statsGrid) {
-			        statsGrid.style.display = 'grid';
-			      }
-			      if (rawJson) {
-			        parseAndShowStats(rawJson);
-			      } else {
-			        updateStatsCounters(0, 0, 0, 0, 0, 0);
-			      }
-			    }
-
-			  } catch (error) {
-			    showError(error.message);
-			    resultsElement.textContent = 'Scan execution failed. Details reported in error section above.';
-			  } finally {
-			    scanBtn.disabled = false;
-			    btnSpinner.style.display = 'none';
-			  }
-			}
-
-			function showError(message) {
-			  const errorElement = document.getElementById('error-message');
-			  errorElement.textContent = message;
-			  errorElement.style.display = 'block';
-			}
-
-			function copyResults() {
-			  const resultsElement = document.getElementById('scan-results');
-			  const text = resultsElement.textContent;
-
-			  navigator.clipboard.writeText(text).then(() => {
-			    const copyBtn = document.getElementById('copy-btn');
-			    const originalText = copyBtn.textContent;
-			    copyBtn.textContent = 'Copied!';
-			    setTimeout(() => {
-			      copyBtn.textContent = originalText;
-			    }, 2000);
-			  }).catch(err => {
-			    console.error('Failed to copy:', err);
-			  });
-			}
-
-			// Dynamic stats updates
-			function updateStatsCounters(crit, high, med, low, files, total) {
-			  document.getElementById('stats-crit').textContent = crit;
-			  document.getElementById('stats-high').textContent = high;
-			  document.getElementById('stats-med').textContent = med;
-			  document.getElementById('stats-low').textContent = low;
-			  document.getElementById('stats-files').innerHTML = `${files} <span class="stat-card-sub">files</span>`;
-			  document.getElementById('stats-total').textContent = total;
-			}
-
-			function parseAndShowStats(json) {
-			  let crit = 0, high = 0, med = 0, low = 0;
-			  let issueCount = 0;
-			  if (json.summary && typeof json.summary.issue_count !== 'undefined') {
-			    issueCount = json.summary.issue_count;
-			  } else if (json.issues) {
-			    issueCount = json.issues.length;
-			  }
-
-			  const distinctFiles = new Set();
-			  const findings = json.issues || [];
-			  if (Array.isArray(findings)) {
-			    findings.forEach(issue => {
-			      if (issue.file_path) {
-			        distinctFiles.add(issue.file_path);
-			      }
-			      const sev = String(issue.severity || '').toUpperCase();
-			      if (sev.includes('CRIT')) crit++;
-			      else if (sev.includes('HIGH')) high++;
-			      else if (sev.includes('MED')) med++;
-			      else low++;
-			    });
-			  }
-
-			  updateStatsCounters(crit, high, med, low, distinctFiles.size, issueCount);
-			}
 		</script>
 	</body>
 </html>
