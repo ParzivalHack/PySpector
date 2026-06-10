@@ -1,1951 +1,2175 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<title>PySpector - High-Performance Python SAST</title>
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1"
-		/>
-		<meta
-			name="description"
-			content="PySpector is a high-performance Python SAST framework with a Rust core, deep taint analysis, and AI/LLM security rules."
-		/>
-
-		<!-- Fonts -->
-		<link
-			rel="preconnect"
-			href="https://fonts.googleapis.com"
-		/>
-		<link
-			rel="preconnect"
-			href="https://fonts.gstatic.com"
-			crossorigin
-		/>
-		<link
-			href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-			rel="stylesheet"
-		/>
-
-		<style>
-			:root {
-			  /* Backgrounds — Black → Grey */
-			  --bg0: #080b0d;
-			  --bg1: #0e1317;
-			  --bg2: #151b21;
-			  --bg3: #1c242c;
-			  --bg4: #232d37;
-			  --bg5: #2a3540;
-
-			  /* Grey scale */
-			  --g1: #2e3d4a;
-			  --g2: #3d5166;
-			  --g3: #6b7f90;
-			  --g4: #8fa4b5;
-			  --g5: #b8c9d5;
-			  --white: #e8f0f5;
-
-			  /* DarkRed → Orange (accents, borders, titles) */
-			  --crit2: #dc2626;
-			  --crit3: #ef4444;
-			  --high2: #ea580c;
-			  --high3: #f97316;
-			  --med2: #d97706;
-			  --med3: #f59e0b;
-			  --low3: #22c55e;
-			  --info2: #0ea5e9;
-
-			  --critb: rgba(220, 38, 38, 0.15);
-			  --highb: rgba(234, 88, 12, 0.15);
-			  --medb: rgba(217, 119, 6, 0.12);
-			  --lowb: rgba(22, 197, 94, 0.12);
-			  --infob: rgba(14, 165, 233, 0.12);
-
-			  --grad: linear-gradient(135deg, #b71c1c, #f97316);
-			  --grad-h: linear-gradient(90deg, #b71c1c, #f97316);
-
-			  --font-sans: "Space Grotesk", sans-serif;
-			  --font-mono: "JetBrains Mono", monospace;
-			  --sidebar-w: 240px;
-			  --header-h: 64px;
-			  --radius: 8px;
-			  --radius-lg: 12px;
-			  --radius-sm: 5px;
-
-			  --accent: var(--high3);
-			  --accent-hover: #fb923c;
-			}
-
-			* {
-			  box-sizing: border-box;
-			  margin: 0;
-			  padding: 0;
-			}
-
-			body {
-			  font-family: var(--font-sans);
-			  background-color: var(--bg0);
-			  color: var(--white);
-			  line-height: 1.5;
-			  overflow-x: hidden;
-			  display: flex;
-			}
-
-			/* Scrollbar Styling */
-			::-webkit-scrollbar {
-			  width: 8px;
-			  height: 8px;
-			}
-			::-webkit-scrollbar-track {
-			  background: var(--bg0);
-			}
-			::-webkit-scrollbar-thumb {
-			  background: var(--g1);
-			  border-radius: var(--radius-sm);
-			}
-			::-webkit-scrollbar-thumb:hover {
-			  background: var(--g2);
-			}
-
-			/* Sidebar Styles */
-			aside {
-			  width: var(--sidebar-w);
-			  background-color: var(--bg1);
-			  border-right: 1px solid var(--g1);
-			  height: 100vh;
-			  position: fixed;
-			  top: 0;
-			  left: 0;
-			  display: flex;
-			  flex-direction: column;
-			  z-index: 100;
-			  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-			}
-
-			.sidebar-header {
-			  padding: 20px;
-			  border-bottom: 1px solid var(--g1);
-			  display: flex;
-			  align-items: center;
-			  gap: 10px;
-			}
-
-			.logo-icon {
-			  width: 32px;
-			  height: 32px;
-			  background: var(--grad);
-			  border-radius: var(--radius);
-			  display: flex;
-			  align-items: center;
-			  justify-content: center;
-			  font-weight: 700;
-			  color: var(--white);
-			  font-size: 1.1rem;
-			  box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
-			}
-
-			.logo-text {
-			  display: flex;
-			  flex-direction: column;
-			}
-
-			.logo-title {
-			  font-weight: 700;
-			  font-size: 1.05rem;
-			  letter-spacing: 0.5px;
-			  color: var(--white);
-			}
-
-			.logo-subtitle {
-			  font-size: 0.7rem;
-			  color: var(--g3);
-			  font-family: var(--font-mono);
-			}
-
-			.sidebar-menu {
-			  flex: 1;
-			  padding: 24px 12px;
-			  overflow-y: auto;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 20px;
-			}
-
-			.menu-group-label {
-			  font-size: 0.7rem;
-			  text-transform: uppercase;
-			  letter-spacing: 1.5px;
-			  color: var(--g3);
-			  padding-left: 8px;
-			  margin-bottom: 8px;
-			  font-weight: 600;
-			}
-
-			.menu-list {
-			  list-style: none;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 4px;
-			}
-
-			.menu-item a {
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  padding: 10px 12px;
-			  color: var(--g4);
-			  text-decoration: none;
-			  border-radius: var(--radius);
-			  font-size: 0.9rem;
-			  font-weight: 500;
-			  transition: all 0.2s ease;
-			}
-
-			.menu-item a:hover {
-			  background-color: var(--bg2);
-			  color: var(--white);
-			}
-
-			.menu-item.active a {
-			  background-color: var(--bg3);
-			  color: var(--high3);
-			  border-left: 3px solid var(--high3);
-			  border-top-left-radius: 0;
-			  border-bottom-left-radius: 0;
-			}
-
-			.sidebar-badge {
-			  font-size: 0.7rem;
-			  padding: 2px 6px;
-			  border-radius: var(--radius-sm);
-			  font-weight: 700;
-			  font-family: var(--font-mono);
-			}
-
-			.badge-crit {
-			  background-color: var(--critb);
-			  color: var(--crit3);
-			  border: 1px solid rgba(239, 68, 68, 0.2);
-			}
-
-			.badge-high {
-			  background-color: var(--highb);
-			  color: var(--high3);
-			  border: 1px solid rgba(249, 115, 22, 0.2);
-			}
-
-			.sidebar-footer {
-			  padding: 16px 20px;
-			  border-top: 1px solid var(--g1);
-			  font-size: 0.75rem;
-			  color: var(--g3);
-			  background-color: rgba(8, 11, 13, 0.4);
-			}
-
-			.sidebar-footer div {
-			  margin-bottom: 4px;
-			}
-
-			/* Main Content Wrapper */
-			main {
-			  margin-left: var(--sidebar-w);
-			  flex: 1;
-			  min-height: 100vh;
-			  display: flex;
-			  flex-direction: column;
-			  transition: margin 0.3s ease;
-			}
-
-			/* Header Styling */
-			header.dashboard-header {
-			  height: var(--header-h);
-			  border-bottom: 1px solid var(--g1);
-			  background-color: var(--bg1);
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  padding: 0 32px;
-			  position: sticky;
-			  top: 0;
-			  z-index: 90;
-			  backdrop-filter: blur(10px);
-			}
-
-			.header-title-area {
-			  display: flex;
-			  align-items: center;
-			  gap: 16px;
-			}
-
-			.header-title {
-			  font-size: 1.15rem;
-			  font-weight: 700;
-			  color: var(--white);
-			}
-
-			.header-stats-badge {
-			  display: flex;
-			  align-items: center;
-			  gap: 8px;
-			  background-color: var(--bg0);
-			  border: 1px solid var(--g1);
-			  padding: 4px 10px;
-			  border-radius: 20px;
-			  font-size: 0.75rem;
-			  color: var(--g4);
-			  font-family: var(--font-mono);
-			}
-
-			.header-stats-dot {
-			  width: 6px;
-			  height: 6px;
-			  background-color: var(--low3);
-			  border-radius: 50%;
-			  box-shadow: 0 0 8px var(--low3);
-			}
-
-			.header-controls {
-			  display: flex;
-			  align-items: center;
-			  gap: 12px;
-			}
-
-			/* Interactive UI Elements & Buttons */
-			.btn {
-			  display: inline-flex;
-			  align-items: center;
-			  justify-content: center;
-			  gap: 8px;
-			  padding: 8px 16px;
-			  border-radius: var(--radius);
-			  font-family: var(--font-sans);
-			  font-size: 0.85rem;
-			  font-weight: 600;
-			  cursor: pointer;
-			  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-			  border: 1px solid var(--g1);
-			  background-color: var(--bg2);
-			  color: var(--g5);
-			  text-decoration: none;
-			}
-
-			.btn:hover {
-			  background-color: var(--bg3);
-			  color: var(--white);
-			  border-color: var(--g2);
-			}
-
-			.btn.primary {
-			  background: var(--grad);
-			  border: none;
-			  color: var(--white);
-			  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
-			}
-
-			.btn.primary:hover {
-			  opacity: 0.95;
-			  transform: translateY(-1px);
-			  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.3);
-			}
-
-			.btn.secondary {
-			  background-color: var(--bg3);
-			  color: var(--white);
-			  border-color: var(--g2);
-			}
-
-			.user-profile-badge {
-			  display: flex;
-			  align-items: center;
-			  gap: 8px;
-			  background-color: var(--bg2);
-			  border: 1px solid var(--g1);
-			  padding: 4px 12px 4px 6px;
-			  border-radius: 20px;
-			}
-
-			.avatar {
-			  width: 24px;
-			  height: 24px;
-			  border-radius: 50%;
-			  background: var(--grad);
-			  display: flex;
-			  align-items: center;
-			  justify-content: center;
-			  font-size: 0.7rem;
-			  font-weight: 700;
-			  color: var(--white);
-			}
-
-			.profile-info {
-			  display: flex;
-			  flex-direction: column;
-			}
-
-			.profile-name {
-			  font-size: 0.75rem;
-			  font-weight: 600;
-			  line-height: 1.1;
-			}
-
-			.profile-role {
-			  font-size: 0.6rem;
-			  color: var(--g3);
-			}
-
-			/* Dashboard Main Container */
-			.dashboard-viewport {
-			  padding: 32px;
-			  max-width: 1300px;
-			  width: 100%;
-			  margin: 0 auto;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 32px;
-			}
-
-			/* Dashboard Widgets/Cards */
-			.widget {
-			  background-color: var(--bg1);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius-lg);
-			  padding: 24px;
-			  position: relative;
-			  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-			}
-
-			.widget:hover {
-			  border-color: var(--g2);
-			}
-
-			.widget-title {
-			  font-size: 0.95rem;
-			  font-weight: 700;
-			  text-transform: uppercase;
-			  letter-spacing: 1px;
-			  margin-bottom: 20px;
-			  color: var(--high3);
-			  display: flex;
-			  align-items: center;
-			  gap: 8px;
-			}
-
-			.widget-title::before {
-			  content: "";
-			  width: 6px;
-			  height: 6px;
-			  background-color: var(--high3);
-			  border-radius: 50%;
-			  display: inline-block;
-			}
-
-			/* Grid Layouts */
-			.grid-2col {
-			  display: grid;
-			  grid-template-columns: 1fr 1fr;
-			  gap: 24px;
-			}
-
-			.grid-3col {
-			  display: grid;
-			  grid-template-columns: repeat(3, 1fr);
-			  gap: 24px;
-			}
-
-			.grid-4col {
-			  display: grid;
-			  grid-template-columns: repeat(4, 1fr);
-			  gap: 24px;
-			}
-
-			/* stats card grid matching the mockup */
-			.stats-summary-grid {
-			  display: grid;
-			  grid-template-columns: repeat(6, 1fr);
-			  gap: 16px;
-			}
-
-			.stat-card {
-			  background-color: var(--bg1);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius);
-			  padding: 16px;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 8px;
-			  transition: all 0.2s ease;
-			  position: relative;
-			  overflow: hidden;
-			}
-
-			.stat-card::after {
-			  content: "";
-			  position: absolute;
-			  bottom: 0;
-			  left: 0;
-			  width: 100%;
-			  height: 3px;
-			  background: transparent;
-			}
-
-			.stat-card:hover {
-			  transform: translateY(-2px);
-			  border-color: var(--g2);
-			}
-
-			.stat-card.crit::after { background-color: var(--crit2); }
-			.stat-card.high::after { background-color: var(--high2); }
-			.stat-card.med::after { background-color: var(--med2); }
-			.stat-card.low::after { background-color: var(--low3); }
-			.stat-card.files::after { background-color: var(--info2); }
-			.stat-card.time::after { background: var(--grad); }
-
-			.stat-card-label {
-			  font-size: 0.75rem;
-			  text-transform: uppercase;
-			  font-weight: 600;
-			  color: var(--g4);
-			  letter-spacing: 0.5px;
-			}
-
-			.stat-card-value {
-			  font-size: 1.8rem;
-			  font-weight: 700;
-			  font-family: var(--font-mono);
-			  line-height: 1.1;
-			  display: flex;
-			  align-items: baseline;
-			  gap: 4px;
-			}
-
-			.stat-card-sub {
-			  font-size: 0.75rem;
-			  color: var(--g3);
-			  font-weight: 400;
-			}
-
-			/* Specific Sections */
-			.hero-widget {
-			  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg1) 100%);
-			  border: 1px solid var(--g1);
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  overflow: hidden;
-			}
-
-			.hero-text {
-			  max-width: 60%;
-			  z-index: 2;
-			}
-
-			.hero-badge {
-			  display: inline-block;
-			  padding: 4px 10px;
-			  background-color: var(--highb);
-			  border: 1px solid rgba(249, 115, 22, 0.3);
-			  color: var(--high3);
-			  font-size: 0.75rem;
-			  border-radius: 20px;
-			  margin-bottom: 16px;
-			  font-weight: 600;
-			}
-
-			.hero-widget h1 {
-			  font-size: 2.2rem;
-			  font-weight: 700;
-			  line-height: 1.15;
-			  margin-bottom: 16px;
-			  letter-spacing: -0.5px;
-			}
-
-			.hero-widget h1 span {
-			  background: var(--grad);
-			  -webkit-background-clip: text;
-			  -webkit-text-fill-color: transparent;
-			}
-
-			.hero-widget p {
-			  color: var(--g4);
-			  font-size: 1rem;
-			  margin-bottom: 24px;
-			  line-height: 1.6;
-			}
-
-			.hero-visual {
-			  flex: 1;
-			  display: flex;
-			  justify-content: flex-end;
-			  align-items: center;
-			  position: relative;
-			}
-
-			.hero-visual pre {
-			  margin: 0;
-			  padding: 16px;
-			  font-size: 0.75rem;
-			  background-color: rgba(8, 11, 13, 0.8);
-			  border-radius: var(--radius);
-			  border: 1px solid var(--g1);
-			  font-family: var(--font-mono);
-			  color: var(--white);
-			  line-height: 1.25;
-			  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-			}
-
-			/* API Playground / Scan Config Widget style */
-			.scan-config-widget {
-			  border: 1px solid var(--g1);
-			}
-
-			.input-row {
-			  display: flex;
-			  gap: 16px;
-			  align-items: flex-end;
-			  margin-bottom: 20px;
-			  flex-wrap: wrap;
-			}
-
-			.input-field-group {
-			  flex: 1;
-			  min-width: 300px;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 6px;
-			}
-
-			.input-field-group.severity-group {
-			  flex: 0 0 160px;
-			  min-width: 140px;
-			}
-
-			.input-label {
-			  font-size: 0.75rem;
-			  font-weight: 600;
-			  color: var(--g4);
-			}
-
-			.text-input, .select-input {
-			  width: 100%;
-			  background-color: var(--bg0);
-			  border: 1px solid var(--g1);
-			  padding: 10px 14px;
-			  color: var(--white);
-			  font-family: var(--font-mono);
-			  font-size: 0.85rem;
-			  border-radius: var(--radius);
-			  outline: none;
-			  transition: border-color 0.2s ease;
-			}
-
-			.text-input:focus, .select-input:focus {
-			  border-color: var(--high3);
-			}
-
-			.input-subtext {
-			  font-size: 0.7rem;
-			  color: var(--g3);
-			}
-
-			.checkbox-row {
-			  display: flex;
-			  gap: 24px;
-			  flex-wrap: wrap;
-			  margin-bottom: 20px;
-			}
-
-			.checkbox-label {
-			  display: flex;
-			  align-items: center;
-			  gap: 8px;
-			  cursor: pointer;
-			  font-size: 0.85rem;
-			  font-weight: 500;
-			  color: var(--g5);
-			}
-
-			.checkbox-label input {
-			  width: 16px;
-			  height: 16px;
-			  accent-color: var(--high3);
-			  cursor: pointer;
-			}
-
-			.playground-output-box {
-			  margin-top: 20px;
-			  background-color: var(--bg0);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius);
-			  overflow: hidden;
-			}
-
-			.output-header {
-			  background-color: var(--bg2);
-			  padding: 8px 16px;
-			  border-bottom: 1px solid var(--g1);
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  font-size: 0.75rem;
-			  font-weight: 600;
-			  color: var(--g4);
-			}
-
-			.copy-btn {
-			  background: none;
-			  border: 1px solid var(--g1);
-			  color: var(--g4);
-			  padding: 2px 8px;
-			  border-radius: var(--radius-sm);
-			  cursor: pointer;
-			  font-size: 0.7rem;
-			  font-family: var(--font-sans);
-			  transition: all 0.2s ease;
-			}
-
-			.copy-btn:hover {
-			  background-color: var(--bg3);
-			  color: var(--white);
-			}
-
-			.output-terminal {
-			  padding: 20px;
-			  font-family: var(--font-mono);
-			  font-size: 0.85rem;
-			  color: var(--white);
-			  max-height: 400px;
-			  overflow-y: auto;
-			  white-space: pre-wrap;
-			  line-height: 1.5;
-			}
-
-			.error-box {
-			  margin-top: 16px;
-			  padding: 12px 16px;
-			  background-color: rgba(220, 38, 38, 0.1);
-			  border: 1px solid rgba(220, 38, 38, 0.3);
-			  border-radius: var(--radius);
-			  color: var(--crit3);
-			  font-size: 0.85rem;
-			}
-
-			/* Tunnel Config Widget */
-			.tunnel-widget {
-			  border: 1px solid var(--g1);
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  gap: 24px;
-			}
-
-			.tunnel-info {
-			  flex: 1;
-			}
-
-			.tunnel-title {
-			  font-size: 0.9rem;
-			  font-weight: 600;
-			  color: var(--white);
-			  margin-bottom: 4px;
-			  display: flex;
-			  align-items: center;
-			  gap: 8px;
-			}
-
-			.tunnel-badge {
-			  background-color: var(--bg0);
-			  border: 1px solid var(--g1);
-			  color: var(--g3);
-			  padding: 2px 8px;
-			  border-radius: var(--radius-sm);
-			  font-size: 0.65rem;
-			  font-weight: 700;
-			  letter-spacing: 0.5px;
-			}
-
-			.tunnel-badge.online {
-			  color: var(--low3);
-			  border-color: rgba(34, 197, 94, 0.3);
-			  background-color: rgba(34, 197, 94, 0.05);
-			  box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
-			}
-
-			.tunnel-desc {
-			  font-size: 0.8rem;
-			  color: var(--g3);
-			}
-
-			/* Feature Grid / Cards */
-			.features-widget-grid {
-			  display: grid;
-			  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-			  gap: 20px;
-			}
-
-			.feature-card {
-			  background-color: var(--bg2);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius);
-			  padding: 20px;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 10px;
-			  transition: all 0.2s ease;
-			}
-
-			.feature-card:hover {
-			  border-color: var(--g2);
-			  transform: translateY(-2px);
-			}
-
-			.feature-card-icon {
-			  width: 36px;
-			  height: 36px;
-			  border-radius: var(--radius);
-			  background-color: var(--bg3);
-			  display: flex;
-			  align-items: center;
-			  justify-content: center;
-			  color: var(--high3);
-			  font-size: 1.1rem;
-			  font-weight: 700;
-			}
-
-			.feature-card-title {
-			  font-weight: 700;
-			  font-size: 0.95rem;
-			  color: var(--white);
-			}
-
-			.feature-card-desc {
-			  font-size: 0.85rem;
-			  color: var(--g4);
-			  line-height: 1.5;
-			}
-
-			/* Tables & Benchmark widgets styling */
-			.dashboard-table-container {
-			  width: 100%;
-			  overflow-x: auto;
-			}
-
-			.dashboard-table {
-			  width: 100%;
-			  border-collapse: collapse;
-			  text-align: left;
-			  font-size: 0.85rem;
-			}
-
-			.dashboard-table th {
-			  background-color: var(--bg2);
-			  color: var(--g4);
-			  font-weight: 600;
-			  padding: 12px 16px;
-			  border-bottom: 1px solid var(--g1);
-			  text-transform: uppercase;
-			  font-size: 0.7rem;
-			  letter-spacing: 0.5px;
-			}
-
-			.dashboard-table td {
-			  padding: 12px 16px;
-			  border-bottom: 1px solid var(--g1);
-			  color: var(--white);
-			}
-
-			.dashboard-table tr:hover td {
-			  background-color: var(--bg2);
-			}
-
-			.progress-bar-container {
-			  width: 120px;
-			  height: 8px;
-			  background-color: var(--bg0);
-			  border-radius: 4px;
-			  overflow: hidden;
-			  display: inline-block;
-			  vertical-align: middle;
-			  margin-right: 8px;
-			}
-
-			.progress-bar-fill {
-			  height: 100%;
-			  border-radius: 4px;
-			}
-
-			.tag {
-			  font-size: 0.7rem;
-			  padding: 2px 6px;
-			  border-radius: var(--radius-sm);
-			  font-weight: 600;
-			}
-
-			.tag.highlight {
-			  background-color: var(--highb);
-			  color: var(--high3);
-			}
-
-			.tag.success {
-			  background-color: var(--lowb);
-			  color: var(--low3);
-			}
-
-			/* Flow Diagrams and Code Blocks */
-			.flow-steps {
-			  display: grid;
-			  grid-template-columns: repeat(4, 1fr);
-			  gap: 16px;
-			  position: relative;
-			}
-
-			.flow-step-card {
-			  background-color: var(--bg2);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius);
-			  padding: 16px;
-			  display: flex;
-			  flex-direction: column;
-			  gap: 8px;
-			  position: relative;
-			}
-
-			.flow-step-num {
-			  position: absolute;
-			  top: 12px;
-			  right: 12px;
-			  font-family: var(--font-mono);
-			  font-size: 0.75rem;
-			  color: var(--g3);
-			  font-weight: 700;
-			}
-
-			.flow-step-title {
-			  font-size: 0.9rem;
-			  font-weight: 600;
-			  color: var(--white);
-			}
-
-			.flow-step-desc {
-			  font-size: 0.8rem;
-			  color: var(--g4);
-			}
-
-			/* Tabs/Interactive switcher for quick start */
-			.tabs-header {
-			  display: flex;
-			  border-bottom: 1px solid var(--g1);
-			  margin-bottom: 16px;
-			  gap: 4px;
-			}
-
-			.tab-btn {
-			  padding: 8px 16px;
-			  background: none;
-			  border: none;
-			  color: var(--g4);
-			  cursor: pointer;
-			  font-family: var(--font-sans);
-			  font-weight: 600;
-			  font-size: 0.85rem;
-			  border-bottom: 2px solid transparent;
-			  transition: all 0.2s ease;
-			}
-
-			.tab-btn:hover {
-			  color: var(--white);
-			}
-
-			.tab-btn.active {
-			  color: var(--high3);
-			  border-bottom-color: var(--high3);
-			}
-
-			.tab-pane {
-			  display: none;
-			}
-
-			.tab-pane.active {
-			  display: block;
-			}
-
-			pre.code-terminal {
-			  background-color: var(--bg0);
-			  border: 1px solid var(--g1);
-			  padding: 16px;
-			  border-radius: var(--radius);
-			  font-family: var(--font-mono);
-			  font-size: 0.85rem;
-			  overflow-x: auto;
-			  color: var(--g5);
-			}
-
-			/* Hall of Fame grid */
-			.hall-of-fame-grid {
-			  display: grid;
-			  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-			  gap: 16px;
-			}
-
-			.hof-card {
-			  background-color: var(--bg2);
-			  border: 1px solid var(--g1);
-			  border-radius: var(--radius);
-			  padding: 16px;
-			  display: flex;
-			  align-items: center;
-			  gap: 12px;
-			  text-decoration: none;
-			  transition: all 0.2s ease;
-			}
-
-			.hof-card:hover {
-			  border-color: var(--g2);
-			  transform: translateY(-1px);
-			}
-
-			.hof-avatar {
-			  width: 40px;
-			  height: 40px;
-			  border-radius: 50%;
-			  border: 1px solid var(--g1);
-			}
-
-			.hof-info {
-			  display: flex;
-			  flex-direction: column;
-			}
-
-			.hof-name {
-			  font-size: 0.85rem;
-			  font-weight: 600;
-			  color: var(--white);
-			}
-
-			.hof-role {
-			  font-size: 0.7rem;
-			  color: var(--g3);
-			}
-
-			/* Footer styling */
-			footer {
-			  border-top: 1px solid var(--g1);
-			  background-color: var(--bg1);
-			  padding: 24px 32px;
-			  display: flex;
-			  align-items: center;
-			  justify-content: space-between;
-			  font-size: 0.8rem;
-			  color: var(--g3);
-			  margin-top: 48px;
-			}
-
-			.footer-links {
-			  display: flex;
-			  gap: 16px;
-			}
-
-			.footer-links a {
-			  color: var(--g3);
-			  text-decoration: none;
-			}
-
-			.footer-links a:hover {
-			  color: var(--white);
-			}
-
-			/* Mobile hamburger menu and sidebar controls */
-			.menu-toggle-floating {
-			  display: none;
-			  position: fixed;
-			  top: 15px;
-			  left: 15px;
-			  z-index: 105;
-			  background-color: var(--bg1);
-			  border: 1px solid var(--g1);
-			  color: var(--white);
-			  font-size: 1.25rem;
-			  padding: 6px 12px;
-			  border-radius: var(--radius);
-			  cursor: pointer;
-			  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-			}
-
-			aside .menu-toggle {
-			  background: none;
-			  border: none;
-			  color: var(--white);
-			  font-size: 1.35rem;
-			  cursor: pointer;
-			  display: none; /* Hidden on desktop */
-			  margin-left: auto;
-			}
-
-			/* Responsive adjustments */
-			@media (max-width: 992px) {
-			  aside {
-			    transform: translateX(-100%);
-			  }
-
-			  aside.open {
-			    transform: translateX(0);
-			  }
-
-			  main {
-			    margin-left: 0;
-			  }
-
-			  .menu-toggle-floating {
-			    display: block;
-			  }
-
-			  body.sidebar-open .menu-toggle-floating {
-			    display: none;
-			  }
-
-			  aside .menu-toggle {
-			    display: block;
-			  }
-
-			  header.dashboard-header {
-			    display: none;
-			  }
-
-			  .grid-2col, .grid-3col, .grid-4col {
-			    grid-template-columns: 1fr;
-			  }
-
-			  .stats-summary-grid {
-			    grid-template-columns: repeat(3, 1fr);
-			  }
-
-			  .hero-widget {
-			    flex-direction: column;
-			    align-items: flex-start;
-			    gap: 24px;
-			  }
-
-			  .hero-text {
-			    max-width: 100%;
-			  }
-
-			  .hero-visual {
-			    width: 100%;
-			    justify-content: flex-start;
-			  }
-
-			  .flow-steps {
-			    grid-template-columns: 1fr;
-			  }
-			}
-
-			@media (max-width: 600px) {
-			  .stats-summary-grid {
-			    grid-template-columns: repeat(2, 1fr);
-			  }
-
-			  .dashboard-viewport {
-			    padding: 16px;
-			    gap: 20px;
-			  }
-			}
-		</style>
-	</head>
-
-	<body>
-		<!-- Sidebar Component -->
-		<aside id="sidebar">
-			<div class="sidebar-header">
-				<div class="logo-icon">P</div>
-				<div class="logo-text">
-					<span class="logo-title">PySpector</span>
-					<span
-						class="logo-subtitle"
-						id="release-version-sidebar"
-						>v0.1.9-beta SAST</span
-					>
-				</div>
-				<button
-					class="menu-toggle"
-					onclick="toggleSidebar()"
-				>
-					☰
-				</button>
-			</div>
-
-			<div class="sidebar-menu">
-				<div>
-					<div class="menu-group-label">Analysis</div>
-					<ul class="menu-list">
-						<li
-							class="menu-item active"
-							id="nav-overview"
-						>
-							<a href="#overview"
-								><span>Overview</span>
-								<span class="sidebar-badge badge-high">SAST</span></a
-							>
-						</li>
-						<li
-							class="menu-item"
-							id="nav-capabilities"
-						>
-							<a href="#capabilities"><span>Capabilities</span></a>
-						</li>
-						<li
-							class="menu-item"
-							id="nav-benchmarks"
-						>
-							<a href="#benchmarks"><span>Performance</span></a>
-						</li>
-					</ul>
-				</div>
-				<div>
-					<div class="menu-group-label">Plugin & System</div>
-					<ul class="menu-list">
-						<li
-							class="menu-item"
-							id="nav-quickstart"
-						>
-							<a href="#quickstart"><span>Quick Start CLI</span></a>
-						</li>
-						<li
-							class="menu-item"
-							id="nav-plugins"
-						>
-							<a href="#plugins"><span>Plugin Architecture</span></a>
-						</li>
-						<li
-							class="menu-item"
-							id="nav-contribute"
-						>
-							<a href="#contribute"><span>Contributors</span></a>
-						</li>
-					</ul>
-				</div>
-			</div>
-		</aside>
-
-		<!-- Floating Menu Toggle (Visible when sidebar is closed on mobile) -->
-		<button
-			class="menu-toggle-floating"
-			onclick="toggleSidebar()"
-		>
-			☰
-		</button>
-
-		<!-- Workspace Area -->
-		<main>
-			<!-- Header Bar -->
-			<header class="dashboard-header">
-				<div class="header-title-area">
-					<h2
-						class="header-title"
-						id="current-view-title"
-					>
-						Security Overview
-					</h2>
-				</div>
-
-				<div class="header-controls">
-					<a
-						href="https://github.com/ParzivalHack/PySpector"
-						target="_blank"
-						class="btn secondary"
-						>★ Star Repository</a
-					>
-					<a
-						href="https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.9-beta"
-						target="_blank"
-						class="btn secondary"
-						id="release-link-topbar"
-						>v0.1.9-beta</a
-					>
-				</div>
-			</header>
-
-			<!-- Main Workspace Content -->
-			<div class="dashboard-viewport">
-				<!-- Hero Dashboard Box -->
-				<section
-					id="overview"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="hero-widget widget">
-						<div class="hero-text">
-							<div class="hero-badge">High-Performance Static Analysis</div>
-							<h1>
-								The Hybrid SAST Framework for <span>Python Codebases</span>
-							</h1>
-							<p>
-								PySpector compiles its core analysis module in Rust to avoid
-								PyObject execution overhead, utilizing a multi-threaded parallel
-								engine with Rayon to scan 71% faster than Bandit and 16.6x
-								faster than Semgrep.
-							</p>
-							<div style="display: flex; gap: 12px;">
-								<a
-									href="#quickstart"
-									class="btn primary"
-									>View Quick Start</a
-								>
-							</div>
-						</div>
-						<div class="hero-visual">
-							<pre>
- ╔══════════════════════════════════════╗
- ║              PYSPECTOR               ║
- ║         Next-Gen Rust Core           ║
- ╚══════════════════════════════════════╝
- 
-  ┌──────┐     ┌────────┐     ┌────────┐
-  │ AST  │◄───►│ RUST   │◄───►│ TAINT  │
-  │ GEN  │     │ ENGINE │     │ FLOW   │
-  └──────┘     └────────┘     └────────┘
-     ▲                             │
-     └───────── PYTHON CLI ◄───────┘
-            </pre
-							>
-						</div>
-					</div>
-				</section>
-
-				<!-- Engine Architecture Visualization -->
-				<section
-					id="architecture"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Engine Architecture</div>
-						<p
-							style="color: var(--g4); margin-bottom: 24px; font-size: 0.95rem;"
-						>
-							How PySpector translates source structures into dynamic taint
-							propagation:
-						</p>
-
-						<div class="flow-steps">
-							<div class="flow-step-card">
-								<span class="flow-step-num">01</span>
-								<span class="flow-step-title">AST Generation</span>
-								<span class="flow-step-desc"
-									>Python CLI generates native syntax AST structures,
-									serializing data targets into normalized JSON arrays.</span
-								>
-							</div>
-
-							<div class="flow-step-card">
-								<span class="flow-step-num">02</span>
-								<span class="flow-step-title">Call Graph Map</span>
-								<span class="flow-step-desc"
-									>Rust Core constructs project-wide maps of function
-									boundaries, resolving cross-file reference paths.</span
-								>
-							</div>
-
-							<div class="flow-step-card">
-								<span class="flow-step-num">03</span>
-								<span class="flow-step-title">CFG Compilation</span>
-								<span class="flow-step-desc"
-									>Calculates basic blocks mapping branch paths, conditional
-									evaluations, and loops control flows.</span
-								>
-							</div>
-
-							<div class="flow-step-card">
-								<span class="flow-step-num">04</span>
-								<span class="flow-step-title">Taint Worklist</span>
-								<span class="flow-step-desc"
-									>Executes fix-point worklist algorithms matching source
-									injections to unsafe code destinations.</span
-								>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<!-- Core Capabilities Grid -->
-				<section
-					id="capabilities"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Core Capabilities</div>
-						<p
-							style="color: var(--g4); margin-bottom: 24px; font-size: 0.95rem;"
-						>
-							PySpector tracks untrusted data across complex boundaries,
-							bypassing normal syntax matchers to verify absolute security
-							compliance.
-						</p>
-
-						<div class="features-widget-grid">
-							<div class="feature-card">
-								<div class="feature-card-title">Rust Parallel Core</div>
-								<div class="feature-card-desc">
-									Compiled natively using Rayon to parallelize scans across core
-									layers, maximizing execution speed.
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Taint Flow Analysis</div>
-								<div class="feature-card-desc">
-									Tracks variables flow from Sources (user inputs) to Sinks
-									(dangerous executes) respecting active Sanitizers.
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">AI & LLM Guardrails</div>
-								<div class="feature-card-desc">
-									Active rules to discover prompt injections, unsafe agent tools
-									execution, and token exposures.
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Multi-Layer Checks</div>
-								<div class="feature-card-desc">
-									Runs regex matchers for API secret scanning and full AST
-									matching for Python structural errors.
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">CI/CD Integrations</div>
-								<div class="feature-card-desc">
-									Structured output layers exporting to standard HTML pages,
-									SARIF, and JSON configuration files.
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Interactive Triage</div>
-								<div class="feature-card-desc">
-									TUI-based local command scans for active auditing, generating
-									repeatable baseline profiles.
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<!-- Performance Benchmarks Section -->
-				<section
-					id="benchmarks"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Performance Benchmarks</div>
-						<p
-							style="color: var(--g4); margin-bottom: 24px; font-size: 0.95rem;"
-						>
-							Comparative analysis on Debian-based Linux environment with major
-							open source codebases.
-						</p>
-
-						<div class="dashboard-table-container">
-							<table class="dashboard-table">
-								<thead>
-									<tr>
-										<th>Metric</th>
-										<th>PySpector</th>
-										<th>Bandit</th>
-										<th>Semgrep</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td><strong>Throughput</strong></td>
-										<td><strong>25,607 lines/sec</strong></td>
-										<td>14,927 lines/sec</td>
-										<td>1,538 lines/sec</td>
-									</tr>
-									<tr>
-										<td><strong>Performance Advantage</strong></td>
-										<td>
-											<span class="tag success">71% faster</span> than Bandit
-										</td>
-										<td>Baseline</td>
-										<td>16.6x slower</td>
-									</tr>
-									<tr>
-										<td><strong>Memory Usage</strong></td>
-										<td>1.4 GB average</td>
-										<td>111 MB average</td>
-										<td>277 MB average</td>
-									</tr>
-									<tr>
-										<td><strong>CPU Utilization</strong></td>
-										<td>120% (multi-core)</td>
-										<td>100% (single-core)</td>
-										<td>40%</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-						<div>
-							<p
-								style="color: var(--g4); margin-top: 24px; margin-bottom: 24px; font-size: 0.95rem;"
-							>
-								Note these benchmarks reflect baseline cold-run performance
-								across Django, Flask, Pandas, Scikit-learn and Requestes Python
-								projects.
-							</p>
-						</div>
-						<div class="features-widget-grid">
-							<div class="feature-card">
-								<div class="feature-card-title">Speed</div>
-								<div class="feature-card-desc">
-									Delivers 71% faster scanning than traditional tools through
-									Rust-powered parallel analysis
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Scalability</div>
-								<div class="feature-card-desc">
-									Maintains high throughput on large codebases (500k+ lines of
-									code)
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Resource Profile</div>
-								<div class="feature-card-desc">
-									Optimized for modern multi-core environments with adequate
-									memory allocation
-								</div>
-							</div>
-							<div class="feature-card">
-								<div class="feature-card-title">Consistency</div>
-								<div class="feature-card-desc">
-									Stable performance across different project types and sizes
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<!-- Stats Indicators Matching Dashboard Mock -->
-				<section
-					class="stats-summary-grid"
-					style="margin-bottom: 24px; display: none;"
-				>
-					<div class="stat-card crit">
-						<span class="stat-card-label">Critical Issues</span>
-						<span
-							class="stat-card-value"
-							id="stats-crit"
-							>0</span
-						>
-					</div>
-					<div class="stat-card high">
-						<span class="stat-card-label">High Issues</span>
-						<span
-							class="stat-card-value"
-							id="stats-high"
-							>0</span
-						>
-					</div>
-					<div class="stat-card med">
-						<span class="stat-card-label">Medium Issues</span>
-						<span
-							class="stat-card-value"
-							id="stats-med"
-							>0</span
-						>
-					</div>
-					<div class="stat-card low">
-						<span class="stat-card-label">Low Issues</span>
-						<span
-							class="stat-card-value"
-							id="stats-low"
-							>0</span
-						>
-					</div>
-					<div class="stat-card files">
-						<span class="stat-card-label">Files Scanned</span>
-						<span
-							class="stat-card-value"
-							id="stats-files"
-							>0 <span class="stat-card-sub">files</span></span
-						>
-					</div>
-					<div class="stat-card time">
-						<span class="stat-card-label">Total Issues</span>
-						<span
-							class="stat-card-value"
-							id="stats-total"
-							>0</span
-						>
-					</div>
-				</section>
-
-				<!-- Quick Start CLI Tabs -->
-				<section
-					id="quickstart"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Quick Start CLI</div>
-						<p
-							style="color: var(--g4); margin-bottom: 20px; font-size: 0.95rem;"
-						>
-							PySpector is distributed via PyPI. Get started with native command
-							lines in seconds:
-						</p>
-
-						<div class="tabs-header">
-							<button
-								class="tab-btn active"
-								onclick="switchTab(event, 'qs-install')"
-							>
-								Installation
-							</button>
-							<button
-								class="tab-btn"
-								onclick="switchTab(event, 'qs-scans')"
-							>
-								Common Scans
-							</button>
-							<button
-								class="tab-btn"
-								onclick="switchTab(event, 'qs-ci')"
-							>
-								CI/CD & Hooks
-							</button>
-						</div>
-
-						<div
-							id="qs-install"
-							class="tab-pane active"
-						>
-							<pre
-								class="code-terminal"
-							><code># Install PySpector globally or inside virtual environment
-pip install pyspector
-
-# Verify local Rust compiler is configured if compiling from source
-cargo --version</code></pre>
-						</div>
-
-						<div
-							id="qs-scans"
-							class="tab-pane"
-						>
-							<pre class="code-terminal"><code># Scan active local directory
-pyspector scan ./my_python_project
-
-# Scan specifying JSON output file
-pyspector scan ./project -f json -o scan_report.json
-
-# Scan enabling interactive setup wizard
-pyspector scan --wizard
-
-# Execute scans including LLM security rules
-pyspector scan ./llm_agents --ai</code></pre>
-						</div>
-
-						<div
-							id="qs-ci"
-							class="tab-pane"
-						>
-							<pre
-								class="code-terminal"
-							><code># Export to standard SARIF files for Github Code Scanning integration
-pyspector scan ./src -f sarif -o report.sarif
-
-# Configure pre-commit hook layers
-./scripts/setup_hooks.sh
-
-# Generate automated scheduled scans
-./scripts/setup_cron.sh</code></pre>
-						</div>
-					</div>
-				</section>
-
-				<!-- Plugin System CLI Details (with terminal configuration blocks) -->
-				<section
-					id="plugins"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Plugin System</div>
-						<p
-							style="color: var(--g4); margin-bottom: 20px; font-size: 0.95rem;"
-						>
-							PySpector handles post-scan execution layers, letting developers
-							orchestrate warnings or generate custom security artifacts.
-						</p>
-
-						<div class="tabs-header">
-							<button
-								class="tab-btn active"
-								onclick="switchTab(event, 'tab-cli')"
-							>
-								CLI Commands
-							</button>
-							<button
-								class="tab-btn"
-								onclick="switchTab(event, 'tab-config')"
-							>
-								Configuration Structure
-							</button>
-							<button
-								class="tab-btn"
-								onclick="switchTab(event, 'tab-plugin-code')"
-							>
-								Authoring Plugins
-							</button>
-						</div>
-
-						<div
-							id="tab-cli"
-							class="tab-pane active"
-						>
-							<pre
-								class="code-terminal"
-							><code># List discovered local plugin states
-pyspector plugin list
-
-# Audit, calculate check-hashes and mark a plugin as secure
-pyspector plugin trust plugin_name
-
-# Install external pipeline hooks
-pyspector plugin install ./path/to/hook.py --trust
-
-# Run scans linking active trusted post-hooks
-pyspector scan ./target --plugin aipocgen --plugin-config ./config.json</code></pre>
-						</div>
-
-						<div
-							id="tab-config"
-							class="tab-pane"
-						>
-							<pre class="code-terminal"><code>{
+<head>
+<meta charset="UTF-8" />
+<title>PySpector: High-Performance Python/Rust SAST Framework</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="PySpector is a state-of-the-art Python SAST framework with a Rust core: flow-sensitive, inter-procedural taint analysis, AI/LLM security rules, SARIF output and an extensible plugin system." />
+<meta property="og:title" content="PySpector: Trace taint. Catch vulns. Ship safely." />
+<meta property="og:description" content="Graph-based Python SAST with a Rust core. 71% faster than Bandit, 16.6× faster than Semgrep." />
+<meta property="og:type" content="website" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23b71c1c'/%3E%3Cstop offset='1' stop-color='%23f97316'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='url(%23g)'/%3E%3Cpath d='M10 22 V10 h7 a5 5 0 0 1 0 10 h-4' fill='none' stroke='%23e8f0f5' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+<style>
+/* ============================================================
+   PySpector design tokens
+   ============================================================ */
+:root {
+  /* Backgrounds: black → blue-grey */
+  --bg0: #080b0d;
+  --bg1: #0e1317;
+  --bg2: #151b21;
+  --bg3: #1c242c;
+  --bg4: #232d37;
+  --bg5: #2a3540;
+
+  /* Grey scale */
+  --g1: #2e3d4a;
+  --g2: #3d5166;
+  --g3: #6b7f90;
+  --g4: #8fa4b5;
+  --g5: #b8c9d5;
+  --white: #e8f0f5;
+
+  /* Severity scale (also doubles as the accent system) */
+  --crit2: #dc2626;
+  --crit3: #ef4444;
+  --high2: #ea580c;
+  --high3: #f97316;
+  --med2: #d97706;
+  --med3: #f59e0b;
+  --low3: #22c55e;
+  --info2: #0ea5e9;
+
+  --critb: rgba(220, 38, 38, 0.15);
+  --highb: rgba(234, 88, 12, 0.15);
+  --medb: rgba(217, 119, 6, 0.12);
+  --lowb: rgba(34, 197, 94, 0.12);
+  --infob: rgba(14, 165, 233, 0.12);
+
+  --grad: linear-gradient(135deg, #b71c1c, #f97316);
+  --grad-h: linear-gradient(90deg, #b71c1c, #f97316);
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 5px;
+  --radius: 8px;
+  --radius-lg: 14px;
+
+  --nav-h: 64px;
+  --container: 1180px;
+
+  --accent: var(--high3);
+  --accent-hover: #fb923c;
+
+  --shadow-card: 0 1px 0 rgba(232,240,245,0.03) inset, 0 16px 40px -24px rgba(0,0,0,0.8);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg0);
+  color: var(--white);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(249,115,22,0.35); color: var(--white); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg0); }
+::-webkit-scrollbar-thumb { background: var(--g1); border-radius: 6px; border: 2px solid var(--bg0); }
+::-webkit-scrollbar-thumb:hover { background: var(--g2); }
+
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+
+.container { max-width: var(--container); margin: 0 auto; padding: 0 28px; }
+
+/* Accessibility */
+:focus-visible { outline: 2px solid var(--high3); outline-offset: 2px; border-radius: 4px; }
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 999;
+  background: var(--bg3); color: var(--white); padding: 10px 16px; border-radius: 0 0 var(--radius) 0;
+}
+.skip-link:focus { left: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* ============================================================
+   Top navigation
+   ============================================================ */
+.topnav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: var(--nav-h);
+  background: rgba(8, 11, 13, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(46, 61, 74, 0.6);
+}
+.topnav-inner {
+  max-width: var(--container); margin: 0 auto; padding: 0 28px;
+  height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+}
+.brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+.brand-mark {
+  width: 34px; height: 34px; border-radius: 9px; background: var(--grad);
+  display: grid; place-items: center;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.35);
+  flex-shrink: 0;
+}
+.brand-mark svg { width: 18px; height: 18px; }
+.brand-name { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.3px; }
+.brand-name { text-decoration: none; color: var(--white); }
+.brand-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--g3); letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; transition: color 0.18s ease; }
+a.brand-sub:hover { color: #c084fc; }
+
+.nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+.nav-links a {
+  display: block; padding: 8px 13px; border-radius: var(--radius);
+  font-size: 0.875rem; font-weight: 500; color: var(--g4); text-decoration: none;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+.nav-links a:hover { color: var(--white); background: var(--bg2); }
+.nav-links a.active { color: var(--high3); }
+
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 9px 18px; border-radius: var(--radius);
+  font-family: var(--font-sans); font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  border: 1px solid var(--g1); background: var(--bg2); color: var(--g5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn:hover { background: var(--bg3); color: var(--white); border-color: var(--g2); }
+.btn.primary {
+  background: var(--grad); border: 1px solid transparent; color: #fff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+}
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 7px 20px rgba(234, 88, 12, 0.38); filter: brightness(1.05); }
+.btn.ghost { background: transparent; border-color: var(--g1); }
+.btn .gh-ico { width: 16px; height: 16px; }
+
+.release-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--g4);
+  border: 1px solid var(--g1); background: var(--bg1);
+  padding: 4px 11px; border-radius: 999px; text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.release-pill:hover { border-color: var(--high2); color: var(--white); }
+.release-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--low3); box-shadow: 0 0 8px var(--low3); }
+
+.nav-burger {
+  display: none; background: none; border: 1px solid var(--g1); border-radius: var(--radius);
+  width: 40px; height: 40px; cursor: pointer; color: var(--g4);
+  align-items: center; justify-content: center;
+}
+
+/* ============================================================
+   Hero signature: live taint-trace
+   ============================================================ */
+.hero {
+  position: relative;
+  padding: calc(var(--nav-h) + 76px) 0 90px;
+  overflow: hidden;
+}
+.hero::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(900px 420px at 78% 18%, rgba(234, 88, 12, 0.10), transparent 65%),
+    radial-gradient(700px 500px at 12% 85%, rgba(183, 28, 28, 0.07), transparent 60%);
+  pointer-events: none;
+}
+.hero::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(46,61,74,0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(46,61,74,0.16) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+}
+.hero-grid {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 1px;
+  color: var(--high3); background: var(--highb); border: 1px solid rgba(249,115,22,0.3);
+  padding: 6px 13px; border-radius: 999px; margin-bottom: 22px;
+}
+.hero h1 {
+  font-size: clamp(2.3rem, 4.6vw, 3.5rem);
+  font-weight: 700; line-height: 1.07; letter-spacing: -1.5px; margin-bottom: 22px;
+}
+.hero h1 .grad-text {
+  background: var(--grad-h);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.hero-lede { color: var(--g4); font-size: 1.08rem; max-width: 56ch; margin-bottom: 30px; }
+.hero-lede strong { color: var(--g5); font-weight: 600; }
+.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 26px; }
+
+.install-cmd {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: var(--font-mono); font-size: 0.9rem;
+  background: var(--bg1); border: 1px solid var(--g1); border-radius: var(--radius);
+  padding: 11px 16px; color: var(--g5);
+}
+.install-cmd .ps1 { color: var(--high3); user-select: none; }
+.install-cmd button {
+  background: none; border: none; cursor: pointer; color: var(--g3); display: grid; place-items: center;
+  transition: color 0.15s ease;
+}
+.install-cmd button:hover { color: var(--white); }
+
+.hero-proof { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 24px; max-width: 580px; }
+.proof-item { display: flex; flex-direction: column; gap: 2px; }
+.proof-num { font-family: var(--font-mono); font-weight: 700; font-size: 1.25rem; color: var(--white); }
+.proof-num em { font-style: normal; color: var(--high3); }
+.proof-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--g3); font-weight: 600; }
+.proof-link { text-decoration: none; display: flex; flex-direction: column; gap: 2px; }
+.proof-link:hover .proof-num { color: var(--g5); }
+.proof-link:hover .proof-num em { color: var(--accent-hover); }
+.proof-link:hover .proof-label { color: var(--g4); }
+
+/* Taint trace window */
+.trace-window {
+  position: relative;
+  background: var(--bg1); border: 1px solid var(--g1); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card), 0 40px 80px -40px rgba(0,0,0,0.9);
+  overflow: hidden;
+}
+.trace-titlebar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--g1); background: var(--bg2);
+}
+.trace-dots { display: flex; gap: 6px; }
+.trace-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--g1); }
+.trace-dots span:nth-child(1) { background: rgba(239,68,68,0.7); }
+.trace-dots span:nth-child(2) { background: rgba(245,158,11,0.7); }
+.trace-dots span:nth-child(3) { background: rgba(34,197,94,0.7); }
+.trace-file { font-family: var(--font-mono); font-size: 0.72rem; color: var(--g3); }
+.trace-engine {
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 1px;
+  color: var(--high3); background: var(--highb); border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 4px; padding: 2px 7px;
+}
+.trace-body { position: relative; padding: 18px 0 16px; }
+.trace-code { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.85; list-style: none; }
+.trace-code li { display: flex; gap: 14px; padding: 0 18px; position: relative; white-space: pre; }
+.trace-code .ln { color: var(--g2); width: 18px; text-align: right; flex-shrink: 0; user-select: none; }
+.trace-code .kw { color: #c084fc; }
+.trace-code .fn { color: #7dd3fc; }
+.trace-code .st { color: #86efac; }
+.trace-code .cm { color: var(--g3); }
+.trace-code li.mark-source, .trace-code li.mark-sink { border-left: 2px solid transparent; }
+.trace-code li.mark-source { background: rgba(14,165,233,0.07); border-left-color: var(--info2); }
+.trace-code li.mark-sink { background: rgba(220,38,38,0.09); border-left-color: var(--crit3); }
+.line-tag {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 0.56rem; letter-spacing: 1.2px; font-weight: 700;
+  padding: 1.5px 7px; border-radius: 4px;
+}
+.line-tag.src { color: var(--info2); background: var(--infob); border: 1px solid rgba(14,165,233,0.3); }
+.line-tag.snk { color: var(--crit3); background: var(--critb); border: 1px solid rgba(239,68,68,0.3); }
+
+.taint-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.taint-path {
+  fill: none; stroke: url(#taintGrad); stroke-width: 2;
+  stroke-dasharray: 6 7; stroke-linecap: round;
+  animation: taintFlow 1.4s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(249,115,22,0.55));
+}
+@keyframes taintFlow { to { stroke-dashoffset: -13; } }
+.taint-pulse { fill: var(--high3); filter: drop-shadow(0 0 7px rgba(249,115,22,0.9)); }
+
+.trace-finding {
+  margin: 14px 16px 2px; padding: 12px 14px;
+  background: var(--bg2); border: 1px solid var(--g1); border-left: 3px solid var(--crit2);
+  border-radius: var(--radius);
+  display: flex; align-items: center; gap: 12px;
+  animation: findingIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 1.1s backwards;
+}
+@keyframes findingIn { from { opacity: 0; transform: translateY(10px); } }
+.sev-badge {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+  padding: 3px 8px; border-radius: 4px; flex-shrink: 0;
+}
+.sev-badge.crit { color: var(--crit3); background: var(--critb); border: 1px solid rgba(239,68,68,0.3); }
+.sev-badge.high { color: var(--high3); background: var(--highb); border: 1px solid rgba(249,115,22,0.3); }
+.sev-badge.med  { color: var(--med3);  background: var(--medb);  border: 1px solid rgba(245,158,11,0.3); }
+.sev-badge.low  { color: var(--low3);  background: var(--lowb);  border: 1px solid rgba(34,197,94,0.3); }
+.sev-badge.info { color: var(--info2); background: var(--infob); border: 1px solid rgba(14,165,233,0.3); }
+.trace-finding-text { font-size: 0.78rem; color: var(--g5); }
+.trace-finding-text code { font-family: var(--font-mono); color: var(--white); font-size: 0.74rem; }
+.trace-finding-meta { font-family: var(--font-mono); font-size: 0.66rem; color: var(--g3); margin-left: auto; flex-shrink: 0; }
+
+/* ============================================================
+   Trusted in production section
+   ============================================================ */
+.trusted { border-top: 1px solid var(--g1); border-bottom: 1px solid var(--g1); background: var(--bg1); padding: 52px 0; }
+.trusted-inner { display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
+.trusted-label {
+  font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 2.5px;
+  color: var(--g3); font-weight: 600;
+  display: flex; align-items: center; gap: 14px;
+}
+.trusted-label::before, .trusted-label::after {
+  content: ""; flex: 1; height: 1px; width: 48px; background: linear-gradient(90deg, transparent, var(--g1));
+}
+.trusted-label::after { background: linear-gradient(90deg, var(--g1), transparent); }
+.trusted-cards { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+.trusted-card {
+  background: var(--bg2); border: 1px solid var(--g1); border-radius: var(--radius-lg);
+  padding: 28px 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+  text-decoration: none; max-width: 340px; width: 100%;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
+  position: relative; overflow: hidden;
+}
+.trusted-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(249,115,22,0.35), transparent);
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.trusted-card:hover { border-color: var(--g2); box-shadow: 0 8px 32px -12px rgba(0,0,0,0.7); transform: translateY(-3px); }
+.trusted-card:hover::before { opacity: 1; }
+.trusted-logo {
+  height: 36px; width: auto; max-width: 160px;
+  filter: brightness(0) invert(1) opacity(0.7);
+  transition: opacity 0.2s ease;
+}
+.trusted-card:hover .trusted-logo { filter: brightness(0) invert(1) opacity(1); }
+.trusted-card-body { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.trusted-desc { font-size: 0.82rem; color: var(--g3); line-height: 1.55; max-width: 30ch; text-align: center; }
+.trusted-desc strong { color: var(--g4); font-weight: 600; }
+.trusted-badge { font-family: var(--font-mono); font-size: 0.62rem; padding: 3px 9px; border-radius: 4px; letter-spacing: 0.5px; }
+.trusted-badge.green { color: var(--low3); background: var(--lowb); border: 1px solid rgba(34,197,94,0.25); }
+
+/* ============================================================
+   Generic section scaffolding
+   ============================================================ */
+section.block { padding: 92px 0; position: relative; scroll-margin-top: calc(var(--nav-h) + 8px); }
+section.block.alt { background: var(--bg1); border-top: 1px solid var(--g1); border-bottom: 1px solid var(--g1); }
+
+.section-head { max-width: 720px; margin-bottom: 52px; }
+.section-eyebrow {
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--high3); font-weight: 600; display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.section-eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--grad-h); border-radius: 2px; }
+.section-head h2 { font-size: clamp(1.7rem, 3vw, 2.35rem); font-weight: 700; letter-spacing: -0.8px; line-height: 1.15; margin-bottom: 14px; }
+.section-head p { color: var(--g4); font-size: 1.02rem; }
+
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* Pipeline */
+.pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; counter-reset: stage; position: relative; }
+.stage {
+  position: relative; padding: 26px 24px 26px 28px;
+  border: 1px solid var(--g1); border-right: none; background: var(--bg1);
+}
+.stage:first-child { border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+.stage:last-child { border-right: 1px solid var(--g1); border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+.stage::after {
+  content: "→"; position: absolute; right: -9px; top: 50%; transform: translateY(-50%);
+  z-index: 3; color: var(--high3); background: var(--bg0); border: 1px solid var(--g1);
+  width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem;
+  display: grid; place-items: center;
+}
+.stage:last-child::after { display: none; }
+.stage-num { font-family: var(--font-mono); font-size: 0.66rem; color: var(--g3); letter-spacing: 1.5px; margin-bottom: 10px; }
+.stage-title { font-weight: 700; font-size: 0.98rem; margin-bottom: 8px; }
+.stage-desc { font-size: 0.82rem; color: var(--g4); line-height: 1.55; }
+.stage-lang {
+  position: absolute; top: 18px; right: 18px;
+  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 1px; padding: 2px 7px; border-radius: 4px;
+}
+.stage-lang.py { color: var(--info2); background: var(--infob); border: 1px solid rgba(14,165,233,0.25); }
+.stage-lang.rs { color: var(--high3); background: var(--highb); border: 1px solid rgba(249,115,22,0.25); }
+
+/* Feature grid */
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.feature-card {
+  background: var(--bg1); border: 1px solid var(--g1); border-radius: var(--radius-lg);
+  padding: 26px; display: flex; flex-direction: column; gap: 12px;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+  position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--grad-h); opacity: 0; transition: opacity 0.25s ease;
+}
+.feature-card:hover { transform: translateY(-4px); border-color: var(--g2); box-shadow: var(--shadow-card); }
+.feature-card:hover::before { opacity: 1; }
+.feature-ico {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--g1);
+  display: grid; place-items: center; color: var(--high3);
+}
+.feature-ico svg { width: 19px; height: 19px; }
+.feature-title { font-weight: 700; font-size: 1rem; }
+.feature-desc { font-size: 0.87rem; color: var(--g4); }
+.feature-desc code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--g5); background: var(--bg3); padding: 1px 6px; border-radius: 4px; }
+
+/* Benchmarks */
+.bench-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: stretch; }
+.bench-panel { background: var(--bg0); border: 1px solid var(--g1); border-radius: var(--radius-lg); padding: 26px; }
+section.block:not(.alt) .bench-panel { background: var(--bg1); }
+.bench-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--g4); margin-bottom: 22px; font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 20px; }
+.bar-row { display: grid; grid-template-columns: 92px 1fr 110px; align-items: center; gap: 14px; }
+.bar-name { font-family: var(--font-mono); font-size: 0.78rem; color: var(--g5); }
+.bar-track { background: var(--bg3); border-radius: 5px; height: 14px; overflow: hidden; position: relative; }
+.bar-fill {
+  height: 100%; border-radius: 5px; display: block;
+  transform-origin: left center; transform: scaleX(0);
+  transition: transform 1.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bar-fill.grown { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .bar-fill { transform: scaleX(1); transition: none; } }
+.bar-fill.pys { background: var(--grad-h); box-shadow: 0 0 12px rgba(249,115,22,0.4); }
+.bar-fill.other { background: var(--g2); }
+.bar-val { font-family: var(--font-mono); font-size: 0.74rem; color: var(--g4); text-align: right; }
+.bar-row.lead .bar-val { color: var(--high3); font-weight: 700; }
+
+.bench-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.bench-table th {
+  text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--g3); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--g1);
+}
+.bench-table td { padding: 11px 12px; border-bottom: 1px solid rgba(46,61,74,0.5); color: var(--g5); }
+.bench-table tr:last-child td { border-bottom: none; }
+.bench-table td:first-child { color: var(--white); font-weight: 600; }
+.bench-table .mono { font-family: var(--font-mono); font-size: 0.78rem; }
+.bench-note { font-size: 0.76rem; color: var(--g3); margin-top: 18px; line-height: 1.6; }
+.bench-note a { color: var(--g4); }
+
+.tag { font-size: 0.66rem; font-family: var(--font-mono); padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.tag.win { background: var(--highb); color: var(--high3); border: 1px solid rgba(249,115,22,0.3); }
+.tag.ok { background: var(--lowb); color: var(--low3); border: 1px solid rgba(34,197,94,0.3); }
+.tag.dim { background: var(--bg3); color: var(--g4); border: 1px solid var(--g1); }
+
+/* ============================================================
+   Documentation
+   ============================================================ */
+.docs-layout {
+  display: grid; grid-template-columns: 252px minmax(0, 1fr); gap: 56px; align-items: start;
+}
+.docs-rail {
+  position: sticky; top: calc(var(--nav-h) + 28px);
+  max-height: calc(100vh - var(--nav-h) - 56px); overflow-y: auto;
+  padding-right: 8px;
+}
+.docs-rail-group { margin-bottom: 26px; }
+.docs-rail-label {
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--g3); font-weight: 600; margin-bottom: 10px; padding-left: 13px;
+}
+.docs-rail ul { list-style: none; display: flex; flex-direction: column; gap: 1px; }
+.docs-rail a {
+  display: block; padding: 7px 13px; border-left: 2px solid var(--g1);
+  font-size: 0.85rem; color: var(--g4); text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.docs-rail a:hover { color: var(--white); background: var(--bg2); }
+.docs-rail a.active { color: var(--high3); border-left-color: var(--high3); background: rgba(249,115,22,0.05); }
+
+.docs-content { min-width: 0; }
+.doc-section { padding-bottom: 64px; margin-bottom: 64px; border-bottom: 1px solid var(--g1); scroll-margin-top: calc(var(--nav-h) + 24px); }
+.doc-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.doc-kicker {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--g3); margin-bottom: 10px;
+}
+.doc-section > h3 { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 16px; }
+.doc-section h4 { font-size: 1.08rem; font-weight: 700; margin: 34px 0 12px; scroll-margin-top: calc(var(--nav-h) + 24px); }
+.doc-section h5 { font-size: 0.92rem; font-weight: 700; margin: 24px 0 10px; color: var(--g5); }
+.doc-section p { color: var(--g4); font-size: 0.95rem; margin-bottom: 14px; max-width: 78ch; }
+.doc-section p strong { color: var(--g5); }
+.doc-section p code, .doc-section li code, .doc-section td code {
+  font-family: var(--font-mono); font-size: 0.82em; color: var(--high3);
+  background: var(--bg2); border: 1px solid var(--g1); padding: 1px 6px; border-radius: 4px;
+}
+.doc-section ul, .doc-section ol { color: var(--g4); font-size: 0.95rem; margin: 0 0 16px 22px; display: flex; flex-direction: column; gap: 7px; max-width: 76ch; }
+.doc-section li strong { color: var(--g5); }
+.doc-section a:not(.btn) { color: var(--high3); text-decoration: none; border-bottom: 1px solid rgba(249,115,22,0.35); }
+.doc-section a:not(.btn):hover { border-bottom-color: var(--high3); }
+
+/* Code blocks */
+.codeblock { position: relative; background: #060809; border: 1px solid var(--g1); border-radius: var(--radius); margin: 18px 0 22px; overflow: hidden; }
+.codeblock-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px; background: var(--bg2); border-bottom: 1px solid var(--g1);
+}
+.codeblock-lang { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--g3); }
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--g1); color: var(--g4);
+  font-family: var(--font-sans); font-size: 0.68rem; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--radius-sm); cursor: pointer;
+  transition: all 0.15s ease;
+}
+.copy-btn:hover { background: var(--bg3); color: var(--white); }
+.copy-btn.copied { color: var(--low3); border-color: rgba(34,197,94,0.4); }
+.codeblock pre { padding: 16px 18px; overflow-x: auto; }
+.codeblock code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.7; color: var(--g5); }
+.codeblock .c { color: var(--g3); }        /* comment */
+.codeblock .k { color: #c084fc; }          /* keyword */
+.codeblock .s { color: #86efac; }          /* string */
+.codeblock .f { color: #7dd3fc; }          /* function/call */
+.codeblock .o { color: var(--high3); }     /* flag/option */
+.codeblock .p { color: var(--g4); }        /* prompt */
+
+/* Callouts */
+.callout {
+  display: flex; gap: 13px; align-items: flex-start;
+  border: 1px solid var(--g1); border-radius: var(--radius);
+  padding: 14px 16px; margin: 18px 0 22px; font-size: 0.88rem; color: var(--g4);
+  max-width: 80ch;
+}
+.callout svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; }
+.callout strong { color: var(--g5); }
+.callout.note { background: rgba(14,165,233,0.05); border-color: rgba(14,165,233,0.25); }
+.callout.note svg { color: var(--info2); }
+.callout.tip { background: rgba(34,197,94,0.05); border-color: rgba(34,197,94,0.25); }
+.callout.tip svg { color: var(--low3); }
+.callout.warn { background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.3); }
+.callout.warn svg { color: var(--med3); }
+.callout.danger { background: rgba(220,38,38,0.06); border-color: rgba(239,68,68,0.3); }
+.callout.danger svg { color: var(--crit3); }
+
+/* Doc tables */
+.doc-table-wrap { overflow-x: auto; margin: 18px 0 22px; border: 1px solid var(--g1); border-radius: var(--radius); }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 560px; }
+.doc-table th {
+  text-align: left; background: var(--bg2); color: var(--g4);
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+  padding: 10px 14px; border-bottom: 1px solid var(--g1);
+}
+.doc-table td { padding: 10px 14px; border-bottom: 1px solid rgba(46,61,74,0.5); color: var(--g4); vertical-align: top; }
+.doc-table tr:last-child td { border-bottom: none; }
+.doc-table td:first-child { white-space: nowrap; }
+
+/* Tabs */
+.tabs { margin: 18px 0 22px; }
+.tabs-header { display: flex; gap: 4px; border-bottom: 1px solid var(--g1); flex-wrap: wrap; }
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  padding: 9px 16px; cursor: pointer; color: var(--g4);
+  font-family: var(--font-sans); font-size: 0.84rem; font-weight: 600;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--white); }
+.tab-btn.active { color: var(--high3); border-bottom-color: var(--high3); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* Source / Sink / Sanitizer concept cards */
+.tss-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0 22px; }
+.tss-card { border: 1px solid var(--g1); border-radius: var(--radius); padding: 18px; background: var(--bg2); }
+.tss-card h5 { margin: 0 0 8px; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; }
+.tss-card.src h5 { color: var(--info2); } .tss-card.snk h5 { color: var(--crit3); } .tss-card.san h5 { color: var(--low3); }
+.tss-card p { font-size: 0.82rem; margin: 0; }
+.tss-card code { font-size: 0.74rem !important; }
+
+/* Severity legend */
+.sev-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 22px; }
+
+/* Scope lists for security policy */
+.scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0 22px; }
+.scope-card { border: 1px solid var(--g1); border-radius: var(--radius-lg); padding: 22px; }
+.scope-card.in { background: rgba(34,197,94,0.04); border-color: rgba(34,197,94,0.25); }
+.scope-card.out { background: rgba(239,68,68,0.04); border-color: rgba(239,68,68,0.22); }
+.scope-card h5 { margin: 0 0 14px; display: flex; align-items: center; gap: 9px; font-size: 0.95rem; }
+.scope-card.in h5 { color: var(--low3); } .scope-card.out h5 { color: var(--crit3); }
+.scope-card ul { margin: 0 0 0 4px; list-style: none; gap: 9px; }
+.scope-card li { font-size: 0.85rem; padding-left: 20px; position: relative; }
+.scope-card.in li::before { content: "✓"; position: absolute; left: 0; color: var(--low3); font-weight: 700; }
+.scope-card.out li::before { content: "✕"; position: absolute; left: 0; color: var(--crit3); font-weight: 700; }
+.scope-card li code { font-size: 0.74rem !important; }
+
+/* FAQ */
+.faq-item { border: 1px solid var(--g1); border-radius: var(--radius); margin-bottom: 10px; background: var(--bg1); overflow: hidden; }
+.faq-item summary {
+  cursor: pointer; padding: 16px 20px; font-weight: 600; font-size: 0.94rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  list-style: none; transition: background-color 0.15s ease;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary:hover { background: var(--bg2); }
+.faq-item summary::after { content: "+"; font-family: var(--font-mono); color: var(--high3); font-size: 1.1rem; transition: transform 0.2s ease; }
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item .faq-body { padding: 0 20px 18px; color: var(--g4); font-size: 0.9rem; }
+.faq-item .faq-body a { color: var(--high3); text-decoration: none; border-bottom: 1px solid rgba(249,115,22,0.35); transition: border-color 0.15s ease; }
+.faq-item .faq-body a:hover { border-bottom-color: var(--high3); }
+.faq-item .faq-body code { font-family: var(--font-mono); font-size: 0.8em; color: var(--high3); background: var(--bg2); border: 1px solid var(--g1); padding: 1px 6px; border-radius: 4px; }
+
+/* Hall of fame */
+.hof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.hof-card {
+  display: flex; align-items: center; gap: 16px; text-decoration: none;
+  background: var(--bg1); border: 1px solid var(--g1); border-radius: var(--radius-lg); padding: 20px;
+  transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1), border-color 0.25s ease;
+}
+.hof-card:hover { transform: translateY(-3px); border-color: rgba(249,115,22,0.4); }
+.hof-avatar { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--g1); }
+.hof-card:hover .hof-avatar { border-color: var(--high3); }
+.hof-name { font-weight: 700; display: block; }
+.hof-role { font-size: 0.76rem; color: var(--g3); font-family: var(--font-mono); }
+.hof-shield { margin-left: auto; color: var(--high3); }
+
+/* CTA band */
+.cta-band {
+  position: relative; border: 1px solid var(--g1); border-radius: var(--radius-lg);
+  padding: 56px 48px; text-align: center; overflow: hidden; background: var(--bg1);
+}
+.cta-band::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(640px 280px at 50% 120%, rgba(234,88,12,0.16), transparent 70%);
+}
+.cta-band > * { position: relative; }
+.cta-band h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -0.7px; margin-bottom: 12px; }
+.cta-band p { color: var(--g4); margin-bottom: 28px; }
+.cta-band .hero-ctas { justify-content: center; margin-bottom: 0; }
+
+/* Footer */
+footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); padding: 56px 0 32px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
+.footer-brand p { color: var(--g4); font-size: 0.86rem; margin-top: 14px; max-width: 36ch; }
+.footer-col h6 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--g3); margin-bottom: 14px; font-weight: 600; }
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.footer-col a { font-size: 0.86rem; color: var(--g4); text-decoration: none; transition: color 0.15s ease; }
+.footer-col a:hover { color: var(--high3); }
+.footer-bottom {
+  border-top: 1px solid var(--g1); padding-top: 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  font-size: 0.78rem; color: var(--g3);
+}
+.footer-bottom .mono { font-family: var(--font-mono); font-size: 0.7rem; }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 1024px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .pipeline { grid-template-columns: 1fr 1fr; }
+  .stage:nth-child(2) { border-right: 1px solid var(--g1); border-radius: 0 var(--radius-lg) 0 0; }
+  .stage:nth-child(1) { border-radius: var(--radius-lg) 0 0 0; }
+  .stage:nth-child(3) { border-top: none; border-radius: 0 0 0 var(--radius-lg); }
+  .stage:nth-child(4) { border-top: none; border-radius: 0 0 var(--radius-lg) 0; }
+  .stage:nth-child(2)::after { display: none; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .bench-grid { grid-template-columns: 1fr; }
+  .docs-layout { grid-template-columns: 1fr; gap: 0; }
+  .docs-rail { display: none; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .hof-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .nav-links, .nav-actions .btn.ghost, .release-pill { display: none; }
+  .nav-burger { display: flex; }
+  .mobile-menu {
+    position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 199;
+    background: var(--bg1); border-bottom: 1px solid var(--g1);
+    display: none; flex-direction: column; padding: 10px 18px 18px;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { padding: 12px 10px; color: var(--g4); text-decoration: none; font-weight: 600; border-bottom: 1px solid rgba(46,61,74,0.4); }
+  .mobile-menu a:last-child { border-bottom: none; }
+  .pipeline { grid-template-columns: 1fr; }
+  .stage { border-right: 1px solid var(--g1) !important; border-top: none; border-radius: 0 !important; }
+  .stage:first-child { border-top: 1px solid var(--g1); border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important; }
+  .stage:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg) !important; }
+  .stage::after { display: none; }
+  .features-grid, .scope-grid, .tss-grid { grid-template-columns: 1fr; }
+  section.block { padding: 64px 0; }
+  .hero { padding-top: calc(var(--nav-h) + 48px); }
+  .footer-grid { grid-template-columns: 1fr; }
+  .cta-band { padding: 40px 24px; }
+  .bar-row { grid-template-columns: 70px 1fr 84px; }
+  .hero-proof { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .trusted-inner { gap: 20px; }
+  .trusted-card { padding: 22px 24px 20px; }
+}
+@media (min-width: 761px) { .mobile-menu { display: none !important; } }
+
+/* ============================================================
+   v2 micro-animations: scanline, eyebrow draw, pipeline stagger
+   ============================================================ */
+/* Scanline sweep over the hero taint-trace window */
+.trace-body::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 6%; height: 2px; z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(249,115,22,0.45), transparent);
+  animation: scanline 5s linear infinite; pointer-events: none;
+}
+@keyframes scanline {
+  0%   { top: 6%;  opacity: 0; }
+  6%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 92%; opacity: 0; }
+}
+
+/* Section eyebrow underline draws itself in on reveal */
+.section-head.reveal .section-eyebrow::before { width: 0; transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s; }
+.section-head.reveal.in .section-eyebrow::before { width: 22px; }
+
+/* Pipeline stages cascade in, arrows pulse softly */
+.pipeline.reveal .stage { opacity: 0; transform: translateY(16px); transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pipeline.reveal.in .stage { opacity: 1; transform: none; }
+.pipeline.reveal.in .stage:nth-child(2) { transition-delay: 0.12s; }
+.pipeline.reveal.in .stage:nth-child(3) { transition-delay: 0.24s; }
+.pipeline.reveal.in .stage:nth-child(4) { transition-delay: 0.36s; }
+.pipeline.reveal.in .stage::after { animation: arrowPulse 2.6s ease-in-out infinite; }
+@keyframes arrowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  50%      { box-shadow: 0 0 12px 2px rgba(249,115,22,0.35); }
+}
+
+/* Hall of Fame shield wiggles on hover */
+.hof-card:hover .hof-shield svg { animation: shieldNod 0.6s ease; }
+@keyframes shieldNod {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-10deg); }
+  60% { transform: rotate(8deg); }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#docs">Skip to documentation</a>
+<!-- ============================================================ NAV -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="brand">
+      <a class="brand-mark" href="#top" aria-label="PySpector home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e8f0f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18 V6 h5.5 a4 4 0 0 1 0 8 H9"/></svg>
+      </a>
+      <span>
+        <a class="brand-name" href="#top">PySpector</a><br/>
+        <a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a>
+      </span>
+    </div>
+
+    <ul class="nav-links" id="main-nav">
+      <li><a href="#features" data-spy="features">Features</a></li>
+      <li><a href="#architecture" data-spy="architecture">Architecture</a></li>
+      <li><a href="#benchmarks" data-spy="benchmarks">Benchmarks</a></li>
+      <li><a href="#docs" data-spy="docs">Docs</a></li>
+      <li><a href="#security" data-spy="security">Security</a></li>
+      <li><a href="#community" data-spy="community">Community</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <a class="release-pill" id="release-link" href="https://github.com/ParzivalHack/PySpector/releases" target="_blank" rel="noopener">
+        <span class="release-dot"></span><span id="release-tag">v0.2.0-beta</span>
+      </a>
+      <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">
+        <svg class="gh-ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        Star on GitHub
+      </a>
+      <button class="nav-burger" aria-label="Open menu" onclick="toggleMobileMenu()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#features" onclick="toggleMobileMenu()">Features</a>
+  <a href="#architecture" onclick="toggleMobileMenu()">Architecture</a>
+  <a href="#benchmarks" onclick="toggleMobileMenu()">Benchmarks</a>
+  <a href="#docs" onclick="toggleMobileMenu()">Documentation</a>
+  <a href="#security" onclick="toggleMobileMenu()">Security Policy</a>
+  <a href="#community" onclick="toggleMobileMenu()">Community</a>
+  <a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">GitHub ↗</a>
+</div>
+
+<!-- ============================================================ HERO -->
+<header class="hero" id="top">
+  <div class="container hero-grid">
+    <div>
+      <span class="hero-eyebrow">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
+        FLOW-SENSITIVE · INTER-PROCEDURAL · RUST-POWERED
+      </span>
+      <h1>Trace taint across your entire codebase. <span class="grad-text">Before attackers do.</span></h1>
+      <p class="hero-lede">
+        PySpector is a graph-based SAST framework for modern Python. A <strong>Rust analysis core</strong> builds the call graph and control flow graph of your project, then propagates taint from <strong>sources to sinks</strong> across function boundaries, at an average of <strong>25,000 lines/second</strong>.
+      </p>
+      <div class="hero-ctas">
+        <span class="install-cmd">
+          <span class="ps1">$</span><span id="hero-install">pip install pyspector</span>
+          <button onclick="copyText('pip install pyspector', this)" aria-label="Copy install command" title="Copy">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </span>
+        <a class="btn ghost" href="#docs">Read the docs</a>
+      </div>
+      <div class="hero-proof">
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="71" data-suffix="%">71%</em> faster</span><span class="proof-label">than Bandit</span></div>
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="16.6" data-decimals="1" data-suffix="×">16.6×</em> faster</span><span class="proof-label">than Semgrep</span></div>
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="25000" data-suffix="+">25,000+</em></span><span class="proof-label">lines / second</span></div>
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="3">3</em></span><span class="proof-label">analysis engines</span></div>
+        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="15000" data-suffix="+">15,000+</em></span><span class="proof-label">downloads</span></a></div>
+        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="15" data-suffix="+">15+</em></span><span class="proof-label">unique contributors</span></a></div>
+      </div>
+    </div>
+
+    <!-- Signature element: live taint trace -->
+    <div class="trace-window" aria-label="Animated example of PySpector tracing tainted data from a source to a sink">
+      <div class="trace-titlebar">
+        <span class="trace-dots"><span></span><span></span><span></span></span>
+        <span class="trace-file">app/views.py · pyspector scan ./app</span>
+        <span class="trace-engine">GRAPH ENGINE</span>
+      </div>
+      <div class="trace-body">
+        <ul class="trace-code">
+          <li><span class="ln">1</span><span><span class="kw">from</span> flask <span class="kw">import</span> request</span></li>
+          <li class="mark-source" id="trace-src"><span class="ln">2</span><span>host = request.args.<span class="fn">get</span>(<span class="st">"host"</span>)</span><span class="line-tag src">SOURCE</span></li>
+          <li><span class="ln">3</span><span>cmd  = <span class="fn">build_ping</span>(host)   <span class="cm"># crosses fn boundary</span></span></li>
+          <li><span class="ln">4</span><span><span class="kw">def</span> <span class="fn">build_ping</span>(target):</span></li>
+          <li><span class="ln">5</span><span>    <span class="kw">return</span> <span class="st">f"ping -c1 {target}"</span></span></li>
+          <li class="mark-sink" id="trace-snk"><span class="ln">6</span><span>os.<span class="fn">system</span>(cmd)</span><span class="line-tag snk">SINK</span></li>
+        </ul>
+        <svg class="taint-svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="taintGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0ea5e9"/>
+              <stop offset="0.5" stop-color="#f59e0b"/>
+              <stop offset="1" stop-color="#ef4444"/>
+            </linearGradient>
+          </defs>
+          <path class="taint-path" id="taint-path" d="M 9 52 C 35 66, 35 132, 9 146"/>
+          <circle class="taint-pulse" r="3.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" rotate="auto">
+              <mpath href="#taint-path"/>
+            </animateMotion>
+          </circle>
+        </svg>
+        <div class="trace-finding">
+          <span class="sev-badge crit">CRITICAL</span>
+          <span class="trace-finding-text">Command injection: tainted <code>request.args</code> reaches <code>os.system</code> via <code>build_ping()</code></span>
+          <span class="trace-finding-meta">CWE-78 · views.py:6</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================ TRUSTED BY -->
+<div class="trusted">
+  <div class="container trusted-inner">
+    <span class="trusted-label">Trusted by</span>
+    <div class="trusted-cards">
+      <a class="trusted-card" href="https://satori.ci/" target="_blank" rel="noopener" aria-label="SatoriCI — core scan engine">
+        <img class="trusted-logo" src="https://satori.ci/img/logo.svg" alt="SatoriCI" loading="lazy" />
+        <div class="trusted-card-body">
+          <p class="trusted-desc"><strong>SatoriCI</strong> integrated PySpector as a <strong>core SAST scanning engine</strong>, using it actively to scan <strong>30,000+ repositories</strong> at scale across the Satori platform.</p>
+          <span class="trusted-badge green">Production-Proven✔</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ FEATURES -->
+<section class="block" id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Capabilities</div>
+      <h2>More than a linter. A data-flow analysis engine.</h2>
+      <p>Traditional scanners grep for patterns. PySpector understands the structure of your application: its control flow, its call graph, and the path untrusted data takes through both.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+        <span class="feature-title">Flow-sensitive analysis</span>
+        <span class="feature-desc">A Control Flow Graph tracks variable states sequentially, distinguishing safe code paths from vulnerable ones, instead of flagging everything that merely looks risky.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7 7.5 10.5 16M17 7.5 13.5 16"/></svg></span>
+        <span class="feature-title">Inter-procedural taint tracking</span>
+        <span class="feature-desc">Untrusted data is propagated across function boundaries with global fixed-point iteration and context-aware function summaries that map parameters to return values.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 11-13h-8l1-7Z"/></svg></span>
+        <span class="feature-title">Rust-native performance</span>
+        <span class="feature-desc">The core engine is compiled Rust with <code>rayon</code> parallelization across every available core, built for CI/CD pipelines and 500k+ LoC monorepos.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="feature-title">Multi-engine hybrid scanning</span>
+        <span class="feature-desc">Three engines in one pass: a regex engine for secrets and config errors, an AST engine for structural anti-patterns, and a graph engine for full data-flow chains.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4.5-2 7H7c0-2.5-2-4-2-7a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/></svg></span>
+        <span class="feature-title">AI-agent security rules</span>
+        <span class="feature-desc">A specialized <code>--ai</code> ruleset finds prompt injection, insecure tool use, and data leakage in LLM-integrated Python applications and agent frameworks.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <span class="feature-title">Supply-chain auditing</span>
+        <span class="feature-desc">The <code>--supply-chain</code> mode checks project dependencies against known CVEs, so the code you import is held to the same standard as the code you write.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg></span>
+        <span class="feature-title">Extensible plugin system</span>
+        <span class="feature-desc">Post-process findings, generate artifacts, or trigger automation, inside a trust model with checksums, AST inspection, and explicit opt-in execution.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span>
+        <span class="feature-title">SARIF & CI/CD native</span>
+        <span class="feature-desc">First-class SARIF 2.1.0 export plugs directly into GitHub Code Scanning, security dashboards, and DevSecOps aggregation pipelines.</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/></svg></span>
+        <span class="feature-title">Interactive triage & baselining</span>
+        <span class="feature-desc">A built-in TUI lets you review findings, suppress accepted risk, and save a baseline so reviewed issues never resurface in future scans.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ ARCHITECTURE -->
+<section class="block alt" id="architecture">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Core Engine</div>
+      <h2>From source file to finding, in four stages.</h2>
+      <p>A hybrid architecture: a flexible Python CLI orchestrates the workflow, while a memory-safe Rust core (bridged via <span style="font-family:var(--font-mono); font-size:0.9em;">pyo3</span>) does the heavy lifting in parallel.</p>
+    </div>
+    <div class="pipeline reveal">
+      <div class="stage">
+        <span class="stage-lang py">PYTHON</span>
+        <div class="stage-num">STAGE 01</div>
+        <div class="stage-title">AST Parsing</div>
+        <div class="stage-desc">Source is parsed with the native <code style="font-family:var(--font-mono); font-size:0.9em; color:var(--g5);">ast</code> module into a structured JSON AST, ready for semantic analysis.</div>
+      </div>
+      <div class="stage">
+        <span class="stage-lang rs">RUST</span>
+        <div class="stage-num">STAGE 02</div>
+        <div class="stage-title">Call Graph Construction</div>
+        <div class="stage-desc">A project-wide map of function definitions and call sites enables true cross-file, inter-procedural analysis.</div>
+      </div>
+      <div class="stage">
+        <span class="stage-lang rs">RUST</span>
+        <div class="stage-num">STAGE 03</div>
+        <div class="stage-title">CFG Generation</div>
+        <div class="stage-desc">Every function is decomposed into a Control Flow Graph, capturing order of operations and conditional logic.</div>
+      </div>
+      <div class="stage">
+        <span class="stage-lang rs">RUST</span>
+        <div class="stage-num">STAGE 04</div>
+        <div class="stage-title">Fixed-Point Taint Propagation</div>
+        <div class="stage-desc">A worklist algorithm propagates taint from sources to sinks, respecting sanitizers that clean data along the way.</div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ============================================================ BENCHMARKS -->
+<section class="block" id="benchmarks">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Benchmarks</div>
+      <h2>Measured against the tools you already run.</h2>
+      <p>Head-to-head against Bandit and Semgrep with identical configurations, across five major Python codebases (Django, Flask, Pandas, Scikit-learn, Requests) from 13k to 530k lines of code.</p>
+    </div>
+    <div class="bench-grid">
+      <div class="bench-panel reveal">
+        <h3>Throughput: lines analyzed per second</h3>
+        <div class="bars" id="bench-bars">
+          <div class="bar-row lead">
+            <span class="bar-name">PySpector</span>
+            <span class="bar-track"><span class="bar-fill pys" style="width:100%"></span></span>
+            <span class="bar-val">25,607 l/s</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-name">Bandit</span>
+            <span class="bar-track"><span class="bar-fill other" style="width:58.3%"></span></span>
+            <span class="bar-val">14,927 l/s</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-name">Semgrep</span>
+            <span class="bar-track"><span class="bar-fill other" style="width:6%"></span></span>
+            <span class="bar-val">1,538 l/s</span>
+          </div>
+        </div>
+        <p class="bench-note">Debian-based Linux VM (2 cores, 4 GB RAM). Values are averages over multiple runs with CPU settling periods between executions. Raw benchmark data is available in the <a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">repository</a> for reproducibility.</p>
+      </div>
+      <div class="bench-panel reveal">
+        <h3>Comparative profile</h3>
+        <table class="bench-table">
+          <thead><tr><th>Metric</th><th>PySpector</th><th>Bandit</th><th>Semgrep</th></tr></thead>
+          <tbody>
+            <tr><td>Relative speed</td><td><span class="tag win">71% faster</span></td><td><span class="tag dim">baseline</span></td><td><span class="tag dim">16.6× slower</span></td></tr>
+            <tr><td>Memory usage</td><td class="mono">1.4 GB avg</td><td class="mono">111 MB avg</td><td class="mono">277 MB avg</td></tr>
+            <tr><td>CPU utilization</td><td class="mono">120% multi-core</td><td class="mono">100% single</td><td class="mono">40%</td></tr>
+            <tr><td>Analysis depth</td><td><span class="tag ok">Graph + Taint + AST + RegEx</span></td><td><span class="tag dim">AST patterns</span></td><td><span class="tag dim">Patterns</span></td></tr>
+          </tbody>
+        </table>
+        <p class="bench-note">PySpector trades a larger memory footprint for full graph construction and multi-core saturation. Recommended: 4+ cores and 4+ GB RAM for large codebases; 2 cores / 2 GB minimum.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DOCS -->
+<section class="block alt" id="docs">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Documentation</div>
+      <h2>Everything you need, from first scan to custom plugins.</h2>
+      <p>The complete PySpector reference: installation, CLI, scan modes, taint concepts, output formats, triage, automation, custom rules, and the plugin SDK.</p>
+    </div>
+
+    <div class="docs-layout">
+      <!-- Docs rail -->
+      <aside class="docs-rail" aria-label="Documentation navigation">
+        <div class="docs-rail-group">
+          <div class="docs-rail-label">Start here</div>
+          <ul>
+            <li><a href="#doc-install" data-docspy="doc-install">Installation</a></li>
+            <li><a href="#doc-first-scan" data-docspy="doc-first-scan">Your first scan</a></li>
+            <li><a href="#doc-concepts" data-docspy="doc-concepts">Taint analysis concepts</a></li>
+          </ul>
+        </div>
+        <div class="docs-rail-group">
+          <div class="docs-rail-label">Reference</div>
+          <ul>
+            <li><a href="#doc-cli" data-docspy="doc-cli">CLI reference</a></li>
+            <li><a href="#doc-modes" data-docspy="doc-modes">Scan modes</a></li>
+            <li><a href="#doc-output" data-docspy="doc-output">Reports & SARIF</a></li>
+            <li><a href="#doc-triage" data-docspy="doc-triage">Triage & baselining</a></li>
+          </ul>
+        </div>
+        <div class="docs-rail-group">
+          <div class="docs-rail-label">Extend & automate</div>
+          <ul>
+            <li><a href="#doc-plugins" data-docspy="doc-plugins">Plugin system</a></li>
+            <li><a href="#doc-authoring" data-docspy="doc-authoring">Authoring plugins</a></li>
+            <li><a href="#doc-rules" data-docspy="doc-rules">Writing custom rules</a></li>
+            <li><a href="#doc-automation" data-docspy="doc-automation">CI/CD & automation</a></li>
+          </ul>
+        </div>
+        <div class="docs-rail-group">
+          <div class="docs-rail-label">Project</div>
+          <ul>
+            <li><a href="#doc-contributing" data-docspy="doc-contributing">Contributing</a></li>
+            <li><a href="#doc-faq" data-docspy="doc-faq">FAQ</a></li>
+            <li><a href="#security" data-docspy="">Security policy ↓</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Docs content -->
+      <div class="docs-content">
+
+        <!-- INSTALLATION -->
+        <article class="doc-section" id="doc-install">
+          <div class="doc-kicker">Start here · 01</div>
+          <h3>Installation</h3>
+          <p>PySpector ships on PyPI as a hybrid Python/Rust package. The Python CLI orchestrates scans; the Rust core performs the analysis.</p>
+
+          <h4>Prerequisites</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Requirement</th><th>Version</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Python</strong></td><td>3.9 to 3.14</td><td>A dedicated Python 3.14 virtual environment is highly recommended.</td></tr>
+              <tr><td><strong>Rust toolchain</strong></td><td>stable</td><td>Required for the analysis core. Install via <a href="https://rustup.rs/" target="_blank" rel="noopener">rustup</a>, then verify with <code>cargo --version</code>.</td></tr>
+              <tr><td><strong>Hardware</strong></td><td>2+ cores, 2 GB RAM</td><td>4+ cores and 4+ GB RAM recommended for large codebases. SSD recommended for big repos.</td></tr>
+            </tbody>
+          </table></div>
+
+          <h4>Create a virtual environment</h4>
+          <div class="tabs">
+            <div class="tabs-header">
+              <button class="tab-btn active" onclick="switchTab(event, 'tab-venv-linux')">Linux / macOS</button>
+              <button class="tab-btn" onclick="switchTab(event, 'tab-venv-win')">Windows (PowerShell)</button>
+            </div>
+            <div id="tab-venv-linux" class="tab-pane active">
+              <div class="codeblock">
+                <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="python3.14 -m venv venv&#10;source venv/bin/activate">Copy</button></div>
+                <pre><code><span class="c"># Download Python 3.14, then:</span>
+<span class="p">$</span> python3.14 -m venv venv
+<span class="p">$</span> <span class="f">source</span> venv/bin/activate</code></pre>
+              </div>
+            </div>
+            <div id="tab-venv-win" class="tab-pane">
+              <div class="codeblock">
+                <div class="codeblock-head"><span class="codeblock-lang">powershell</span><button class="copy-btn" data-copy="python3.14 -m venv venv&#10;.\venv\Scripts\Activate.ps1">Copy</button></div>
+                <pre><code><span class="c"># Download Python 3.14 from the Microsoft Store, then:</span>
+<span class="p">PS&gt;</span> python3.14 -m venv venv
+<span class="p">PS&gt;</span> .\venv\Scripts\Activate.ps1
+<span class="c"># or, depending on the installation source:</span>
+<span class="p">PS&gt;</span> .\venv\bin\Activate.ps1</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <h4>Install from PyPI</h4>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pip install pyspector">Copy</button></div>
+            <pre><code><span class="p">$</span> pip <span class="f">install</span> pyspector</code></pre>
+          </div>
+          <div class="callout tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4.5-2 7H7c0-2.5-2-4-2-7a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/></svg>
+            <span><strong>Verify the install</strong> by running <code>pyspector --help</code>. If the Rust core fails to build, confirm <code>cargo --version</code> works inside the same shell session.</span>
+          </div>
+        </article>
+
+        <!-- FIRST SCAN -->
+        <article class="doc-section" id="doc-first-scan">
+          <div class="doc-kicker">Start here · 02</div>
+          <h3>Your first scan</h3>
+          <p>The primary command is <code>scan</code>. It accepts a local file, a directory, or a remote Git repository.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan [PATH or --url REPO_URL] [OPTIONS]">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> [PATH or <span class="o">--url</span> REPO_URL] [OPTIONS]</code></pre>
+          </div>
+
+          <h4>Common invocations</h4>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan /path/to/your/project&#10;pyspector scan /path/to/your/project -o report.html -f html&#10;pyspector scan --url https://github.com/username/repo.git">Copy</button></div>
+            <pre><code><span class="c"># Scan a local file or directory</span>
+<span class="p">$</span> pyspector <span class="f">scan</span> /path/to/your/project
+
+<span class="c"># Scan and save the report as HTML</span>
+<span class="p">$</span> pyspector <span class="f">scan</span> /path/to/your/project <span class="o">-o</span> report.html <span class="o">-f</span> html
+
+<span class="c"># Scan a public GitHub repository directly</span>
+<span class="p">$</span> pyspector <span class="f">scan</span> <span class="o">--url</span> <span class="s">https://github.com/username/repo.git</span></code></pre>
+          </div>
+
+          <h4>Wizard mode</h4>
+          <p>New to SAST, or running PySpector in a classroom? The <code>--wizard</code> flag launches a guided, interactive scan setup, ideal for first-time users and students.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan --wizard">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> <span class="o">--wizard</span></code></pre>
+          </div>
+
+          <h4>Reading the results</h4>
+          <p>Findings are reported with a severity, a rule ID, the file and line, and (for graph-engine findings) the full taint path from source to sink. Severities map to the following scale:</p>
+          <div class="sev-row">
+            <span class="sev-badge crit">CRITICAL</span>
+            <span class="sev-badge high">HIGH</span>
+            <span class="sev-badge med">MEDIUM</span>
+            <span class="sev-badge low">LOW</span>
+            <span class="sev-badge info">INFO</span>
+          </div>
+          <p>Use a severity threshold to keep noise out of CI, and the <a href="#doc-triage">triage workflow</a> to baseline accepted findings.</p>
+        </article>
+
+        <!-- CONCEPTS -->
+        <article class="doc-section" id="doc-concepts">
+          <div class="doc-kicker">Start here · 03</div>
+          <h3>Taint analysis concepts</h3>
+          <p>PySpector's graph engine models your application as data flowing between three kinds of program points. Understanding them makes findings (and false-positive triage) much easier to reason about.</p>
+          <div class="tss-grid">
+            <div class="tss-card src">
+              <h5>Sources</h5>
+              <p>Where untrusted data enters: HTTP parameters like <code>request.args</code>, environment input, file reads, CLI arguments, LLM outputs.</p>
+            </div>
+            <div class="tss-card snk">
+              <h5>Sinks</h5>
+              <p>Dangerous operations: <code>os.system</code>, <code>subprocess</code>, SQL execution, <code>eval</code>, deserialization, template rendering, file writes.</p>
+            </div>
+            <div class="tss-card san">
+              <h5>Sanitizers</h5>
+              <p>Functions that neutralize taint along the way: escaping, parameterization, allow-listing. Paths through a sanitizer are not reported.</p>
+            </div>
+          </div>
+
+          <h4>How a finding is produced</h4>
+          <ol>
+            <li><strong>Parse:</strong> each Python file is converted to a JSON AST by the CLI and handed to the Rust core via <code>pyo3</code>.</li>
+            <li><strong>Map:</strong> the engine builds a project-wide call graph, so a value returned by a helper in <code>utils.py</code> is connected to its caller in <code>views.py</code>.</li>
+            <li><strong>Model:</strong> every function becomes a Control Flow Graph: the analysis knows that an <code>if</code> branch which sanitizes input makes that branch safe, while the <code>else</code> branch may not be.</li>
+            <li><strong>Propagate:</strong> a worklist algorithm iterates to a global fixed point, pushing taint through assignments, calls, and returns using context-aware function summaries.</li>
+            <li><strong>Report:</strong> any taint that reaches a sink without passing a sanitizer becomes a finding, with the complete source → sink path attached.</li>
+          </ol>
+          <div class="callout note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg>
+            <span><strong>Why flow-sensitivity matters:</strong> pattern-based tools flag every call to <code>subprocess.run</code> with a variable argument. PySpector only reports it when an actual untrusted value can reach it on at least one execution path.</span>
+          </div>
+        </article>
+
+        <!-- CLI REFERENCE -->
+        <article class="doc-section" id="doc-cli">
+          <div class="doc-kicker">Reference · 01</div>
+          <h3>CLI reference</h3>
+          <p>PySpector exposes four top-level commands: <code>scan</code>, <code>watch</code>, <code>triage</code>, and <code>plugin</code>.</p>
+
+          <h4>pyspector scan</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Option</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>PATH</code></td><td>Local file or directory to analyze.</td></tr>
+              <tr><td><code>-u, --url REPO_URL</code></td><td>Clone and scan a public GitHub or GitLab repository instead of a local path (other hosts are rejected).</td></tr>
+              <tr><td><code>-f, --format</code></td><td>Report format: <code>json</code>, <code>html</code>, or <code>sarif</code>. Defaults to terminal output.</td></tr>
+              <tr><td><code>-o, --output</code></td><td>Write the report to a file instead of stdout.</td></tr>
+              <tr><td><code>--wizard</code></td><td>Interactive guided scan mode for first-time users.</td></tr>
+              <tr><td><code>--ai</code></td><td>Enable the AI/LLM security ruleset (prompt injection, insecure tool use, data leakage).</td></tr>
+              <tr><td><code>--supply-chain</code></td><td>Check project dependencies for known CVEs.</td></tr>
+              <tr><td><code>--plugin NAME</code></td><td>Run a trusted plugin after the scan. Repeatable.</td></tr>
+              <tr><td><code>--plugin-config FILE</code></td><td>JSON file with per-plugin configuration blocks.</td></tr>
+              <tr><td><code>-s, --severity LEVEL</code></td><td>Minimum severity to report: <code>LOW</code> (default), <code>MEDIUM</code>, <code>HIGH</code>, or <code>CRITICAL</code>.</td></tr>
+              <tr><td><code>-c, --config FILE</code></td><td>Path to a <code>pyspector.toml</code> configuration file (overrides defaults).</td></tr>
+              <tr><td><code>--syntax-warnings</code></td><td>Treat Python <code>SyntaxWarning</code>s as errors and exclude the affected files.</td></tr>
+              <tr><td><code>--stats</code></td><td>Print a performance and findings statistics table after the scan (LoC/sec, memory, per-engine breakdown, top rules and files).</td></tr>
+              <tr><td><code>--list-plugins</code></td><td>List all available plugins and exit.</td></tr>
+              <tr><td><code>--debug</code></td><td>Show all informational and progress messages; without it only findings, warnings, and errors are printed.</td></tr>
+            </tbody>
+          </table></div>
+
+          <h4>pyspector watch</h4>
+          <p>Continuous watch mode: PySpector runs a full initial scan, then re-scans whenever a <code>.py</code> file is created, modified, or deleted, printing only the <strong>NEW</strong> and <strong>RESOLVED</strong> findings after each pass.</p>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Option</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>PATH</code></td><td>File or directory to watch.</td></tr>
+              <tr><td><code>--debounce SECONDS</code></td><td>Wait this long after the last change before re-scanning (default: 1.0).</td></tr>
+              <tr><td><code>-s, --severity</code> / <code>--ai</code> / <code>-c, --config</code></td><td>Same semantics as <code>scan</code>.</td></tr>
+            </tbody>
+          </table></div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector watch ./src --severity MEDIUM --debounce 2">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">watch</span> ./src <span class="o">--severity</span> MEDIUM <span class="o">--debounce</span> 2</code></pre>
+          </div>
+
+          <h4>pyspector triage</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Usage</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>pyspector triage report.json</code></td><td>Open the interactive triage TUI on a previously generated JSON report.</td></tr>
+            </tbody>
+          </table></div>
+
+          <h4>pyspector plugin</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>plugin list</code></td><td>Show discovered plugins with trust status, version, and author.</td></tr>
+              <tr><td><code>plugin trust NAME</code></td><td>Validate, checksum, and mark a plugin as trusted.</td></tr>
+              <tr><td><code>plugin info NAME</code></td><td>Display stored metadata and checksum verification status.</td></tr>
+              <tr><td><code>plugin install PATH [--trust]</code></td><td>Install a plugin file, optionally trusting it in the same step.</td></tr>
+              <tr><td><code>plugin remove NAME</code></td><td>Remove a plugin from the local catalogue.</td></tr>
+            </tbody>
+          </table></div>
+
+          <h4>Configuration file (pyspector.toml)</h4>
+          <p>Project-level settings live under <code>[tool.pyspector]</code> and are loaded with <code>-c pyspector.toml</code>. Anything you set merges on top of the defaults:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">toml · pyspector.toml</span><button class="copy-btn" data-copy='[tool.pyspector]
+severity = "MEDIUM"
+exclude = [".venv", "node_modules", "migrations", "*/generated/*"]'>Copy</button></div>
+            <pre><code><span class="o">[tool.pyspector]</span>
+<span class="o">severity</span> = <span class="s">"MEDIUM"</span>
+<span class="o">exclude</span>  = [<span class="s">".venv"</span>, <span class="s">"node_modules"</span>, <span class="s">"migrations"</span>, <span class="s">"*/generated/*"</span>]</code></pre>
+          </div>
+          <p>Sensible exclusions ship by default (<code>.venv</code>, <code>.git</code>, <code>__pycache__</code>, <code>build</code>, <code>dist</code>, <code>node_modules</code>, <code>vendor</code>, and common test-fixture patterns). PySpector also writes a <code>.pyspector_cache</code> directory next to the scan target: an incremental AST cache (plain JSON, never pickle) that makes repeat scans dramatically faster. It is safe to delete at any time and should stay out of version control.</p>
+        </article>
+
+        <!-- SCAN MODES -->
+        <article class="doc-section" id="doc-modes">
+          <div class="doc-kicker">Reference · 02</div>
+          <h3>Scan modes</h3>
+
+          <h4>AI / LLM security mode</h4>
+          <p>Use <code>--ai</code> when scanning projects that integrate with Large Language Models or agent frameworks. The specialized ruleset targets the failure modes unique to AI applications: prompt injection paths, insecure tool invocation, and unintended data leakage into prompts or logs.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan /path/to/your/project --ai">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> /path/to/your/project <span class="o">--ai</span></code></pre>
+          </div>
+
+          <h4>Supply-chain mode</h4>
+          <p>Use <code>--supply-chain</code> to check the dependencies declared by your project against known CVEs: a fast first pass on the code you import rather than the code you wrote.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan /path/to/your/project --supply-chain">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> /path/to/your/project <span class="o">--supply-chain</span></code></pre>
+          </div>
+
+          <h4>Remote repository mode</h4>
+          <p>Point PySpector at any public GitHub or GitLab repository and it will clone and analyze it in one step, useful for auditing third-party packages before adoption, or for security research at scale. The URL host is validated, so only <code>github.com</code> and <code>gitlab.com</code> repositories are accepted.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan --url https://github.com/username/repo.git">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> <span class="o">--url</span> <span class="s">https://github.com/username/repo.git</span></code></pre>
+          </div>
+          <div class="callout warn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <span><strong>Scan responsibly.</strong> Only scan repositories you own or are authorized to assess. Findings in third-party code should go through that project's own disclosure process.</span>
+          </div>
+        </article>
+
+        <!-- OUTPUT -->
+        <article class="doc-section" id="doc-output">
+          <div class="doc-kicker">Reference · 03</div>
+          <h3>Reports & SARIF</h3>
+          <p>Select the output format with <code>-f</code> and a destination with <code>-o</code>. Three formats are supported, each suited to a different consumer:</p>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Format</th><th>Best for</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag dim">json</span></td><td>Automation, the triage TUI, custom tooling</td><td><code>-f json -o report.json</code></td></tr>
+              <tr><td><span class="tag dim">html</span></td><td>Human-readable reports to share with a team</td><td><code>-f html -o report.html</code></td></tr>
+              <tr><td><span class="tag win">sarif</span></td><td>GitHub Code Scanning, security dashboards, DevSecOps aggregation</td><td><code>-f sarif -o report.sarif</code></td></tr>
+            </tbody>
+          </table></div>
+
+          <h4>SARIF 2.1.0 output</h4>
+          <p>SARIF (Static Analysis Results Interchange Format) is the lingua franca of security tooling. PySpector results integrate directly with GitHub Code Scanning, GitHub Advanced Security, and any SAST aggregation platform.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">json</span><button class="copy-btn" data-copy='{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "PySpector",
+          "informationUri": "https://github.com/ParzivalHack/PySpector"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "PYSEC001",
+          "level": "warning",
+          "message": { "text": "Potential command injection detected" }
+        }
+      ]
+    }
+  ]
+}'>Copy</button></div>
+            <pre><code>{
+  <span class="s">"version"</span>: <span class="s">"2.1.0"</span>,
+  <span class="s">"runs"</span>: [{
+    <span class="s">"tool"</span>: {
+      <span class="s">"driver"</span>: {
+        <span class="s">"name"</span>: <span class="s">"PySpector"</span>,
+        <span class="s">"informationUri"</span>: <span class="s">"https://github.com/ParzivalHack/PySpector"</span>
+      }
+    },
+    <span class="s">"results"</span>: [{
+      <span class="s">"ruleId"</span>: <span class="s">"PYSEC001"</span>,
+      <span class="s">"level"</span>: <span class="s">"warning"</span>,
+      <span class="s">"message"</span>: { <span class="s">"text"</span>: <span class="s">"Potential command injection detected"</span> }
+    }]
+  }]
+}</code></pre>
+          </div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan ./project -f sarif -o report.sarif">Copy</button></div>
+            <pre><code><span class="c"># Generate SARIF, then upload to GitHub Code Scanning</span>
+<span class="p">$</span> pyspector <span class="f">scan</span> ./project <span class="o">-f</span> sarif <span class="o">-o</span> report.sarif</code></pre>
+          </div>
+        </article>
+
+        <!-- TRIAGE -->
+        <article class="doc-section" id="doc-triage">
+          <div class="doc-kicker">Reference · 04</div>
+          <h3>Triage & baselining</h3>
+          <p>Real codebases accumulate accepted risk. The triage workflow lets you review findings once, mark them as ignored, and never see them again in subsequent scans.</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan /path/to/your/project -o report.json -f json&#10;pyspector triage report.json">Copy</button></div>
+            <pre><code><span class="c"># 1. Generate a JSON report</span>
+<span class="p">$</span> pyspector <span class="f">scan</span> /path/to/your/project <span class="o">-o</span> report.json <span class="o">-f</span> json
+
+<span class="c"># 2. Open the interactive triage TUI</span>
+<span class="p">$</span> pyspector <span class="f">triage</span> report.json</code></pre>
+          </div>
+          <h4>Inside the TUI</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Key</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td><code>↑ / ↓</code></td><td>Navigate between findings.</td></tr>
+              <tr><td><code>i</code></td><td>Toggle the "ignored" status of the selected finding.</td></tr>
+              <tr><td><code>s</code></td><td>Save changes to <code>.pyspector_baseline.json</code>.</td></tr>
+            </tbody>
+          </table></div>
+          <p>The baseline file is loaded automatically on subsequent scans, so already-reviewed findings stay suppressed across your whole team and CI pipeline. Commit it alongside your code.</p>
+        </article>
+        <!-- PLUGINS -->
+        <article class="doc-section" id="doc-plugins">
+          <div class="doc-kicker">Extend · 01</div>
+          <h3>Plugin system</h3>
+          <p>Plugins post-process findings, generate custom artifacts, or orchestrate follow-up actions after every scan. They run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.</p>
+
+          <h4>Lifecycle</h4>
+          <ol>
+            <li><strong>Discovery:</strong> plugin files live in the repository's <code>PySpector/plugins</code> directory and are discovered automatically.</li>
+            <li><strong>Registration:</strong> trusted plugins are recorded in <code>plugin_registry.json</code> with their checksum and metadata.</li>
+            <li><strong>Validation:</strong> before execution, PySpector validates plugin configuration, statically inspects the source for dangerous APIs, and verifies the on-disk checksum.</li>
+            <li><strong>Execution:</strong> the plugin is initialized, receives the full findings list, and may emit additional files or data. <code>cleanup()</code> is always called at the end.</li>
+          </ol>
+
+          <h4>Managing plugins from the CLI</h4>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector plugin list&#10;pyspector plugin trust plugin_name&#10;pyspector plugin info plugin_name&#10;pyspector plugin install path/to/plugin.py --trust&#10;pyspector plugin remove legacy_plugin">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">plugin</span> list                              <span class="c"># discovered plugins, trust status, version, author</span>
+<span class="p">$</span> pyspector <span class="f">plugin</span> trust plugin_name                 <span class="c"># validate, checksum, mark as trusted</span>
+<span class="p">$</span> pyspector <span class="f">plugin</span> info plugin_name                  <span class="c"># metadata + checksum verification</span>
+<span class="p">$</span> pyspector <span class="f">plugin</span> install path/to/plugin.py <span class="o">--trust</span>
+<span class="p">$</span> pyspector <span class="f">plugin</span> remove legacy_plugin</code></pre>
+          </div>
+          <p>Only trusted plugins are executed automatically. When you trust a plugin, PySpector calculates its SHA256 checksum and stores the version, author, and description it declares via <code>PluginMetadata</code>. If the file is modified later, you are warned before it runs again.</p>
+
+          <h4>Running plugins during a scan</h4>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan vulnerableapp.py --plugin aipocgen --plugin-config ./PySpector/pluginconfig/aipocgen.json">Copy</button></div>
+            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> vulnerableapp.py <span class="o">--plugin</span> aipocgen <span class="o">--plugin-config</span> ./PySpector/pluginconfig/aipocgen.json</code></pre>
+          </div>
+          <p>The configuration file is a JSON object whose keys match plugin names. Each plugin receives only its own block:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">json · aipocgen.json</span><button class="copy-btn" data-copy='{
   "aipocgen": {
-    "api_key": "ENVIRONMENT_API_KEY",
+    "api_key": "YOUR-GROQ-KEY",
     "model": "llama-3.3-70b",
     "severity_filter": ["HIGH", "CRITICAL"],
     "max_pocs": 5,
     "output_dir": "pocs",
     "dry_run": false
   }
+}'>Copy</button></div>
+            <pre><code>{
+  <span class="s">"aipocgen"</span>: {
+    <span class="s">"api_key"</span>: <span class="s">"YOUR-GROQ-KEY"</span>,
+    <span class="s">"model"</span>: <span class="s">"llama-3.3-70b"</span>,
+    <span class="s">"severity_filter"</span>: [<span class="s">"HIGH"</span>, <span class="s">"CRITICAL"</span>],
+    <span class="s">"max_pocs"</span>: <span class="k">5</span>,
+    <span class="s">"output_dir"</span>: <span class="s">"pocs"</span>,
+    <span class="s">"dry_run"</span>: <span class="k">false</span>
+  }
 }</code></pre>
-						</div>
+          </div>
 
-						<div
-							id="tab-plugin-code"
-							class="tab-pane"
-						>
-							<pre
-								class="code-terminal"
-							><code>from pyspector.plugin_system import PySpectorPlugin, PluginMetadata
+          <h4>Security model</h4>
+          <ul>
+            <li><strong>AST-based static inspection</strong> blocks dangerous constructs (<code>eval</code>, <code>exec</code>, <code>subprocess.*</code>) and warns on sensitive-but-acceptable calls like <code>open</code>.</li>
+            <li><strong>Trust workflow:</strong> a plugin must be explicitly trusted before it can run; validation warnings are surfaced in the CLI.</li>
+            <li><strong>Checksum verification:</strong> each trusted plugin has a stored SHA256 hash; any change is flagged before execution.</li>
+            <li><strong>Argument isolation:</strong> <code>sys.argv</code> is reset so Click-based plugins can't accidentally consume the parent CLI arguments.</li>
+            <li><strong>Structured error handling:</strong> exceptions are caught, traced, and reported without aborting the main scan; <code>cleanup()</code> still runs.</li>
+          </ul>
+          <div class="callout danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg>
+            <span><strong>Review before you trust.</strong> Plugins run with your privileges. Always read third-party plugin code before running <code>pyspector plugin trust</code> or installing with <code>--trust</code>.</span>
+          </div>
+        </article>
+
+        <!-- AUTHORING -->
+        <article class="doc-section" id="doc-authoring">
+          <div class="doc-kicker">Extend · 02</div>
+          <h3>Authoring plugins</h3>
+          <p>Create a Python file in <code>~/.pyspector/plugins/&lt;name&gt;.py</code> and subclass <code>PySpectorPlugin</code>:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">python · my_plugin.py</span><button class="copy-btn" data-copy='from pathlib import Path
+from typing import Any, Dict, List
+
+from pyspector.plugin_system import PySpectorPlugin, PluginMetadata
+
 
 class MyPlugin(PySpectorPlugin):
     @property
     def metadata(self) -> PluginMetadata:
         return PluginMetadata(
-            name="high_summary",
+            name="my_plugin",
             version="0.1.0",
-            author="Auditor",
-            description="Exports summary of findings"
+            author="Your Name",
+            description="Summarises HIGH severity findings",
+            category="reporting",
         )
-    
-    def process_findings(self, findings, scan_path, **kwargs):
+
+    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, str]:
+        if "output_file" not in config:
+            return False, "output_file is required"
+        return True, ""
+
+    def initialize(self, config: Dict[str, Any]) -> bool:
+        self.output = Path(config["output_file"]).resolve()
+        return True
+
+    def process_findings(
+        self,
+        findings: List[Dict[str, Any]],
+        scan_path: Path,
+        **kwargs,
+    ) -> Dict[str, Any]:
         highs = [f for f in findings if f.get("severity") == "HIGH"]
-        return {"success": True, "message": f"Processed {len(highs)} issues"}</code></pre>
-						</div>
-					</div>
-				</section>
-				<!-- Contributors Hall of Fame -->
-				<section
-					id="contribute"
-					style="scroll-margin-top: 100px;"
-				>
-					<div class="widget">
-						<div class="widget-title">Security Hall of Fame</div>
-						<p
-							style="color: var(--g4); margin-bottom: 24px; font-size: 0.95rem;"
-						>
-							PySpector is built by and for the security community. Thanks to
-							all our contributors:
-						</p>
+        self.output.write_text(f"{len(highs)} HIGH findings\n", encoding="utf-8")
+        return {
+            "success": True,
+            "message": f"Summarised {len(highs)} HIGH findings",
+            "output_files": [str(self.output)],
+        }'>Copy</button></div>
+            <pre><code><span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">from</span> typing <span class="k">import</span> Any, Dict, List
 
-						<div class="hall-of-fame-grid">
-							<a
-								href="https://satori.ci/"
-								target="_blank"
-								class="hof-card"
-							>
-								<img
-									src="https://avatars.githubusercontent.com/u/89515805?v=4?s=100"
-									alt="satoridev01"
-									class="hof-avatar"
-								/>
-								<div class="hof-info">
-									<span class="hof-name">satoridev01</span>
-									<span class="hof-role">Security Core</span>
-								</div>
-							</a>
-							<a
-								href="https://github.com/Shinigami81"
-								target="_blank"
-								class="hof-card"
-							>
-								<img
-									src="https://avatars.githubusercontent.com/u/122274261?v=4?s=100"
-									alt="Shinigami"
-									class="hof-avatar"
-								/>
-								<div class="hof-info">
-									<span class="hof-name">Shinigami</span>
-									<span class="hof-role">Plugin Integration</span>
-								</div>
-							</a>
-							<a
-								href="https://youtube.com/fantasm"
-								target="_blank"
-								class="hof-card"
-							>
-								<img
-									src="https://avatars.githubusercontent.com/u/35772301?v=4?s=100"
-									alt="fg0x0"
-									class="hof-avatar"
-								/>
-								<div class="hof-info">
-									<span class="hof-name">fg0x0</span>
-									<span class="hof-role">Taint Engine QA</span>
-								</div>
-							</a>
-						</div>
-					</div>
-				</section>
-			</div>
+<span class="k">from</span> pyspector.plugin_system <span class="k">import</span> PySpectorPlugin, PluginMetadata
 
-			<!-- Footer Component -->
-			<footer>
-				<div>
-					<strong>PySpector</strong> — Next-generation Python SAST tool.
-				</div>
-				<div class="footer-links">
-					<a href="https://github.com/ParzivalHack/PySpector">Repository</a>
-					<a href="https://github.com/ParzivalHack/PySpector/releases"
-						>Releases</a
-					>
-					<a href="https://github.com/ParzivalHack/PySpector/issues">Issues</a>
-					<a
-						href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md"
-						>Contributing</a
-					>
-				</div>
-			</footer>
-		</main>
 
-		<!-- Interactive JavaScript -->
-		<script>
-			const API_URL = 'https://pyspector-api.onrender.com/scan';
+<span class="k">class</span> <span class="f">MyPlugin</span>(PySpectorPlugin):
+    <span class="o">@property</span>
+    <span class="k">def</span> <span class="f">metadata</span>(self) -&gt; PluginMetadata:
+        <span class="k">return</span> <span class="f">PluginMetadata</span>(
+            name=<span class="s">"my_plugin"</span>,
+            version=<span class="s">"0.1.0"</span>,
+            author=<span class="s">"Your Name"</span>,
+            description=<span class="s">"Summarises HIGH severity findings"</span>,
+            category=<span class="s">"reporting"</span>,
+        )
 
-			// Fetch Latest Release dynamically from GitHub
-			async function fetchLatestRelease() {
-			  try {
-			    const response = await fetch('https://api.github.com/repos/ParzivalHack/PySpector/releases');
-			    if (response.ok) {
-			      const data = await response.json();
-			      if (data && data.length > 0) {
-			        const latest = data[0];
-			        const tagName = latest.tag_name;
-			        const htmlUrl = latest.html_url;
+    <span class="k">def</span> <span class="f">validate_config</span>(self, config: Dict[str, Any]) -&gt; tuple[bool, str]:
+        <span class="k">if</span> <span class="s">"output_file"</span> <span class="k">not in</span> config:
+            <span class="k">return</span> <span class="k">False</span>, <span class="s">"output_file is required"</span>
+        <span class="k">return</span> <span class="k">True</span>, <span class="s">""</span>
 
-			        const sidebarVersion = document.getElementById('release-version-sidebar');
-			        if (sidebarVersion) {
-			          sidebarVersion.textContent = `${tagName} SAST`;
-			        }
-			        const topbarLink = document.getElementById('release-link-topbar');
-			        if (topbarLink) {
-			          topbarLink.textContent = tagName;
-			          topbarLink.href = htmlUrl;
-			        }
-			      }
-			    }
-			  } catch (error) {
-			    console.error('Failed to fetch latest release from GitHub API:', error);
-			  }
-			}
+    <span class="k">def</span> <span class="f">initialize</span>(self, config: Dict[str, Any]) -&gt; bool:
+        self.output = <span class="f">Path</span>(config[<span class="s">"output_file"</span>]).<span class="f">resolve</span>()
+        <span class="k">return</span> <span class="k">True</span>
 
-			// Run on DOM load
-			document.addEventListener('DOMContentLoaded', fetchLatestRelease);
+    <span class="k">def</span> <span class="f">process_findings</span>(self, findings, scan_path, **kwargs) -&gt; Dict[str, Any]:
+        highs = [f <span class="k">for</span> f <span class="k">in</span> findings <span class="k">if</span> f.<span class="f">get</span>(<span class="s">"severity"</span>) == <span class="s">"HIGH"</span>]
+        self.output.<span class="f">write_text</span>(<span class="s">f"{len(highs)} HIGH findings\n"</span>, encoding=<span class="s">"utf-8"</span>)
+        <span class="k">return</span> {
+            <span class="s">"success"</span>: <span class="k">True</span>,
+            <span class="s">"message"</span>: <span class="s">f"Summarised {len(highs)} HIGH findings"</span>,
+            <span class="s">"output_files"</span>: [<span class="f">str</span>(self.output)],
+        }</code></pre>
+          </div>
 
-			// Toggle Mobile Sidebar View
-			function toggleSidebar() {
-			  const sidebar = document.getElementById('sidebar');
-			  sidebar.classList.toggle('open');
-			  document.body.classList.toggle('sidebar-open');
-			}
+          <h4>Required interface</h4>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Member</th><th>Required</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>metadata</code></td><td>Yes</td><td>Return a <code>PluginMetadata</code> instance describing the plugin.</td></tr>
+              <tr><td><code>validate_config(config)</code></td><td>Recommended</td><td>Abort gracefully when required settings are missing by returning <code>(False, "reason")</code>.</td></tr>
+              <tr><td><code>initialize(config)</code></td><td>Yes</td><td>Prepare state or dependencies; return <code>False</code> to skip execution.</td></tr>
+              <tr><td><code>process_findings(...)</code></td><td>Yes</td><td>Receive every finding as a dict; return <code>success</code>, <code>message</code>, optional <code>data</code>, and <code>output_files</code>.</td></tr>
+              <tr><td><code>cleanup()</code></td><td>Optional</td><td>Release resources; called even if an exception occurs.</td></tr>
+            </tbody>
+          </table></div>
 
-			// Interactive Tab switcher
-			function switchTab(event, tabId) {
-			  // Find parent section/widget of the clicked button
-			  const parentWidget = event.currentTarget.closest('.widget');
+          <h4>Best practices</h4>
+          <ul>
+            <li>Store API keys and long-lived secrets in <strong>environment variables</strong> and read them during <code>initialize</code>; give helpful errors when credentials are missing.</li>
+            <li>Keep side-effects <strong>inside the scan directory</strong>. When scanning a single file, <code>scan_path</code> is that file, so switch to <code>scan_path.parent</code> before writing outputs.</li>
+            <li>Validate configuration early with <code>validate_config</code>; PySpector surfaces the message in the CLI without executing the plugin.</li>
+            <li>Return meaningful <code>message</code> values and populate <code>output_files</code> so automation can pick up generated artifacts.</li>
+            <li>Support a <code>dry_run</code> switch (see the bundled <code>aipocgen</code> plugin) for air-gapped testing.</li>
+          </ul>
+          <div class="callout tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4.5-2 7H7c0-2.5-2-4-2-7a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/></svg>
+            <span><strong>Tip:</strong> plugins are plain Python modules, so you can run <code>python my_plugin.py</code> while developing for quick checks before trusting them through the CLI.</span>
+          </div>
+        </article>
 
-			  // Deactivate all sibling tab buttons inside this widget
-			  parentWidget.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        <!-- CUSTOM RULES -->
+        <article class="doc-section" id="doc-rules">
+          <div class="doc-kicker">Extend · 03</div>
+          <h3>Writing custom rules</h3>
+          <p>Rules define <em>what</em> the engine looks for. They live as TOML files in <code>src/pyspector/rules/</code>, are loaded at runtime, and are applied uniformly across every scanned file. There are three kinds:</p>
+          <div class="doc-cards">
+            <div class="doc-card">
+              <span class="doc-card-k">regex pattern</span>
+              <span class="doc-card-v">Fast line-level matching for secrets, misconfigurations, and simple anti-patterns. Define a <code>pattern</code> regular expression.</span>
+            </div>
+            <div class="doc-card">
+              <span class="doc-card-k">ast_match</span>
+              <span class="doc-card-v">Structural matching against Python AST nodes, e.g. <code>Call(func.id=eval)</code>, for precise detection that text search cannot express.</span>
+            </div>
+            <div class="doc-card">
+              <span class="doc-card-k">taint source / sink / sanitizer</span>
+              <span class="doc-card-v">Teach the flow engine new <code>[[taint_source]]</code>, <code>[[taint_sink]]</code>, and <code>[[taint_sanitizer]]</code> entries so untrusted data is tracked across functions.</span>
+            </div>
+          </div>
+          <p>A minimal AST rule looks like this:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">toml · built-in-rules.toml</span><button class="copy-btn" data-copy='[[rule]]
+id = "PY200"
+description = "Use of eval() detected."
+severity = "High"
+remediation = "Avoid eval(). Use ast.literal_eval or explicit parsing."
+ast_match = "Call(func.id=eval)"'>Copy</button></div>
+            <pre><code><span class="o">[[rule]]</span>
+<span class="o">id</span>          = <span class="s">"PY200"</span>
+<span class="o">description</span> = <span class="s">"Use of eval() detected."</span>
+<span class="o">severity</span>    = <span class="s">"High"</span>
+<span class="o">remediation</span> = <span class="s">"Avoid eval(). Use ast.literal_eval or explicit parsing."</span>
+<span class="o">ast_match</span>   = <span class="s">"Call(func.id=eval)"</span></code></pre>
+          </div>
+          <p>Useful fields when authoring rules:</p>
+          <div class="doc-table-wrap"><table class="doc-table">
+            <thead><tr><th>Field</th><th>Applies to</th><th>Purpose</th></tr></thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>all</td><td>Unique identifier surfaced in every report.</td></tr>
+              <tr><td><code>description</code> / <code>severity</code></td><td>all</td><td>Human-readable summary and one of <code>Low</code>, <code>Medium</code>, <code>High</code>, <code>Critical</code>.</td></tr>
+              <tr><td><code>remediation</code> / <code>cwe</code></td><td>all</td><td>Fix guidance and an optional CWE identifier (used for SARIF tags and cross-rule dedup).</td></tr>
+              <tr><td><code>exclude_pattern</code> / <code>file_pattern</code></td><td>rules</td><td>Suppress on lines matching a regex, or restrict the rule to matching file globs.</td></tr>
+              <tr><td><code>function_call</code> / <code>vulnerable_parameter_index</code></td><td>sinks</td><td>The call to watch and which positional argument must be tainted to fire.</td></tr>
+              <tr><td><code>is_method</code> / <code>triggers_on</code></td><td>sinks</td><td>Whether the sink is a method call, and which taint origins should trigger it.</td></tr>
+            </tbody>
+          </table></div>
+          <p>New rules are welcome through the contribution flow below. Include a clear description, a severity, and helpful remediation advice with every rule you add.</p>
+        </article>
 
-			  // Deactivate all sibling tab panes inside this widget
-			  parentWidget.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        <!-- AUTOMATION -->
+        <article class="doc-section" id="doc-automation">
+          <div class="doc-kicker">Extend · 04</div>
+          <h3>CI/CD & automation</h3>
+          <p>PySpector is built for pipelines: fast enough to run on every commit, SARIF-native for platform integration, and shipped with helper scripts for local guardrails.</p>
 
-			  // Activate target tab button and target tab pane
-			  event.currentTarget.classList.add('active');
-			  document.getElementById(tabId).classList.add('active');
-			}
+          <h4>GitHub Code Scanning</h4>
+          <p>Generate SARIF in your workflow and upload it so findings appear directly in pull requests and the repository security dashboard:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">yaml · .github/workflows/pyspector.yml</span><button class="copy-btn" data-copy="name: PySpector
+on: [push, pull_request]
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pip install pyspector
+      - run: pyspector scan . -f sarif -o report.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: report.sarif">Copy</button></div>
+            <pre><code><span class="o">name</span>: PySpector
+<span class="o">on</span>: [push, pull_request]
+<span class="o">jobs</span>:
+  <span class="o">sast</span>:
+    <span class="o">runs-on</span>: ubuntu-latest
+    <span class="o">permissions</span>:
+      <span class="o">security-events</span>: write
+    <span class="o">steps</span>:
+      - <span class="o">uses</span>: actions/checkout@v4
+      - <span class="o">uses</span>: actions/setup-python@v5
+        <span class="o">with</span>: { python-version: <span class="s">'3.14'</span> }
+      - <span class="o">uses</span>: dtolnay/rust-toolchain@stable
+      - <span class="o">run</span>: pip install pyspector
+      - <span class="o">run</span>: pyspector scan . -f sarif -o report.sarif
+      - <span class="o">uses</span>: github/codeql-action/upload-sarif@v3
+        <span class="o">with</span>:
+          <span class="o">sarif_file</span>: report.sarif</code></pre>
+          </div>
 
-			// Scroll Spying to update active sidebar menu item
-			window.addEventListener('scroll', () => {
-			  const sections = ['overview', 'capabilities', 'benchmarks', 'api-playground', 'quickstart', 'plugins', 'contribute'];
-			  let currentSection = 'overview';
+          <h4>Git pre-commit hook</h4>
+          <p>Block commits that introduce new HIGH or CRITICAL issues. The setup script creates an executable <code>.git/hooks/pre-commit</code> that scans staged Python files:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="./scripts/setup_hooks.sh">Copy</button></div>
+            <pre><code><span class="c"># From the root of your Git repository:</span>
+<span class="p">$</span> ./scripts/setup_hooks.sh
 
-			  // If we've reached the bottom of the page, select the last section
-			  if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 10) {
-			    currentSection = sections[sections.length - 1];
-			  } else {
-			    // Find which section is currently in view
-			    for (const sectionId of sections) {
-			      const el = document.getElementById(sectionId);
-			      if (el) {
-			        const rect = el.getBoundingClientRect();
-			        if (rect.top <= 180) {
-			          currentSection = sectionId;
-			        }
-			      }
-			    }
-			  }
+<span class="c"># Bypass for a specific commit if you must:</span>
+<span class="p">$</span> git <span class="f">commit</span> <span class="o">--no-verify</span></code></pre>
+          </div>
 
-			  // Update sidebar styling
-			  document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+          <h4>pre-commit framework</h4>
+          <p>If your team uses the <a href="https://pre-commit.com/" target="_blank" rel="noopener">pre-commit</a> framework, add PySpector as a local hook so it runs on staged Python files alongside your other checks:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">yaml · .pre-commit-config.yaml</span><button class="copy-btn" data-copy="repos:
+  - repo: local
+    hooks:
+      - id: pyspector
+        name: PySpector SAST
+        entry: pyspector
+        args: [&quot;scan&quot;, &quot;.&quot;]
+        language: system
+        types: [python]">Copy</button></div>
+            <pre><code><span class="o">repos</span>:
+  - <span class="o">repo</span>: local
+    <span class="o">hooks</span>:
+      - <span class="o">id</span>: pyspector
+        <span class="o">name</span>: PySpector SAST
+        <span class="o">entry</span>: pyspector
+        <span class="o">args</span>: [<span class="s">"scan"</span>, <span class="s">"."</span>]
+        <span class="o">language</span>: system
+        <span class="o">types</span>: [python]</code></pre>
+          </div>
+          <p>The bundled <code>./scripts/setup_hooks.sh</code> takes the stricter route: it installs a raw Git hook that scans only the staged files with <code>--severity HIGH</code> and blocks the commit on any HIGH or CRITICAL finding (bypass with <code>git commit --no-verify</code>).</p>
 
-			  // Map sections to nav IDs
-			  let navId = 'nav-overview';
-			  if (currentSection === 'capabilities') navId = 'nav-capabilities';
-			  else if (currentSection === 'benchmarks') navId = 'nav-benchmarks';
-			  else if (currentSection === 'api-playground') navId = 'nav-playground';
-			  else if (currentSection === 'quickstart') navId = 'nav-quickstart';
-			  else if (currentSection === 'plugins') navId = 'nav-plugins';
-			  else if (currentSection === 'contribute') navId = 'nav-contribute';
+          <h4>Scheduled scans with cron</h4>
+          <p>For continuous monitoring outside CI, an interactive script generates the right crontab entry for your project:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="./scripts/setup_cron.sh">Copy</button></div>
+            <pre><code><span class="p">$</span> ./scripts/setup_cron.sh</code></pre>
+          </div>
 
-			  const activeNavItem = document.getElementById(navId);
-			  if (activeNavItem) {
-			    activeNavItem.classList.add('active');
-			  }
+          <h4>REST API & Docker</h4>
+          <p>PySpector also ships a small Rust HTTP service (<code>pyspector-api</code>, built on actix-web) that exposes scanning over the network. It accepts <code>POST /scan</code> on port <code>10000</code> with a JSON body and is rate-limited (12 requests/second, burst of 5):</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy='curl -X POST http://localhost:10000/scan \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &apos;{&quot;url&quot;: &quot;https://github.com/psf/requests.git&quot;, &quot;ai&quot;: false, &quot;json_output&quot;: true}&apos;'>Copy</button></div>
+            <pre><code><span class="p">$</span> curl <span class="o">-X</span> POST <span class="s">http://localhost:10000/scan</span> \
+  <span class="o">-H</span> <span class="s">"Content-Type: application/json"</span> \
+  <span class="o">-d</span> <span class="s">'{"url": "...", "ai": false, "json_output": true}'</span></code></pre>
+          </div>
+          <p>The body takes either <code>url</code> (a public repo to clone) or <code>path</code> (a server-side directory), plus the <code>ai</code> and <code>json_output</code> booleans. A <code>Dockerfile</code> is included to build and run the service in a container:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="docker build -t pyspector-api .
+docker run -p 10000:10000 pyspector-api">Copy</button></div>
+            <pre><code><span class="p">$</span> docker <span class="f">build</span> <span class="o">-t</span> pyspector-api .
+<span class="p">$</span> docker <span class="f">run</span> <span class="o">-p</span> 10000:10000 pyspector-api</code></pre>
+          </div>
+        </article>
 
-			  // Update current title in top bar
-			  const titleMap = {
-			    'nav-overview': 'Security Overview',
-			    'nav-capabilities': 'Capabilities & Engine Rules',
-			    'nav-benchmarks': 'Performance Benchmarks',
-			    'nav-playground': 'Live API Scanner Playground',
-			    'nav-quickstart': 'Quick Start Guide',
-			    'nav-plugins': 'Extensible Plugin System',
-			    'nav-contribute': 'Community Contributors'
-			  };
-			  const headerTitle = document.getElementById('current-view-title');
-			  if (headerTitle && titleMap[navId]) {
-			    headerTitle.textContent = titleMap[navId];
-			  }
-			});
-		</script>
-	</body>
+        <!-- CONTRIBUTING -->
+        <article class="doc-section" id="doc-contributing">
+          <div class="doc-kicker">Project · 01</div>
+          <h3>Contributing</h3>
+          <p>Every contribution helps make Python code safer: bug reports, feature ideas, new detection rules, documentation, and improvements to the Python or Rust core are all welcome. The full guide lives in <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>, and the project follows a <a href="https://github.com/ParzivalHack/PySpector/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">Contributor Covenant</a> code of conduct.</p>
+
+          <h4>Development setup</h4>
+          <p>You need Python 3.9+ (3.14 recommended) and the Rust toolchain via <a href="https://rustup.rs/" target="_blank" rel="noopener">rustup</a>. Installing in editable mode compiles the Rust engine and lets you iterate without reinstalling:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="git clone https://github.com/YOURUSERNAME/PySpector.git
+cd PySpector
+python3.14 -m venv venv
+source venv/bin/activate
+pip install -e .
+pyspector --help">Copy</button></div>
+            <pre><code><span class="c"># Fork PySpector, then clone your fork:</span>
+<span class="p">$</span> git <span class="f">clone</span> https://github.com/YOURUSERNAME/PySpector.git
+<span class="p">$</span> <span class="f">cd</span> PySpector
+<span class="p">$</span> python3.14 <span class="o">-m</span> venv venv <span class="o">&amp;&amp;</span> <span class="f">source</span> venv/bin/activate
+<span class="p">$</span> pip <span class="f">install</span> <span class="o">-e</span> .   <span class="c"># compiles the Rust core</span>
+<span class="p">$</span> pyspector <span class="o">--help</span></code></pre>
+          </div>
+
+          <h4>Before opening a PR</h4>
+          <p>Run the test suite and the quality gates; the same checks run in CI and as pre-commit hooks:</p>
+          <div class="codeblock">
+            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="python -m unittest discover tests/unit -v
+ruff check src/
+ruff format src/
+mypy src/">Copy</button></div>
+            <pre><code><span class="p">$</span> python <span class="o">-m</span> unittest discover tests/unit <span class="o">-v</span>   <span class="c"># unit tests</span>
+<span class="p">$</span> ruff <span class="f">check</span> src/ <span class="o">&amp;&amp;</span> ruff <span class="f">format</span> src/          <span class="c"># lint + format</span>
+<span class="p">$</span> mypy src/                                    <span class="c"># type checks</span></code></pre>
+          </div>
+          <p>Then create a feature branch, commit with a clear message (the repo uses conventional commits, e.g. <code>feat: add rule for insecure cookie settings</code>), push to your fork, and <a href="https://github.com/ParzivalHack/PySpector/pulls" target="_blank" rel="noopener">open a pull request</a> describing what you changed. Adding new detection rules (see <a href="#doc-rules">Writing custom rules</a>) is one of the highest-impact ways to contribute.</p>
+        </article>
+
+        <!-- FAQ -->
+        <article class="doc-section" id="doc-faq">
+          <div class="doc-kicker">Project · 02</div>
+          <h3>Frequently asked questions</h3>
+
+          <details class="faq-item">
+            <summary>Why is my scan slow?</summary>
+            <div class="faq-body">If your scan is slow, it's probably because you aren't using PySpector, but rather something else (xD). Jokes apart: scan time grows with the codebase (a 500k LoC project takes longer than a 10k one), but benchmarks consistently show PySpector outpacing other Python SASTs on the same workloads.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Do I need Rust installed to use PySpector?</summary>
+            <div class="faq-body">Yes. PySpector includes a Rust analysis core, so local installation from source requires the Rust toolchain. Install it with <code>rustup</code>, then verify with <code>cargo --version</code> before installing or building PySpector.</div>
+          </details>
+          <details class="faq-item">
+            <summary>What can I scan?</summary>
+            <div class="faq-body">A local Python file, a local project directory, or a public Git repository URL: <code>pyspector scan ./my-python-project</code> or <code>pyspector scan --url https://github.com/username/repo.git</code>.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How do I choose the report format?</summary>
+            <div class="faq-body">Use <code>-f</code> to select <code>json</code>, <code>html</code>, or <code>sarif</code>, and <code>-o</code> to write the report to a file, for example <code>pyspector scan ./project -f sarif -o report.sarif</code>.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How should I handle false positives?</summary>
+            <div class="faq-body">Generate a JSON report, open the triage TUI with <code>pyspector triage report.json</code>, mark findings as ignored with <code>i</code>, and save the baseline with <code>s</code>. Future scans load the baseline automatically so reviewed findings don't reappear.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Are plugins safe to run?</summary>
+            <div class="faq-body">Only trusted plugins are executed automatically. PySpector validates plugin source, records a checksum when you trust a plugin, and warns you if the file changes later. Always review third-party plugin code before trusting it.</div>
+          </details>
+          <details class="faq-item">
+            <summary>When should I use the AI and supply-chain modes?</summary>
+            <div class="faq-body">Use <code>--ai</code> for projects that integrate with LLMs or AI agents; use <code>--supply-chain</code> to check dependencies for known CVEs. They can be combined in a single scan.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How do I integrate PySpector into CI?</summary>
+            <div class="faq-body">Generate SARIF with <code>-f sarif</code> and upload it to a compatible platform such as GitHub Code Scanning. For local guardrails, run <code>./scripts/setup_hooks.sh</code> to install the pre-commit hook.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Does my code ever leave my machine?</summary>
+            <div class="faq-body">No. All analysis (AST parsing, call graph, taint propagation) runs locally in the Rust core. Two optional features touch the network: <code>--supply-chain</code> sends only dependency <em>names and versions</em> to the OSV.dev API, and <code>--url</code> clones the target repository locally before scanning it. Third-party plugins like <code>aipocgen</code> call external APIs only if you configure them, and support <code>dry_run</code> for fully offline use.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Can PySpector re-scan automatically while I code?</summary>
+            <div class="faq-body">Yes: <code>pyspector watch ./src</code> runs a full initial scan, then re-scans whenever a <code>.py</code> file changes, printing only the NEW and RESOLVED findings. Tune the delay with <code>--debounce SECONDS</code>.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How do I exclude files or directories from a scan?</summary>
+            <div class="faq-body">Add an <code>exclude</code> list under <code>[tool.pyspector]</code> in a <code>pyspector.toml</code> and pass it with <code>-c</code>. Common noise (<code>.venv</code>, <code>node_modules</code>, build artifacts, test fixtures) is already excluded by default, and reviewed findings can be silenced permanently with a triage baseline.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Can I write my own detection rules?</summary>
+            <div class="faq-body">Yes. Rules are plain TOML: regex rules for textual patterns, <code>ast_match</code> rules for structural patterns, and taint sources/sinks/sanitizers for data-flow rules. See <a href="#doc-rules">Writing custom rules</a> for the format and a complete example.</div>
+          </details>
+          <details class="faq-item">
+            <summary>What is the <code>.pyspector_cache</code> directory?</summary>
+            <div class="faq-body">An incremental AST cache that makes repeat scans much faster by re-encoding only the functions that changed. It is generated automatically, stored as JSON (never pickle, so nothing executable), safe to delete at any time, and should stay out of version control.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How can I contribute?</summary>
+            <div class="faq-body">Report bugs, suggest enhancements, add detection rules, or improve the Python/Rust core. The <a href="#doc-contributing">Contributing</a> section covers the dev setup and PR checklist, and the full guide lives in <a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.</div>
+          </details>
+          <details class="faq-item">
+            <summary>What license is PySpector under?</summary>
+            <div class="faq-body">PySpector is open source under the <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a>, <a href="https://github.com/ParzivalHack/PySpector/blob/main/NOTICE.md" target="_blank" rel="noopener">© 2025-2026 Tommaso Bona</a>. You're free to use, modify, and distribute it, including commercially, under the <a href="https://github.com/ParzivalHack/PySpector/blob/main/LICENSE" target="_blank" rel="noopener">license terms</a>.</div>
+          </details>
+        </article>
+
+      </div><!-- /docs-content -->
+    </div><!-- /docs-layout -->
+  </div>
+</section>
+
+<!-- ============================================================ SECURITY POLICY -->
+<section class="block" id="security">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Vulnerability Disclosure Program</div>
+      <h2>Found a vulnerability in PySpector itself?</h2>
+      <p>We hold our own code to the standard we scan others against. Valid security research deserves meaningful recognition, including a CVE requested on your behalf through GitHub's CNA partnership.</p>
+    </div>
+
+    <div class="docs-content" style="max-width: 900px;">
+      <article class="doc-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+        <h4 style="margin-top: 0;">How to report</h4>
+        <p>All security issues must be reported <strong>privately</strong> through <a href="https://github.com/ParzivalHack/PySpector/security/advisories/new" target="_blank" rel="noopener">GitHub Security Advisories</a>. This keeps disclosure private until a fix ships, enables direct collaboration with maintainers, and lets us formally request a CVE for you. If you can't use GitHub Advisories, email <a href="mailto:pyspector@protonmail.com">pyspector@protonmail.com</a> (responses may be slower).</p>
+        <p>A strong report includes: a concise descriptive title, a summary of the flaw and its impact, a non-simulated PoC (Python, Bash, or Rust preferred), a CVSS v3.1 vector string, the most applicable CWE identifier(s), and the affected version range (ecosystem <code>pip</code>, package <code>pyspector</code>). We aim to <strong>acknowledge within 48 hours</strong> and provide a <strong>status update within 7 days</strong>.</p>
+
+        <h4>Recognition & incentives</h4>
+        <ul>
+          <li><strong>CVE assignment</strong>: formally requested on your behalf through GitHub's CNA partnership: a permanent, citable record of your finding.</li>
+          <li><strong>Public credit</strong>: named in the GitHub Security Advisory and release notes (unless you request anonymity).</li>
+          <li><strong>Hall of Fame</strong>: reporters of MEDIUM, HIGH, or CRITICAL severity findings are listed in the Security Hall of Fame.</li>
+        </ul>
+        <p>Anonymous submissions are processed equally and respected. Duplicate or low-impact findings may receive private acknowledgement only and are not eligible for CVE requests.</p>
+
+        <h4>Scope</h4>
+        <div class="scope-grid">
+          <div class="scope-card in">
+            <h5><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> In scope</h5>
+            <ul>
+              <li>Command injection (CWE-77/78): e.g. unsanitized input reaching <code>subprocess</code> via <code>--url</code> git clone</li>
+              <li>Arbitrary code execution via malicious <code>.toml</code> rulesets, plugins, or scan targets (CWE-94)</li>
+              <li>Plugin sandbox escape: bypassing trust, checksums, or AST inspection (CWE-693)</li>
+              <li>Path traversal & arbitrary file write (CWE-22/73)</li>
+              <li>SSRF via the REST API <code>/scan</code> endpoint's <code>url</code> parameter (CWE-918)</li>
+              <li>Auth/authorization bypass on the REST API (CWE-306/862)</li>
+              <li>Rust core memory corruption, UAF, buffer or integer overflow (CWE-119/416/190)</li>
+              <li>Supply chain: tampered PyPI package, dependency confusion (CWE-494/829)</li>
+              <li>Information disclosure via output or error messages (CWE-200/532)</li>
+            </ul>
+          </div>
+          <div class="scope-card out">
+            <h5><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 9-6 6M9 9l6 6"/><circle cx="12" cy="12" r="10"/></svg> Out of scope</h5>
+            <ul>
+              <li>Third-party dependency issues not directly exploitable through PySpector</li>
+              <li>Vulnerabilities in code analyzed <em>by</em> PySpector (your own scanned codebase)</li>
+              <li>False negatives / false positives in detection rules: quality issues, not vulns (open an issue instead)</li>
+              <li>Feature requests, UX improvements, non-security bugs</li>
+              <li>DoS requiring unrealistic resources or physical access</li>
+              <li>Issues requiring root/admin privileges or prior access to developer secrets</li>
+              <li>Attacks on project infrastructure (GitHub Actions, PyPI account, domain)</li>
+            </ul>
+          </div>
+        </div>
+
+        <h4>Disclosure timeline</h4>
+        <ol>
+          <li><strong>Private triage</strong>: report received via GitHub Advisory, validated, and acknowledged.</li>
+          <li><strong>Coordination</strong>: fix developed in a private branch; you may be invited to verify the patch.</li>
+          <li><strong>Release</strong>: a patched version is published on PyPI and GitHub.</li>
+          <li><strong>CVE request</strong>: formally requested through GitHub's CNA on your behalf.</li>
+          <li><strong>Advisory publication</strong>: technical details published with full credits.</li>
+        </ol>
+
+        <div class="callout note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg>
+          <span><strong>Safe harbor:</strong> we support good-faith research. You will not face legal action if you act ethically, report promptly, avoid accessing or exfiltrating user data, don't exploit or disclose before a fix, and keep testing within PySpector's open-source codebase. Data exfiltration, destructive testing, or premature public disclosure voids this protection.</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ COMMUNITY -->
+<section class="block alt" id="community">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Community</div>
+      <h2>Security Hall of Fame</h2>
+      <p>PySpector is built by and for the security community. These researchers reported valid findings of MEDIUM severity and above through our disclosure program. Thank you.</p>
+    </div>
+    <div class="hof-grid">
+      <a class="hof-card reveal" href="https://github.com/satoridev01" target="_blank" rel="noopener">
+        <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/89515805?v=4&s=120" alt="satoridev01 avatar" loading="lazy" />
+        <span><span class="hof-name">satoridev01</span><span class="hof-role">Security Core</span></span>
+        <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
+      </a>
+      <a class="hof-card reveal" href="https://github.com/Shinigami81" target="_blank" rel="noopener">
+        <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/122274261?v=4&s=120" alt="Shinigami avatar" loading="lazy" />
+        <span><span class="hof-name">Shinigami</span><span class="hof-role">Plugin Integration</span></span>
+        <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
+      </a>
+      <a class="hof-card reveal" href="https://github.com/fg0x0" target="_blank" rel="noopener">
+        <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/35772301?v=4&s=120" alt="fg0x0 avatar" loading="lazy" />
+        <span><span class="hof-name">fg0x0</span><span class="hof-role">Taint Engine QA</span></span>
+        <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
+      </a>
+    </div>
+
+    <div class="cta-band reveal" style="margin-top: 64px;">
+      <h2>Ship Python with confidence.</h2>
+      <p>One command between your codebase and the vulnerabilities hiding in it.</p>
+      <div class="hero-ctas">
+        <span class="install-cmd">
+          <span class="ps1">$</span><span>pip install pyspector</span>
+          <button onclick="copyText('pip install pyspector', this)" aria-label="Copy install command" title="Copy">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </span>
+        <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ FOOTER -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand">
+          <a class="brand-mark" href="#top" aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="#e8f0f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18 V6 h5.5 a4 4 0 0 1 0 8 H9"/></svg></a>
+          <span><a class="brand-name" href="#top">PySpector</a><br/><a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a></span>
+        </div>
+        <p>High-performance, graph-based static analysis security testing for modern Python projects and large codebases.</p>
+      </div>
+      <div class="footer-col">
+        <h6>Project</h6>
+        <ul>
+          <li><a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">Repository</a></li>
+          <li><a href="https://github.com/ParzivalHack/PySpector/releases" target="_blank" rel="noopener">Releases</a></li>
+          <li><a href="https://pypi.org/project/pyspector/" target="_blank" rel="noopener">PyPI package</a></li>
+          <li><a href="https://github.com/ParzivalHack/PySpector/issues" target="_blank" rel="noopener">Issues</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h6>Documentation</h6>
+        <ul>
+          <li><a href="#doc-install">Installation</a></li>
+          <li><a href="#doc-cli">CLI reference</a></li>
+          <li><a href="#doc-plugins">Plugin system</a></li>
+          <li><a href="#doc-automation">CI/CD integration</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h6>Security & community</h6>
+        <ul>
+          <li><a href="https://github.com/ParzivalHack/PySpector/security/advisories/new" target="_blank" rel="noopener">Report a vulnerability</a></li>
+          <li><a href="#security">Disclosure policy</a></li>
+          <li><a href="#community">Hall of Fame</a></li>
+          <li><a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+          <li><a href="https://linkedin.com/showcase/pyspector/" target="_blank" rel="noopener">LinkedIn</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025-2026 Tommaso Bona · Apache License 2.0</span>
+      <span class="mono">Powered by SecurityCert · Trusted by SatoriCI</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================================ JS -->
+<script>
+// ---------- Mobile menu ----------
+function toggleMobileMenu() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+}
+
+// ---------- Copy helpers ----------
+function flashCopied(btn) {
+  if (!btn) return;
+  const isCopyBtn = btn.classList.contains('copy-btn');
+  if (isCopyBtn) {
+    const prev = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove('copied'); }, 1600);
+  } else {
+    btn.style.color = 'var(--low3)';
+    setTimeout(() => { btn.style.color = ''; }, 1200);
+  }
+}
+function copyText(text, btn) {
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => flashCopied(btn))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove();
+      flashCopied(btn);
+    });
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.copy-btn');
+  if (btn && btn.dataset.copy) copyText(btn.dataset.copy, btn);
+});
+
+// ---------- Tabs ----------
+function switchTab(event, tabId) {
+  const tabs = event.currentTarget.closest('.tabs');
+  tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  tabs.querySelectorAll(':scope > .tab-pane, .tab-pane').forEach(p => p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ---------- GitHub latest release ----------
+async function fetchLatestRelease() {
+  try {
+    const res = await fetch('https://api.github.com/repos/ParzivalHack/PySpector/releases');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.length > 0) {
+      const tag = document.getElementById('release-tag');
+      const link = document.getElementById('release-link');
+      if (tag) tag.textContent = data[0].tag_name;
+      if (link) link.href = data[0].html_url;
+    }
+  } catch (err) { console.error('Release fetch failed:', err); }
+}
+
+// ---------- Taint path geometry (hero) ----------
+function drawTaintPath() {
+  const src = document.getElementById('trace-src');
+  const snk = document.getElementById('trace-snk');
+  const path = document.getElementById('taint-path');
+  const body = src && src.closest('.trace-body');
+  if (!src || !snk || !path || !body) return;
+  const b = body.getBoundingClientRect();
+  const s = src.getBoundingClientRect();
+  const k = snk.getBoundingClientRect();
+  const x = 9; // hug the left gutter
+  const y1 = s.top - b.top + s.height / 2;
+  const y2 = k.top - b.top + k.height / 2;
+  const bow = 26;
+  path.setAttribute('d', `M ${x} ${y1} C ${x + bow} ${y1 + 14}, ${x + bow} ${y2 - 14}, ${x} ${y2}`);
+}
+
+// ---------- Scroll spy (main nav + docs rail) ----------
+function setupScrollSpy() {
+  const mainIds = ['features', 'architecture', 'benchmarks', 'docs', 'security', 'community'];
+  const docIds = Array.from(document.querySelectorAll('.doc-section')).map(el => el.id);
+
+  function onScroll() {
+    const probe = window.scrollY + window.innerHeight * 0.32;
+
+    let current = '';
+    for (const id of mainIds) {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop <= probe) current = id;
+    }
+    document.querySelectorAll('#main-nav a').forEach(a => {
+      a.classList.toggle('active', a.dataset.spy === current);
+    });
+
+    let docCurrent = '';
+    for (const id of docIds) {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop <= probe) docCurrent = id;
+    }
+    document.querySelectorAll('.docs-rail a').forEach(a => {
+      a.classList.toggle('active', a.dataset.docspy === docCurrent && docCurrent !== '');
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
+// ---------- Reveal on scroll ----------
+function setupReveals() {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+}
+
+// ---------- Benchmark bars animate when visible ----------
+function setupBars() {
+  const panel = document.getElementById('bench-bars');
+  if (!panel) return;
+  const grow = () => panel.querySelectorAll('.bar-fill').forEach(b => b.classList.add('grown'));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => { if (en.isIntersecting) { grow(); io.disconnect(); } });
+  }, { threshold: 0.3 });
+  io.observe(panel);
+  // Safety net: never leave the bars empty, even if the observer misfires.
+  window.addEventListener('load', () => setTimeout(grow, 2500));
+}
+
+// ---------- Count-up animation for hero proof stats ----------
+function setupCounts() {
+  const els = document.querySelectorAll('em.count[data-count]');
+  if (!els.length) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // keep static final values
+  const fmt = (v, dec) => v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      const el = en.target;
+      const target = parseFloat(el.dataset.count);
+      const dec = parseInt(el.dataset.decimals || '0', 10);
+      const suffix = el.dataset.suffix || '';
+      const dur = 1300, t0 = performance.now();
+      const frame = (t) => {
+        const p = Math.min((t - t0) / dur, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(target * eased, dec) + suffix;
+        if (p < 1) requestAnimationFrame(frame);
+        else el.textContent = fmt(target, dec) + suffix;
+      };
+      requestAnimationFrame(frame);
+    });
+  }, { threshold: 0.6 });
+  els.forEach(el => io.observe(el));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  fetchLatestRelease();
+  drawTaintPath();
+  setupScrollSpy();
+  setupReveals();
+  setupBars();
+  setupCounts();
+});
+window.addEventListener('resize', drawTaintPath);
+window.addEventListener('load', drawTaintPath);
+</script>
+</body>
 </html>
