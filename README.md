@@ -191,7 +191,7 @@ pyspector scan /path/to/your/project -o report.html -f html
 pyspector scan --url https://github.com/username/repo.git
 ```
 
-### Wizard Mode for Beginners (NEW FEATURE🚀)
+### Wizard Mode for Beginners
 
 <img width="864" height="1098" alt="image" src="https://github.com/user-attachments/assets/5094fef9-73d1-4d34-b530-9498d923a514" />
 
@@ -201,11 +201,9 @@ pyspector scan --url https://github.com/username/repo.git
 pyspector scan --wizard
 ```
 
-
-
 ### Watching for Changes
 
-The `watch` command continuously monitors a directory or file and re-runs the scan whenever a `.py` file is created, modified, or deleted — ideal for real-time feedback during development.
+The `watch` command continuously monitors a directory or file and re-runs the scan whenever a `.py` file is created, modified, or deleted, ideal for real-time feedback during development.
 
 ```bash
 pyspector watch [PATH] [OPTIONS]
