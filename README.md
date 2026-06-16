@@ -192,7 +192,7 @@ pyspector scan /path/to/your/project -o report.html -f html
 pyspector scan --url https://github.com/username/repo.git
 ```
 
-### Wizard Mode for Beginners (NEW FEATURE🚀)
+### Wizard Mode for Beginners
 
 <img width="864" height="1098" alt="image" src="https://github.com/user-attachments/assets/5094fef9-73d1-4d34-b530-9498d923a514" />
 
@@ -201,6 +201,44 @@ pyspector scan --url https://github.com/username/repo.git
 ```bash
 pyspector scan --wizard
 ```
+
+### Watching for Changes
+
+The `watch` command continuously monitors a directory or file and re-runs the scan whenever a `.py` file is created, modified, or deleted, ideal for real-time feedback during development.
+
+```bash
+pyspector watch [PATH] [OPTIONS]
+```
+
+#### Options
+
+| Option | Description |
+|--------|-------------|
+| `path` | Directory or file to watch (required) |
+| `-s, --severity LEVEL` | Minimum severity to report: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (default: `LOW`) |
+| `--ai` | Enable AI/LLM vulnerability scanning rules |
+| `-c, --config FILE` | Path to a `pyspector.toml` config file |
+| `--debounce SECONDS` | Wait time after last change before re-scanning (default: 1.0s) |
+| `--debug` | Show verbose progress output |
+
+#### Examples
+
+- **Watch a project directory for changes:**
+```bash
+pyspector watch ./my-project
+```
+
+- **Watch with minimum HIGH severity:**
+```bash
+pyspector watch ./my-project --severity HIGH
+```
+
+- **Watch with debounce (wait 2s after last change):**
+```bash
+pyspector watch ./my-project --debounce 2.0
+```
+
+On each re-scan, only **new** and **resolved** findings are printed, so you can track your security posture as you code. Exit with `Ctrl+C`.
 
 ### Scan for AI and LLM Vulnerabilities
 
