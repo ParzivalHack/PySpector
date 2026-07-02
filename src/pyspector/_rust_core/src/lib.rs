@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
+use rayon::prelude::*;
 
 mod ast_parser;
 mod graph;
@@ -25,29 +26,46 @@ fn run_scan_py<'py>(
     
     let exclusions: Vec<String> = config.get_item("exclude")?.map_or(Ok(Vec::new()), |v| v.extract())?;
 
-    let ruleset: RuleSet = toml::from_str(&rules_toml_str).map_err(|e| {
+    let mut ruleset: RuleSet = toml::from_str(&rules_toml_str).map_err(|e| {
         pyo3::exceptions::PyValueError::new_err(format!("Failed to parse rules: {}", e))
     })?;
+    // Precompile glob exclusion patterns once instead of on every (file, rule) check.
+    ruleset.finalize();
 
-    let mut py_files: Vec<PythonFile> = Vec::new();
+    // Extracting from Python objects requires the GIL, so this loop must stay
+    // sequential — but it only copies three strings per file, it doesn't parse
+    // anything. The actual parsing (serde_json::from_str over each file's AST,
+    // which can be a sizeable JSON tree) is pure CPU work with no GIL
+    // dependency, so it's deferred and done in parallel below, after detach().
+    let mut raw_files: Vec<(String, String, String)> = Vec::new();
     for item in python_files_data.iter() {
         let file_dict: Bound<'py, PyDict> = item.extract()?;
         let file_path: String = file_dict.get_item("file_path")?.unwrap().extract()?;
         let content: String = file_dict.get_item("content")?.unwrap().extract()?;
         let ast_json: String = file_dict.get_item("ast_json")?.unwrap().extract()?;
 
-        py_files.push(PythonFile::new(file_path, content, ast_json));
+        raw_files.push((file_path, content, ast_json));
     }
 
-    let context = AnalysisContext {
-        root_path: path,
-        exclusions,
-        ruleset,
-        py_files: &py_files,
-    };
-
     // PyO3 renamed `allow_threads` to `detach`
-    let issues = py.detach(|| run_analysis(context));
+    let issues = py.detach(|| {
+        // Parse every file's AST JSON in parallel across all cores instead of
+        // one-at-a-time — previously this ran sequentially before any
+        // Rayon-parallelized analysis even started.
+        let py_files: Vec<PythonFile> = raw_files
+            .into_par_iter()
+            .map(|(file_path, content, ast_json)| PythonFile::new(file_path, content, ast_json))
+            .collect();
+
+        let context = AnalysisContext {
+            root_path: path,
+            exclusions,
+            ruleset,
+            py_files: &py_files,
+        };
+
+        run_analysis(context)
+    });
 
     let py_issues = PyList::empty(py);
     for issue in issues {

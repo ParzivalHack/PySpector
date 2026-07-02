@@ -55,11 +55,16 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         "*_test.py".to_string(),
         "*/test_*.py".to_string(),
     ]);
-    
+    // Precompile each exclusion pattern once — is_excluded() is called once per
+    // file in the walk below and once per file again in the AST pass, so
+    // re-parsing every glob pattern with WildMatch::new() on every call (and
+    // twice per call, at that) adds up on large codebases.
+    let compiled_exclusions = compile_exclusions(&enhanced_exclusions);
+
     for entry in WalkDir::new(root_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
         // Collect all files (not just .py) for regex scanning
-        if path.is_file() && !is_excluded(path, &enhanced_exclusions) {
+        if path.is_file() && !is_excluded(path, &compiled_exclusions) {
             if let Some(s) = path.to_str() {
                 files_to_scan.push(s.to_string());
             }
@@ -89,7 +94,7 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         .par_iter()
         .flat_map(|py_file| {
             let mut findings = Vec::new();
-            if is_excluded(Path::new(&py_file.file_path), &enhanced_exclusions) {
+            if is_excluded(Path::new(&py_file.file_path), &compiled_exclusions) {
                 return findings;
             }
             if let Some(ast) = &py_file.ast {
@@ -154,18 +159,34 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
     issues
 }
 
-fn is_excluded(path: &Path, exclusions: &[String]) -> bool {
+/// Either a precompiled glob pattern or a plain substring, decided once at
+/// compile time (see `compile_exclusions`) instead of re-inspecting the raw
+/// string and reparsing the glob on every file checked.
+enum ExclusionPattern {
+    Glob(wildmatch::WildMatch),
+    Substring(String),
+}
+
+fn compile_exclusions(exclusions: &[String]) -> Vec<ExclusionPattern> {
+    exclusions.iter().map(|ex| {
+        if ex.contains('*') {
+            ExclusionPattern::Glob(wildmatch::WildMatch::new(ex))
+        } else {
+            ExclusionPattern::Substring(ex.clone())
+        }
+    }).collect()
+}
+
+fn is_excluded(path: &Path, exclusions: &[ExclusionPattern]) -> bool {
     let path_str = path.to_str().unwrap_or_default();
     let path_filename = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
-    
-    exclusions.iter().any(|ex| {
-        // Handle glob patterns
-        if ex.contains('*') {
-            wildmatch::WildMatch::new(ex).matches(path_str) || 
-            wildmatch::WildMatch::new(ex).matches(path_filename)
-        } else {
-            // Handle simple substring matching
-            path_str.contains(ex) || path_filename.contains(ex)
+
+    exclusions.iter().any(|ex| match ex {
+        ExclusionPattern::Glob(pattern) => {
+            pattern.matches(path_str) || pattern.matches(path_filename)
+        }
+        ExclusionPattern::Substring(s) => {
+            path_str.contains(s.as_str()) || path_filename.contains(s.as_str())
         }
     })
 }

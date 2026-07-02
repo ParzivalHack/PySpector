@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use crate::issues::Severity;
 use regex::Regex;
+use wildmatch::WildMatch;
 
 /// Global defaults inherited by every rule unless the rule overrides them.
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -14,6 +15,12 @@ pub struct Defaults {
     /// definitions — making it easy to re-enable or override per project.
     #[serde(default)]
     pub disabled_rule_ids: Vec<String>,
+    /// Precompiled form of `exclude_file_patterns`, built once by `RuleSet::finalize()`.
+    /// `WildMatch::new()` parses/allocates on every call, and these patterns are checked
+    /// for every (file, rule) pair during a scan — compiling once avoids redoing that
+    /// parse work millions of times over on a large codebase.
+    #[serde(skip)]
+    pub compiled_exclude_file_patterns: Vec<WildMatch>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -33,9 +40,16 @@ pub struct Rule {
     pub ast_match: Option<String>,
     #[serde(default)]
     pub file_pattern: Option<String>,
+    /// Precompiled form of `file_pattern`, built once by `RuleSet::finalize()`.
+    #[serde(skip)]
+    pub compiled_file_pattern: Option<WildMatch>,
     /// Rule-level glob to exclude specific files (stacks on top of [defaults]).
     #[serde(default)]
     pub exclude_file_pattern: Option<String>,
+    /// Precompiled, comma-split form of `exclude_file_pattern`, built once by
+    /// `RuleSet::finalize()` instead of re-parsing on every exclusion check.
+    #[serde(skip)]
+    pub compiled_exclude_file_pattern: Vec<WildMatch>,
     /// Regex checked against the FULL FILE CONTENT. If the file content matches,
     /// this rule is suppressed for that file regardless of line-level matches.
     /// Use to avoid library-specific FPs: e.g. suppress yaml.load() findings in
@@ -61,19 +75,22 @@ impl Rule {
 
     /// Full exclusion check: path patterns + optional file content regex.
     /// Pass file content when available for the most accurate result.
+    ///
+    /// Glob patterns are matched via the precompiled `compiled_*` fields
+    /// (populated once by `RuleSet::finalize()`) rather than re-parsing the
+    /// pattern strings with `WildMatch::new()` on every call — this check runs
+    /// for every (file, rule) pair during a scan.
     pub fn is_excluded(&self, file_path: &str, content: &str, defaults: &Defaults) -> bool {
         // Check global default exclusions first
-        for pattern in &defaults.exclude_file_patterns {
-            if wildmatch::WildMatch::new(pattern).matches(file_path) {
+        for pattern in &defaults.compiled_exclude_file_patterns {
+            if pattern.matches(file_path) {
                 return true;
             }
         }
         // Then rule-level file path exclusion (supports comma-separated patterns)
-        if let Some(efp) = &self.exclude_file_pattern {
-            for pattern in efp.split(',') {
-                if wildmatch::WildMatch::new(pattern.trim()).matches(file_path) {
-                    return true;
-                }
+        for pattern in &self.compiled_exclude_file_pattern {
+            if pattern.matches(file_path) {
+                return true;
             }
         }
         // Finally, file content exclusion — suppress rule if the file imports
@@ -162,4 +179,28 @@ pub struct RuleSet {
     pub taint_sinks: Vec<TaintSinkRule>,
     #[serde(default, rename = "taint_sanitizer")]
     pub taint_sanitizers: Vec<TaintSanitizerRule>,
+}
+
+impl RuleSet {
+    /// Precompiles every glob exclusion/file pattern into a `WildMatch` once.
+    ///
+    /// Must be called exactly once, right after the ruleset is parsed from TOML
+    /// and before any scanning starts. Without this, `Rule::is_excluded()` and
+    /// the file-pattern check would each call `WildMatch::new()` — which parses
+    /// and allocates — on every single (file, rule) check, of which there are
+    /// millions on a large codebase.
+    pub fn finalize(&mut self) {
+        self.defaults.compiled_exclude_file_patterns = self.defaults.exclude_file_patterns
+            .iter()
+            .map(|p| WildMatch::new(p))
+            .collect();
+
+        for rule in &mut self.rules {
+            rule.compiled_file_pattern = rule.file_pattern.as_deref().map(WildMatch::new);
+            rule.compiled_exclude_file_pattern = rule.exclude_file_pattern
+                .as_deref()
+                .map(|efp| efp.split(',').map(|p| WildMatch::new(p.trim())).collect())
+                .unwrap_or_default();
+        }
+    }
 }
