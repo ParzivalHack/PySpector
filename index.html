@@ -1874,7 +1874,6 @@ mypy src/">Copy</button></div>
             <ul>
               <li>Command injection (CWE-77/78): e.g. unsanitized input reaching <code>subprocess</code> via <code>--url</code> git clone</li>
               <li>Arbitrary code execution via malicious <code>.toml</code> rulesets, plugins, or scan targets (CWE-94)</li>
-              <li>Plugin sandbox escape: bypassing trust, checksums, or AST inspection (CWE-693)</li>
               <li>Path traversal & arbitrary file write (CWE-22/73)</li>
               <li>SSRF via the REST API <code>/scan</code> endpoint's <code>url</code> parameter (CWE-918)</li>
               <li>Auth/authorization bypass on the REST API (CWE-306/862)</li>
@@ -1893,6 +1892,7 @@ mypy src/">Copy</button></div>
               <li>DoS requiring unrealistic resources or physical access</li>
               <li>Issues requiring root/admin privileges or prior access to developer secrets</li>
               <li>Attacks on project infrastructure (GitHub Actions, PyPI account, domain)</li>
+              <li>PySpector's Plugin Sandbox is now explicitly out of scope. Because of hard-to-patch classes of vulnerabilities and low community use of this feature, the whole plugin system will be removed entirely from the PySpector codebase in the next incoming release (v0.2.1).</li>
             </ul>
           </div>
         </div>
@@ -1926,17 +1926,17 @@ mypy src/">Copy</button></div>
     <div class="hof-grid">
       <a class="hof-card reveal" href="https://github.com/satoridev01" target="_blank" rel="noopener">
         <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/89515805?v=4&s=120" alt="satoridev01 avatar" loading="lazy" />
-        <span><span class="hof-name">satoridev01</span><span class="hof-role">Security Core</span></span>
+        <span><span class="hof-name">satoridev01</span><span class="hof-role">CVE-2026-33140</span></span>
         <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
       </a>
       <a class="hof-card reveal" href="https://github.com/Shinigami81" target="_blank" rel="noopener">
         <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/122274261?v=4&s=120" alt="Shinigami avatar" loading="lazy" />
-        <span><span class="hof-name">Shinigami</span><span class="hof-role">Plugin Integration</span></span>
+        <span><span class="hof-name">Shinigami</span><span class="hof-role">CVE-2026-33139</span></span>
         <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
       </a>
       <a class="hof-card reveal" href="https://github.com/fg0x0" target="_blank" rel="noopener">
         <img class="hof-avatar" src="https://avatars.githubusercontent.com/u/35772301?v=4&s=120" alt="fg0x0 avatar" loading="lazy" />
-        <span><span class="hof-name">fg0x0</span><span class="hof-role">Taint Engine QA</span></span>
+        <span><span class="hof-name">fg0x0</span><span class="hof-role">CVE-2026-41206</span></span>
         <span class="hof-shield"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg></span>
       </a>
     </div>
