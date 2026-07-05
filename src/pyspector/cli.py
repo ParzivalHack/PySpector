@@ -19,7 +19,6 @@ from ._ast_encode import AstEncoder
 from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
-from .plugin_system import get_plugin_manager, PluginSecurity
 from .stats import StatsCollector
 import requests
 from urllib.parse import urlparse
@@ -298,85 +297,6 @@ def get_python_file_asts(
     return results
 
 
-def _normalize_plugin_name_cli(raw_name: str) -> tuple[str, bool]:
-    """Normalise plugin identifiers for CLI usage."""
-    stripped = raw_name.strip()
-    normalised = stripped.replace("-", "_")
-    if not normalised:
-        raise click.ClickException("Plugin name cannot be empty.")
-    if not normalised.isidentifier():
-        raise click.ClickException(
-            "Plugin names must be valid Python identifiers "
-            "(letters, numbers, underscores)."
-        )
-    return normalised, normalised != stripped
-
-
-def execute_plugins(
-    findings: list,
-    scan_path: Path,
-    plugin_names: list,
-    plugin_config: dict | None = None,
-    debug: bool = False,
-):
-    """Execute specified plugins on scan results."""
-    if not plugin_names:
-        return
-
-    _dbg(debug, f"\n[*] Loading {len(plugin_names)} plugin(s)...")
-
-    plugin_manager = get_plugin_manager()
-    plugin_config = plugin_config or {}
-
-    for plugin_name in plugin_names:
-        plugin = plugin_manager.load_plugin(
-            plugin_name,
-            require_trusted=True,
-            force_load=False,
-        )
-
-        if not plugin:
-            click.echo(
-                click.style(
-                    f"[!] Failed to load plugin: {plugin_name}",
-                    fg="yellow",
-                )
-            )
-            continue
-
-        config = plugin_config.get(plugin_name, {})
-        original_argv = sys.argv.copy()
-        sys.argv = [original_argv[0] if original_argv else "pyspector"]
-
-        try:
-            result = plugin_manager.execute_plugin(
-                plugin,
-                findings,
-                scan_path,
-                config,
-            )
-        finally:
-            sys.argv = original_argv
-
-        if result.get("success"):
-            _dbg(
-                debug,
-                f"[+] {plugin.metadata.name}: {result.get('message', 'Success')}",
-                fg="green",
-            )
-            if result.get("output_files"):
-                _dbg(debug, "[*] Generated files:")
-                for file_path in result["output_files"]:
-                    _dbg(debug, f"    - {file_path}")
-        else:
-            click.echo(
-                click.style(
-                    f"[!] {plugin.metadata.name}: {result.get('message', 'Failed')}",
-                    fg="red",
-                )
-            )
-
-
 def _scan_to_issues(
     scan_path:      Path,
     config_path:    Optional[Path],
@@ -605,13 +525,6 @@ def run_wizard():
               help="Minimum severity level to report.")
 @click.option('--ai', 'ai_scan', is_flag=True, default=False,
               help="Enable the specialized ruleset for AI/LLM vulnerability scanning.")
-@click.option('--plugin', 'plugins', multiple=True,
-              help="Name of a trusted plugin to run after the scan (repeatable).")
-@click.option('--plugin-config', 'plugin_config_file',
-              type=click.Path(exists=True, path_type=Path),
-              help="Path to a JSON file containing per-plugin configuration.")
-@click.option('--list-plugins', 'list_plugins', is_flag=True,
-              help="List all available plugins and exit.")
 @click.option('--supply-chain', is_flag=True, default=False,
               help="Check project dependencies against the OSV database for known CVEs.")
 @click.option('--syntax-warnings', is_flag=True, default=False,
@@ -635,16 +548,13 @@ def run_scan_command(
     report_format:    str,
     severity_level:   str,
     ai_scan:          bool,
-    plugins:          tuple,
-    plugin_config_file: Optional[Path],
-    list_plugins:     bool,
     supply_chain:     bool,
     syntax_warnings:  bool,
     wizard:           bool,
     show_stats:       bool,
     debug:            bool,
 ):
-    """The main scan command with plugin and stats support."""
+    """The main scan command with stats support."""
 
     _print_banner()
 
@@ -676,8 +586,6 @@ def run_scan_command(
                     params["report_format"],
                     params["severity_level"],
                     params["ai_scan"],
-                    plugins=(),
-                    plugin_config={},
                     supply_chain_scan=params["supply_chain_scan"],
                     syntax_warnings=params["syntax_warnings"],
                     show_stats=params["show_stats"],
@@ -691,8 +599,6 @@ def run_scan_command(
                 params["report_format"],
                 params["severity_level"],
                 params["ai_scan"],
-                plugins=(),
-                plugin_config={},
                 supply_chain_scan=params["supply_chain_scan"],
                 syntax_warnings=params["syntax_warnings"],
                 show_stats=params["show_stats"],
@@ -700,45 +606,10 @@ def run_scan_command(
             )
         return
 
-    # Handle --list-plugins
-    if list_plugins:
-        plugin_manager = get_plugin_manager()
-        available  = plugin_manager.list_available_plugins()
-        registered = plugin_manager.registry.list_plugins()
-
-        click.echo("\n=== Available Plugins ===")
-        if not available:
-            click.echo("No plugins found")
-            click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
-        else:
-            for plugin_name in available:
-                info = next((p for p in registered if p["name"] == plugin_name), None)
-                if info:
-                    status = "trusted" if info.get("trusted") else "untrusted"
-                    click.echo(
-                        f"  - {plugin_name} ({status}) "
-                        f"- v{info.get('version', 'unknown')}"
-                    )
-                else:
-                    click.echo(f"  - {plugin_name} (not registered)")
-        click.echo()
-        return
-
     if not path and not repo_url:
         raise click.UsageError("You must provide either a PATH or a --url to scan.")
     if path and repo_url:
         raise click.UsageError("You cannot provide both a PATH and a --url.")
-
-    # Load plugin config if provided
-    plugin_config: Dict[str, Any] = {}
-    if plugin_config_file:
-        try:
-            with open(plugin_config_file, 'r') as f:
-                plugin_config = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            click.echo(
-                click.style(f"Warning: Could not load plugin config: {e}", fg="yellow")
-            )
 
     if repo_url:
         try:
@@ -762,7 +633,7 @@ def run_scan_command(
                 _execute_scan(
                     Path(temp_dir), config_path, output_file,
                     report_format, severity_level, ai_scan,
-                    plugins, plugin_config, supply_chain,
+                    supply_chain,
                     syntax_warnings, show_stats, debug,
                 )
             except subprocess.CalledProcessError as e:
@@ -785,7 +656,7 @@ def run_scan_command(
         _execute_scan(
             path, config_path, output_file,
             report_format, severity_level, ai_scan,
-            plugins, plugin_config, supply_chain,
+            supply_chain,
             syntax_warnings, show_stats, debug,
         )
 
@@ -797,8 +668,6 @@ def _execute_scan(
     report_format:    str,
     severity_level:   str,
     ai_scan:          bool,
-    plugins:          tuple,
-    plugin_config:    dict,
     supply_chain_scan: bool   = False,
     syntax_warnings:   bool   = False,
     show_stats:        bool   = False,
@@ -994,26 +863,6 @@ def _execute_scan(
             baseline_ignored=_baseline_ignored,
         )
 
-    # ── Plugins ────────────────────────────────────────────────────────────
-    findings_dict = [
-        {
-            "rule_id":     issue.rule_id,
-            "description": issue.description,
-            "file":        issue.file_path,
-            "line":        issue.line_number,
-            "code":        issue.code,
-            "severity":    str(issue.severity).split('.')[-1],
-            "remediation": issue.remediation,
-        }
-        for issue in final_issues
-    ]
-
-    if plugins:
-        try:
-            execute_plugins(findings_dict, scan_path, list(plugins), plugin_config, debug=debug)
-        except click.ClickException as exc:
-            click.echo(click.style(f"[!] Plugin error: {exc}", fg="red"))
-
     # ── Generate Report ────────────────────────────────────────────────────
     reporter = Reporter(final_issues, report_format)
     output   = reporter.generate()
@@ -1079,185 +928,6 @@ def triage_command(report_file: Path):
     except (json.JSONDecodeError, IOError) as e:
         click.echo(click.style(f"Error reading report file: {e}", fg="red"))
 
-
-# --- Plugin Management Commands ---
-
-@click.group(help="Manage PySpector plugins")
-def plugin():
-    """Plugin management commands"""
-    pass
-
-
-@plugin.command(name="list", help="List all available plugins")
-def list_plugins_command():
-    """List available plugins"""
-    plugin_manager = get_plugin_manager()
-    available  = plugin_manager.list_available_plugins()
-    registered = plugin_manager.registry.list_plugins()
-
-    click.echo("\n" + "="*60)
-    click.echo("PySpector Plugins")
-    click.echo("="*60)
-
-    if not available:
-        click.echo("\nNo plugins found in plugin directory")
-        click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
-    else:
-        click.echo(f"\nFound {len(available)} plugin(s):\n")
-
-        for plugin_name in available:
-            info = next((p for p in registered if p["name"] == plugin_name), None)
-
-            if info:
-                is_trusted   = bool(info.get("trusted"))
-                status_text  = "trusted" if is_trusted else "untrusted"
-                status_color = "green"   if is_trusted else "yellow"
-                status       = click.style(status_text, fg=status_color)
-                click.echo(f"  {plugin_name}")
-                click.echo(f"    Status: {status}")
-                click.echo(f"    Version: {info.get('version', 'unknown')}")
-                click.echo(f"    Author: {info.get('author', 'unknown')}")
-                click.echo(f"    Category: {info.get('category', 'general')}")
-            else:
-                click.echo(f"  {plugin_name}")
-                click.echo(
-                    f"    Status: {click.style('not registered', fg='red')}"
-                )
-
-            click.echo()
-
-    click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
-    click.echo("="*60 + "\n")
-
-
-@plugin.command(help="Trust a plugin")
-@click.argument('plugin_name')
-def trust(plugin_name: str):
-    """Trust a plugin"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-    plugin_manager.trust_plugin(plugin_name)
-
-
-@plugin.command(help="Show plugin information")
-@click.argument('plugin_name')
-def info(plugin_name: str):
-    """Show detailed plugin information"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-
-    plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
-
-    if not plugin_path.exists():
-        click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
-        return
-
-    info_data = plugin_manager.registry.get_plugin_info(plugin_name)
-
-    click.echo(f"\n{'='*60}")
-    click.echo(f"Plugin: {plugin_name}")
-    click.echo('='*60)
-
-    if info_data:
-        trusted = (
-            click.style("Yes", fg="green")
-            if info_data.get('trusted')
-            else click.style("No", fg="red")
-        )
-        click.echo(f"Trusted: {trusted}")
-        click.echo(f"Version: {info_data.get('version', 'unknown')}")
-        click.echo(f"Author: {info_data.get('author', 'unknown')}")
-        click.echo(f"Category: {info_data.get('category', 'general')}")
-        click.echo(f"Path: {info_data.get('path', 'unknown')}")
-
-        current_checksum = PluginSecurity.calculate_checksum(plugin_path)
-        stored_checksum  = info_data.get('checksum', '')
-
-        if current_checksum == stored_checksum:
-            click.echo(f"Checksum: {click.style('valid', fg='green')}")
-        else:
-            click.echo(f"Checksum: {click.style('modified', fg='red')}")
-    else:
-        click.echo(click.style("Not registered", fg="yellow"))
-        click.echo(f"Path: {plugin_path}")
-
-    click.echo(f"\n{'='*60}\n")
-
-
-@plugin.command(help="Install a plugin from a file")
-@click.argument('plugin_file', type=click.Path(exists=True, path_type=Path))
-@click.option('--name', help="Custom name for the plugin")
-@click.option('--trust', is_flag=True, help="Automatically trust the plugin")
-def install(plugin_file: Path, name: str, trust: bool):
-    """Install a plugin from a file"""
-    plugin_manager = get_plugin_manager()
-
-    plugin_name, renamed = _normalize_plugin_name_cli(name or plugin_file.stem)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-
-    target_path     = plugin_manager.plugin_dir / f"{plugin_name}.py"
-    overwrite_allowed = False
-
-    if target_path.exists():
-        if not click.confirm(f"Plugin '{plugin_name}' already exists. Overwrite?"):
-            return
-        overwrite_allowed = True
-
-    is_safe, warning = PluginSecurity.validate_plugin_code(plugin_file)
-    if not is_safe:
-        click.echo(click.style(f"Security warning: {warning}", fg="red"))
-        if not trust and not click.confirm("Install anyway?"):
-            return
-
-    if trust:
-        if not plugin_manager.trust_plugin(
-            plugin_name, plugin_file, overwrite=overwrite_allowed
-        ):
-            return
-        click.echo(click.style(f"[+] Plugin stored at {target_path}", fg="green"))
-    else:
-        staged_path = plugin_manager.install_plugin_file(
-            plugin_name, plugin_file, overwrite=overwrite_allowed,
-        )
-        if not staged_path:
-            return
-        click.echo(click.style(f"[+] Plugin installed to {staged_path}", fg="green"))
-        click.echo(f"[*] Run 'pyspector plugin trust {plugin_name}' to trust it")
-
-
-@plugin.command(help="Remove a plugin")
-@click.argument('plugin_name')
-@click.option('--force', is_flag=True, help="Force removal without confirmation")
-def remove(plugin_name: str, force: bool):
-    """Remove a plugin"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-
-    plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
-
-    if not plugin_path.exists():
-        click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
-        return
-
-    if not force:
-        if not click.confirm(f"Remove plugin '{plugin_name}'?"):
-            return
-
-    try:
-        plugin_path.unlink()
-        if plugin_name in plugin_manager.registry.plugins:
-            del plugin_manager.registry.plugins[plugin_name]
-            plugin_manager.registry.save_registry()
-        click.echo(click.style(f"[+] Plugin '{plugin_name}' removed", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error removing plugin: {e}", fg="red"))
 
 
 @click.command(
@@ -1461,4 +1131,3 @@ def watch_command(
 cli.add_command(run_scan_command, name="scan")
 cli.add_command(triage_command,   name="triage")
 cli.add_command(watch_command,    name="watch")
-cli.add_command(plugin)

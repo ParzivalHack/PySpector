@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>PySpector: High-Performance Python/Rust SAST Framework</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="PySpector is a state-of-the-art Python SAST framework with a Rust core: flow-sensitive, inter-procedural taint analysis, AI/LLM security rules, SARIF output and an extensible plugin system." />
+<meta name="description" content="PySpector is a state-of-the-art Python SAST framework with a Rust core: flow-sensitive, inter-procedural taint analysis, AI/LLM security rules, and SARIF output." />
 <meta property="og:title" content="PySpector: Trace taint. Catch vulns. Ship safely." />
 <meta property="og:description" content="Graph-based Python SAST with a Rust core. 71% faster than Bandit, 16.6× faster than Semgrep." />
 <meta property="og:type" content="website" />
@@ -932,11 +932,6 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
         <span class="feature-desc">The <code>--supply-chain</code> mode checks project dependencies against known CVEs, so the code you import is held to the same standard as the code you write.</span>
       </div>
       <div class="feature-card reveal">
-        <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7l8-4 8 4v10l-8 4-8-4Z"/><path d="M4 7l8 4 8-4M12 11v10"/></svg></span>
-        <span class="feature-title">Extensible plugin system</span>
-        <span class="feature-desc">Post-process findings, generate artifacts, or trigger automation, inside a trust model with checksums, AST inspection, and explicit opt-in execution.</span>
-      </div>
-      <div class="feature-card reveal">
         <span class="feature-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span>
         <span class="feature-title">SARIF & CI/CD native</span>
         <span class="feature-desc">First-class SARIF 2.1.0 export plugs directly into GitHub Code Scanning, security dashboards, and DevSecOps aggregation pipelines.</span>
@@ -1038,8 +1033,8 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
   <div class="container">
     <div class="section-head reveal">
       <div class="section-eyebrow">Documentation</div>
-      <h2>Everything you need, from first scan to custom plugins.</h2>
-      <p>The complete PySpector reference: installation, CLI, scan modes, taint concepts, output formats, triage, automation, custom rules, and the plugin SDK.</p>
+      <h2>Everything you need, from first scan to custom rules.</h2>
+      <p>The complete PySpector reference: installation, CLI, scan modes, taint concepts, output formats, triage, automation, and custom rules.</p>
     </div>
 
     <div class="docs-layout">
@@ -1065,8 +1060,6 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
         <div class="docs-rail-group">
           <div class="docs-rail-label">Extend & automate</div>
           <ul>
-            <li><a href="#doc-plugins" data-docspy="doc-plugins">Plugin system</a></li>
-            <li><a href="#doc-authoring" data-docspy="doc-authoring">Authoring plugins</a></li>
             <li><a href="#doc-rules" data-docspy="doc-rules">Writing custom rules</a></li>
             <li><a href="#doc-automation" data-docspy="doc-automation">CI/CD & automation</a></li>
           </ul>
@@ -1217,7 +1210,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
         <article class="doc-section" id="doc-cli">
           <div class="doc-kicker">Reference · 01</div>
           <h3>CLI reference</h3>
-          <p>PySpector exposes four top-level commands: <code>scan</code>, <code>watch</code>, <code>triage</code>, and <code>plugin</code>.</p>
+          <p>PySpector exposes three top-level commands: <code>scan</code>, <code>watch</code>, and <code>triage</code>.</p>
 
           <h4>pyspector scan</h4>
           <div class="doc-table-wrap"><table class="doc-table">
@@ -1230,13 +1223,10 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
               <tr><td><code>--wizard</code></td><td>Interactive guided scan mode for first-time users.</td></tr>
               <tr><td><code>--ai</code></td><td>Enable the AI/LLM security ruleset (prompt injection, insecure tool use, data leakage).</td></tr>
               <tr><td><code>--supply-chain</code></td><td>Check project dependencies for known CVEs.</td></tr>
-              <tr><td><code>--plugin NAME</code></td><td>Run a trusted plugin after the scan. Repeatable.</td></tr>
-              <tr><td><code>--plugin-config FILE</code></td><td>JSON file with per-plugin configuration blocks.</td></tr>
               <tr><td><code>-s, --severity LEVEL</code></td><td>Minimum severity to report: <code>LOW</code> (default), <code>MEDIUM</code>, <code>HIGH</code>, or <code>CRITICAL</code>.</td></tr>
               <tr><td><code>-c, --config FILE</code></td><td>Path to a <code>pyspector.toml</code> configuration file (overrides defaults).</td></tr>
               <tr><td><code>--syntax-warnings</code></td><td>Treat Python <code>SyntaxWarning</code>s as errors and exclude the affected files.</td></tr>
               <tr><td><code>--stats</code></td><td>Print a performance and findings statistics table after the scan (LoC/sec, memory, per-engine breakdown, top rules and files).</td></tr>
-              <tr><td><code>--list-plugins</code></td><td>List all available plugins and exit.</td></tr>
               <tr><td><code>--debug</code></td><td>Show all informational and progress messages; without it only findings, warnings, and errors are printed.</td></tr>
             </tbody>
           </table></div>
@@ -1261,18 +1251,6 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
             <thead><tr><th>Usage</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code>pyspector triage report.json</code></td><td>Open the interactive triage TUI on a previously generated JSON report.</td></tr>
-            </tbody>
-          </table></div>
-
-          <h4>pyspector plugin</h4>
-          <div class="doc-table-wrap"><table class="doc-table">
-            <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
-            <tbody>
-              <tr><td><code>plugin list</code></td><td>Show discovered plugins with trust status, version, and author.</td></tr>
-              <tr><td><code>plugin trust NAME</code></td><td>Validate, checksum, and mark a plugin as trusted.</td></tr>
-              <tr><td><code>plugin info NAME</code></td><td>Display stored metadata and checksum verification status.</td></tr>
-              <tr><td><code>plugin install PATH [--trust]</code></td><td>Install a plugin file, optionally trusting it in the same step.</td></tr>
-              <tr><td><code>plugin remove NAME</code></td><td>Remove a plugin from the local catalogue.</td></tr>
             </tbody>
           </table></div>
 
@@ -1405,184 +1383,9 @@ exclude = [".venv", "node_modules", "migrations", "*/generated/*"]'>Copy</button
           </table></div>
           <p>The baseline file is loaded automatically on subsequent scans, so already-reviewed findings stay suppressed across your whole team and CI pipeline. Commit it alongside your code.</p>
         </article>
-        <!-- PLUGINS -->
-        <article class="doc-section" id="doc-plugins">
-          <div class="doc-kicker">Extend · 01</div>
-          <h3>Plugin system</h3>
-          <p>Plugins post-process findings, generate custom artifacts, or orchestrate follow-up actions after every scan. They run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.</p>
-
-          <h4>Lifecycle</h4>
-          <ol>
-            <li><strong>Discovery:</strong> plugin files live in the repository's <code>PySpector/plugins</code> directory and are discovered automatically.</li>
-            <li><strong>Registration:</strong> trusted plugins are recorded in <code>plugin_registry.json</code> with their checksum and metadata.</li>
-            <li><strong>Validation:</strong> before execution, PySpector validates plugin configuration, statically inspects the source for dangerous APIs, and verifies the on-disk checksum.</li>
-            <li><strong>Execution:</strong> the plugin is initialized, receives the full findings list, and may emit additional files or data. <code>cleanup()</code> is always called at the end.</li>
-          </ol>
-
-          <h4>Managing plugins from the CLI</h4>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector plugin list&#10;pyspector plugin trust plugin_name&#10;pyspector plugin info plugin_name&#10;pyspector plugin install path/to/plugin.py --trust&#10;pyspector plugin remove legacy_plugin">Copy</button></div>
-            <pre><code><span class="p">$</span> pyspector <span class="f">plugin</span> list                              <span class="c"># discovered plugins, trust status, version, author</span>
-<span class="p">$</span> pyspector <span class="f">plugin</span> trust plugin_name                 <span class="c"># validate, checksum, mark as trusted</span>
-<span class="p">$</span> pyspector <span class="f">plugin</span> info plugin_name                  <span class="c"># metadata + checksum verification</span>
-<span class="p">$</span> pyspector <span class="f">plugin</span> install path/to/plugin.py <span class="o">--trust</span>
-<span class="p">$</span> pyspector <span class="f">plugin</span> remove legacy_plugin</code></pre>
-          </div>
-          <p>Only trusted plugins are executed automatically. When you trust a plugin, PySpector calculates its SHA256 checksum and stores the version, author, and description it declares via <code>PluginMetadata</code>. If the file is modified later, you are warned before it runs again.</p>
-
-          <h4>Running plugins during a scan</h4>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="pyspector scan vulnerableapp.py --plugin aipocgen --plugin-config ./PySpector/pluginconfig/aipocgen.json">Copy</button></div>
-            <pre><code><span class="p">$</span> pyspector <span class="f">scan</span> vulnerableapp.py <span class="o">--plugin</span> aipocgen <span class="o">--plugin-config</span> ./PySpector/pluginconfig/aipocgen.json</code></pre>
-          </div>
-          <p>The configuration file is a JSON object whose keys match plugin names. Each plugin receives only its own block:</p>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">json · aipocgen.json</span><button class="copy-btn" data-copy='{
-  "aipocgen": {
-    "api_key": "YOUR-GROQ-KEY",
-    "model": "llama-3.3-70b",
-    "severity_filter": ["HIGH", "CRITICAL"],
-    "max_pocs": 5,
-    "output_dir": "pocs",
-    "dry_run": false
-  }
-}'>Copy</button></div>
-            <pre><code>{
-  <span class="s">"aipocgen"</span>: {
-    <span class="s">"api_key"</span>: <span class="s">"YOUR-GROQ-KEY"</span>,
-    <span class="s">"model"</span>: <span class="s">"llama-3.3-70b"</span>,
-    <span class="s">"severity_filter"</span>: [<span class="s">"HIGH"</span>, <span class="s">"CRITICAL"</span>],
-    <span class="s">"max_pocs"</span>: <span class="k">5</span>,
-    <span class="s">"output_dir"</span>: <span class="s">"pocs"</span>,
-    <span class="s">"dry_run"</span>: <span class="k">false</span>
-  }
-}</code></pre>
-          </div>
-
-          <h4>Security model</h4>
-          <ul>
-            <li><strong>AST-based static inspection</strong> blocks dangerous constructs (<code>eval</code>, <code>exec</code>, <code>subprocess.*</code>) and warns on sensitive-but-acceptable calls like <code>open</code>.</li>
-            <li><strong>Trust workflow:</strong> a plugin must be explicitly trusted before it can run; validation warnings are surfaced in the CLI.</li>
-            <li><strong>Checksum verification:</strong> each trusted plugin has a stored SHA256 hash; any change is flagged before execution.</li>
-            <li><strong>Argument isolation:</strong> <code>sys.argv</code> is reset so Click-based plugins can't accidentally consume the parent CLI arguments.</li>
-            <li><strong>Structured error handling:</strong> exceptions are caught, traced, and reported without aborting the main scan; <code>cleanup()</code> still runs.</li>
-          </ul>
-          <div class="callout danger">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z"/></svg>
-            <span><strong>Review before you trust.</strong> Plugins run with your privileges. Always read third-party plugin code before running <code>pyspector plugin trust</code> or installing with <code>--trust</code>.</span>
-          </div>
-        </article>
-
-        <!-- AUTHORING -->
-        <article class="doc-section" id="doc-authoring">
-          <div class="doc-kicker">Extend · 02</div>
-          <h3>Authoring plugins</h3>
-          <p>Create a Python file in <code>~/.pyspector/plugins/&lt;name&gt;.py</code> and subclass <code>PySpectorPlugin</code>:</p>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">python · my_plugin.py</span><button class="copy-btn" data-copy='from pathlib import Path
-from typing import Any, Dict, List
-
-from pyspector.plugin_system import PySpectorPlugin, PluginMetadata
-
-
-class MyPlugin(PySpectorPlugin):
-    @property
-    def metadata(self) -> PluginMetadata:
-        return PluginMetadata(
-            name="my_plugin",
-            version="0.1.0",
-            author="Your Name",
-            description="Summarises HIGH severity findings",
-            category="reporting",
-        )
-
-    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, str]:
-        if "output_file" not in config:
-            return False, "output_file is required"
-        return True, ""
-
-    def initialize(self, config: Dict[str, Any]) -> bool:
-        self.output = Path(config["output_file"]).resolve()
-        return True
-
-    def process_findings(
-        self,
-        findings: List[Dict[str, Any]],
-        scan_path: Path,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        highs = [f for f in findings if f.get("severity") == "HIGH"]
-        self.output.write_text(f"{len(highs)} HIGH findings\n", encoding="utf-8")
-        return {
-            "success": True,
-            "message": f"Summarised {len(highs)} HIGH findings",
-            "output_files": [str(self.output)],
-        }'>Copy</button></div>
-            <pre><code><span class="k">from</span> pathlib <span class="k">import</span> Path
-<span class="k">from</span> typing <span class="k">import</span> Any, Dict, List
-
-<span class="k">from</span> pyspector.plugin_system <span class="k">import</span> PySpectorPlugin, PluginMetadata
-
-
-<span class="k">class</span> <span class="f">MyPlugin</span>(PySpectorPlugin):
-    <span class="o">@property</span>
-    <span class="k">def</span> <span class="f">metadata</span>(self) -&gt; PluginMetadata:
-        <span class="k">return</span> <span class="f">PluginMetadata</span>(
-            name=<span class="s">"my_plugin"</span>,
-            version=<span class="s">"0.1.0"</span>,
-            author=<span class="s">"Your Name"</span>,
-            description=<span class="s">"Summarises HIGH severity findings"</span>,
-            category=<span class="s">"reporting"</span>,
-        )
-
-    <span class="k">def</span> <span class="f">validate_config</span>(self, config: Dict[str, Any]) -&gt; tuple[bool, str]:
-        <span class="k">if</span> <span class="s">"output_file"</span> <span class="k">not in</span> config:
-            <span class="k">return</span> <span class="k">False</span>, <span class="s">"output_file is required"</span>
-        <span class="k">return</span> <span class="k">True</span>, <span class="s">""</span>
-
-    <span class="k">def</span> <span class="f">initialize</span>(self, config: Dict[str, Any]) -&gt; bool:
-        self.output = <span class="f">Path</span>(config[<span class="s">"output_file"</span>]).<span class="f">resolve</span>()
-        <span class="k">return</span> <span class="k">True</span>
-
-    <span class="k">def</span> <span class="f">process_findings</span>(self, findings, scan_path, **kwargs) -&gt; Dict[str, Any]:
-        highs = [f <span class="k">for</span> f <span class="k">in</span> findings <span class="k">if</span> f.<span class="f">get</span>(<span class="s">"severity"</span>) == <span class="s">"HIGH"</span>]
-        self.output.<span class="f">write_text</span>(<span class="s">f"{len(highs)} HIGH findings\n"</span>, encoding=<span class="s">"utf-8"</span>)
-        <span class="k">return</span> {
-            <span class="s">"success"</span>: <span class="k">True</span>,
-            <span class="s">"message"</span>: <span class="s">f"Summarised {len(highs)} HIGH findings"</span>,
-            <span class="s">"output_files"</span>: [<span class="f">str</span>(self.output)],
-        }</code></pre>
-          </div>
-
-          <h4>Required interface</h4>
-          <div class="doc-table-wrap"><table class="doc-table">
-            <thead><tr><th>Member</th><th>Required</th><th>Purpose</th></tr></thead>
-            <tbody>
-              <tr><td><code>metadata</code></td><td>Yes</td><td>Return a <code>PluginMetadata</code> instance describing the plugin.</td></tr>
-              <tr><td><code>validate_config(config)</code></td><td>Recommended</td><td>Abort gracefully when required settings are missing by returning <code>(False, "reason")</code>.</td></tr>
-              <tr><td><code>initialize(config)</code></td><td>Yes</td><td>Prepare state or dependencies; return <code>False</code> to skip execution.</td></tr>
-              <tr><td><code>process_findings(...)</code></td><td>Yes</td><td>Receive every finding as a dict; return <code>success</code>, <code>message</code>, optional <code>data</code>, and <code>output_files</code>.</td></tr>
-              <tr><td><code>cleanup()</code></td><td>Optional</td><td>Release resources; called even if an exception occurs.</td></tr>
-            </tbody>
-          </table></div>
-
-          <h4>Best practices</h4>
-          <ul>
-            <li>Store API keys and long-lived secrets in <strong>environment variables</strong> and read them during <code>initialize</code>; give helpful errors when credentials are missing.</li>
-            <li>Keep side-effects <strong>inside the scan directory</strong>. When scanning a single file, <code>scan_path</code> is that file, so switch to <code>scan_path.parent</code> before writing outputs.</li>
-            <li>Validate configuration early with <code>validate_config</code>; PySpector surfaces the message in the CLI without executing the plugin.</li>
-            <li>Return meaningful <code>message</code> values and populate <code>output_files</code> so automation can pick up generated artifacts.</li>
-            <li>Support a <code>dry_run</code> switch (see the bundled <code>aipocgen</code> plugin) for air-gapped testing.</li>
-          </ul>
-          <div class="callout tip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4.5-2 7H7c0-2.5-2-4-2-7a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/></svg>
-            <span><strong>Tip:</strong> plugins are plain Python modules, so you can run <code>python my_plugin.py</code> while developing for quick checks before trusting them through the CLI.</span>
-          </div>
-        </article>
-
         <!-- CUSTOM RULES -->
         <article class="doc-section" id="doc-rules">
-          <div class="doc-kicker">Extend · 03</div>
+          <div class="doc-kicker">Extend · 01</div>
           <h3>Writing custom rules</h3>
           <p>Rules define <em>what</em> the engine looks for. They live as TOML files in <code>src/pyspector/rules/</code>, are loaded at runtime, and are applied uniformly across every scanned file. There are three kinds:</p>
           <div class="doc-cards">
@@ -1631,7 +1434,7 @@ ast_match = "Call(func.id=eval)"'>Copy</button></div>
 
         <!-- AUTOMATION -->
         <article class="doc-section" id="doc-automation">
-          <div class="doc-kicker">Extend · 04</div>
+          <div class="doc-kicker">Extend · 02</div>
           <h3>CI/CD & automation</h3>
           <p>PySpector is built for pipelines: fast enough to run on every commit, SARIF-native for platform integration, and shipped with helper scripts for local guardrails.</p>
 
@@ -1798,10 +1601,6 @@ mypy src/">Copy</button></div>
             <div class="faq-body">Generate a JSON report, open the triage TUI with <code>pyspector triage report.json</code>, mark findings as ignored with <code>i</code>, and save the baseline with <code>s</code>. Future scans load the baseline automatically so reviewed findings don't reappear.</div>
           </details>
           <details class="faq-item">
-            <summary>Are plugins safe to run?</summary>
-            <div class="faq-body">Only trusted plugins are executed automatically. PySpector validates plugin source, records a checksum when you trust a plugin, and warns you if the file changes later. Always review third-party plugin code before trusting it.</div>
-          </details>
-          <details class="faq-item">
             <summary>When should I use the AI and supply-chain modes?</summary>
             <div class="faq-body">Use <code>--ai</code> for projects that integrate with LLMs or AI agents; use <code>--supply-chain</code> to check dependencies for known CVEs. They can be combined in a single scan.</div>
           </details>
@@ -1811,7 +1610,7 @@ mypy src/">Copy</button></div>
           </details>
           <details class="faq-item">
             <summary>Does my code ever leave my machine?</summary>
-            <div class="faq-body">No. All analysis (AST parsing, call graph, taint propagation) runs locally in the Rust core. Two optional features touch the network: <code>--supply-chain</code> sends only dependency <em>names and versions</em> to the OSV.dev API, and <code>--url</code> clones the target repository locally before scanning it. Third-party plugins like <code>aipocgen</code> call external APIs only if you configure them, and support <code>dry_run</code> for fully offline use.</div>
+            <div class="faq-body">No. All analysis (AST parsing, call graph, taint propagation) runs locally in the Rust core. Two optional features touch the network: <code>--supply-chain</code> sends only dependency <em>names and versions</em> to the OSV.dev API, and <code>--url</code> clones the target repository locally before scanning it.</div>
           </details>
           <details class="faq-item">
             <summary>Can PySpector re-scan automatically while I code?</summary>
@@ -1873,7 +1672,7 @@ mypy src/">Copy</button></div>
             <h5><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> In scope</h5>
             <ul>
               <li>Command injection (CWE-77/78): e.g. unsanitized input reaching <code>subprocess</code> via <code>--url</code> git clone</li>
-              <li>Arbitrary code execution via malicious <code>.toml</code> rulesets, plugins, or scan targets (CWE-94)</li>
+              <li>Arbitrary code execution via malicious <code>.toml</code> rulesets or scan targets (CWE-94)</li>
               <li>Path traversal & arbitrary file write (CWE-22/73)</li>
               <li>SSRF via the REST API <code>/scan</code> endpoint's <code>url</code> parameter (CWE-918)</li>
               <li>Auth/authorization bypass on the REST API (CWE-306/862)</li>
@@ -1892,7 +1691,7 @@ mypy src/">Copy</button></div>
               <li>DoS requiring unrealistic resources or physical access</li>
               <li>Issues requiring root/admin privileges or prior access to developer secrets</li>
               <li>Attacks on project infrastructure (GitHub Actions, PyPI account, domain)</li>
-              <li>PySpector's Plugin Sandbox is now explicitly out of scope. Because of hard-to-patch classes of vulnerabilities and low community use of this feature, the whole plugin system will be removed entirely from the PySpector codebase in the next incoming release (v0.2.1).</li>
+              <li>PySpector's plugin system was removed entirely in v0.2.1 due to hard-to-patch classes of vulnerabilities and low community use of the feature. It no longer exists in the codebase and is therefore out of scope.</li>
             </ul>
           </div>
         </div>
@@ -1982,7 +1781,7 @@ mypy src/">Copy</button></div>
         <ul>
           <li><a href="#doc-install">Installation</a></li>
           <li><a href="#doc-cli">CLI reference</a></li>
-          <li><a href="#doc-plugins">Plugin system</a></li>
+          <li><a href="#doc-rules">Writing custom rules</a></li>
           <li><a href="#doc-automation">CI/CD integration</a></li>
         </ul>
       </div>
