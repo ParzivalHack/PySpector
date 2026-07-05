@@ -468,6 +468,7 @@ def run_wizard():
     supply_chain = click.confirm("Check dependencies for CVE vulnerabilities?", default=False)
     syntax_warnings = click.confirm("Treat Python SyntaxWarnings as errors?", default=False)
     show_stats = click.confirm("Show scan performance statistics at the end?", default=False)
+    debug = click.confirm("Show verbose debug output?", default=False)
 
     output_file = None
     if report_format != "console":
@@ -487,6 +488,7 @@ def run_wizard():
         "supply_chain_scan": supply_chain,
         "syntax_warnings": syntax_warnings,
         "show_stats":      show_stats,
+        "debug":           debug,
     }
 
 
@@ -574,7 +576,7 @@ def run_scan_command(
                     "URL must be a public GitHub or GitLab repository."
                 )
             with tempfile.TemporaryDirectory() as temp_dir:
-                _dbg(debug, f"[*] Cloning '{params['repo_url']}' into temporary directory...")
+                _dbg(params["debug"], f"[*] Cloning '{params['repo_url']}' into temporary directory...")
                 subprocess.run(
                     ['git', 'clone', '--depth', '1', params["repo_url"], temp_dir],
                     check=True, capture_output=True, text=True,
@@ -589,7 +591,7 @@ def run_scan_command(
                     supply_chain_scan=params["supply_chain_scan"],
                     syntax_warnings=params["syntax_warnings"],
                     show_stats=params["show_stats"],
-                    debug=debug,
+                    debug=params["debug"],
                 )
         else:
             _execute_scan(
@@ -602,7 +604,7 @@ def run_scan_command(
                 supply_chain_scan=params["supply_chain_scan"],
                 syntax_warnings=params["syntax_warnings"],
                 show_stats=params["show_stats"],
-                debug=debug,
+                debug=params["debug"],
             )
         return
 
