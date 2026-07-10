@@ -20,6 +20,7 @@ from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
 from .stats import StatsCollector
+from .messages import handle_msg_flag
 import requests
 from urllib.parse import urlparse
 
@@ -393,6 +394,10 @@ def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
               help="Show all informational/progress messages.")
 @click.option('--wizard', is_flag=True, default=False,
               help="Launch interactive guided scan mode — ideal for first-time users.")
+@click.option('--msg', 'show_msg', type=bool, default=None,
+              help="Enable or disable the rotating contact message shown below the "
+                   "banner (--msg=True / --msg=False). The setting persists across "
+                   "future runs until changed again, so it only needs to be set once.")
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -406,6 +411,7 @@ def cli(
     show_stats: bool,
     debug: bool,
     wizard: bool,
+    show_msg: Optional[bool],
 ):
     """
     PySpector: A high-performance, security-focused static analysis tool
@@ -424,12 +430,14 @@ def cli(
             'show_stats':     show_stats,
             'debug':          debug,
             'wizard':         wizard,
+            'show_msg':       show_msg,
         },
         'watch': {
             'ai_scan':        ai_scan,
             'severity_level': severity_level,
             'config_path':    config_path,
             'debug':          debug,
+            'show_msg':       show_msg,
         },
     }
 
@@ -542,6 +550,10 @@ def run_wizard():
 @click.option('--debug', is_flag=True, default=False,
               help="Show all informational/progress messages and the banner. "
                    "Without this flag only findings, warnings and errors are printed.")
+@click.option('--msg', 'show_msg', type=bool, default=None,
+              help="Enable or disable the rotating contact message shown below the "
+                   "banner (--msg=True / --msg=False). The setting persists across "
+                   "future runs until changed again, so it only needs to be set once.")
 def run_scan_command(
     path:             Optional[Path],
     repo_url:         Optional[str],
@@ -555,10 +567,12 @@ def run_scan_command(
     wizard:           bool,
     show_stats:       bool,
     debug:            bool,
+    show_msg:         Optional[bool],
 ):
     """The main scan command with stats support."""
 
     _print_banner()
+    handle_msg_flag(show_msg)
 
     # --- Wizard Mode ---
     if wizard:
@@ -970,6 +984,12 @@ def triage_command(report_file: Path):
     "--debug", is_flag=True, default=False,
     help="Show verbose progress output.",
 )
+@click.option(
+    "--msg", "show_msg", type=bool, default=None,
+    help="Enable or disable the rotating contact message shown below the "
+         "banner (--msg=True / --msg=False). The setting persists across "
+         "future runs until changed again, so it only needs to be set once.",
+)
 def watch_command(
     path:           Path,
     severity_level: str,
@@ -977,6 +997,7 @@ def watch_command(
     config_path:    Optional[Path],
     debounce:       float,
     debug:          bool,
+    show_msg:       Optional[bool],
 ) -> None:
     """Continuous watch mode: re-scan on every .py file change."""
     try:
@@ -990,6 +1011,7 @@ def watch_command(
         sys.exit(1)
 
     _print_banner()
+    handle_msg_flag(show_msg)
     click.echo(f"[*] Watch mode  —  " + click.style(str(path), bold=True))
     click.echo(
         f"    Severity : {severity_level}"
