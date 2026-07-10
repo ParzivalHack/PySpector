@@ -18,12 +18,13 @@ from .reporting import Reporter
 from .triage import run_triage_tui
 from .plugin_system import get_plugin_manager, PluginSecurity
 from .stats import StatsCollector
+from .git_history import iter_all_blobs, iter_staged_files
 import requests
 from urllib.parse import urlparse
 
 # Import the Rust core from its new location
 try:
-    from pyspector._rust_core import run_scan
+    from pyspector._rust_core import run_scan, scan_blobs
 except ImportError:
     click.echo(click.style("Error: PySpector's core engine module not found.", fg="red"))
     exit(1)
@@ -969,6 +970,222 @@ def triage_command(report_file: Path):
         click.echo(click.style(f"Error reading report file: {e}", fg="red"))
 
 
+# --- Secret Detection Commands ---
+
+def _load_ignored_fingerprints(baseline_path: Path) -> set:
+    """Loads the set of ignored fingerprints from a .pyspector_baseline.json file."""
+    if not baseline_path.exists():
+        return set()
+    try:
+        with baseline_path.open('r') as f:
+            data = json.load(f)
+            return set(data.get("ignored_fingerprints", []))
+    except (json.JSONDecodeError, IOError):
+        return set()
+
+
+def _run_secrets_scan(
+    scan_path: Path,
+    config_path: Optional[Path],
+    history: bool,
+    staged_only: bool,
+    entropy_threshold: Optional[float],
+) -> list:
+    """
+    Runs the secret-detection ruleset over the working tree and/or git
+    history/staged content. Returns a fingerprint-deduplicated list of Issue
+    objects (before baseline/severity filtering).
+    """
+    config = load_config(config_path)
+    if entropy_threshold is not None:
+        config['entropy_threshold'] = entropy_threshold
+
+    rules_toml_str = get_default_rules(secrets_scan=True)
+
+    all_issues = []
+
+    if staged_only:
+        blobs = [
+            {"path": path, "content": content, "commit": "staged"}
+            for path, content in iter_staged_files(scan_path)
+        ]
+        if blobs:
+            all_issues.extend(scan_blobs(blobs, rules_toml_str, config))
+    else:
+        # Working tree: no Python ASTs are needed (secrets are regex/entropy only),
+        # which keeps this scan fast even on large repos.
+        all_issues.extend(run_scan(str(scan_path.resolve()), rules_toml_str, config, []))
+
+        if history:
+            click.echo("[*] Scanning full git history for secrets (this may take a while on large repos)...")
+            blobs = [
+                {"path": path, "content": content, "commit": "history"}
+                for path, content in iter_all_blobs(scan_path)
+            ]
+            if blobs:
+                all_issues.extend(scan_blobs(blobs, rules_toml_str, config))
+
+    seen = set()
+    deduped = []
+    for issue in all_issues:
+        fingerprint = issue.get_fingerprint()
+        if fingerprint not in seen:
+            seen.add(fingerprint)
+            deduped.append(issue)
+
+    return deduped
+
+
+@click.group(help="Detect hardcoded secrets in the working tree, staged changes, or full git history.")
+def secrets():
+    """Secret detection commands."""
+    pass
+
+
+@secrets.command(name="scan", help="Scan for hardcoded secrets.")
+@click.argument('path', type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), required=False, default=Path('.'))
+@click.option('-c', '--config', 'config_path', type=click.Path(exists=True, path_type=Path), help="Path to a pyspector config TOML file.")
+@click.option('-o', '--output', 'output_file', type=click.Path(path_type=Path), help="Path to write the report to.")
+@click.option('-f', '--format', 'report_format', type=click.Choice(['console', 'json', 'sarif', 'html']), default='console', help="Format of the report.")
+@click.option('-s', '--severity', 'severity_level', type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']), default='LOW', help="Minimum severity level to report.")
+@click.option('--history', is_flag=True, default=False, help="Also scan the full git history (all commits), not just the working tree.")
+@click.option('--staged-only', is_flag=True, default=False, help="Scan only staged (git diff --cached) content. Intended for pre-commit hooks.")
+@click.option('--entropy-threshold', type=float, default=None, help="Override the Shannon-entropy threshold (bits/char) for the high-entropy rule.")
+@click.option('--fail-on-findings/--no-fail-on-findings', 'fail_on_findings', default=True, help="Exit non-zero if unbaselined findings remain (default: enabled, for CI use).")
+def secrets_scan_command(
+    path: Path,
+    config_path: Optional[Path],
+    output_file: Optional[Path],
+    report_format: str,
+    severity_level: str,
+    history: bool,
+    staged_only: bool,
+    entropy_threshold: Optional[float],
+    fail_on_findings: bool,
+):
+    """Scan for hardcoded secrets and exit non-zero if any unbaselined findings remain."""
+    if staged_only and history:
+        raise click.UsageError("--staged-only and --history cannot be used together.")
+
+    start_time = time.time()
+    click.echo(f"[*] Starting PySpector secret scan on '{path}'...")
+
+    issues = _run_secrets_scan(path, config_path, history, staged_only, entropy_threshold)
+
+    baseline_path = path / ".pyspector_baseline.json"
+    ignored_fingerprints = _load_ignored_fingerprints(baseline_path)
+    if ignored_fingerprints:
+        click.echo(f"[*] Loaded baseline from '{baseline_path}', ignoring {len(ignored_fingerprints)} known finding(s).")
+
+    severity_map = {'LOW': 0, 'MEDIUM': 1, 'HIGH': 2, 'CRITICAL': 3}
+    min_severity_val = severity_map[severity_level.upper()]
+
+    final_issues = [
+        issue for issue in issues
+        if (severity_map[str(issue.severity).split('.')[-1].upper()] >= min_severity_val
+            and issue.get_fingerprint() not in ignored_fingerprints)
+    ]
+
+    reporter = Reporter(final_issues, report_format)
+    output = reporter.generate()
+
+    if output_file:
+        try:
+            output_file.write_text(output, encoding='utf-8')
+            click.echo(f"\n[+] Report saved to '{output_file}'")
+        except IOError as e:
+            click.echo(click.style(f"Error writing to output file: {e}", fg="red"))
+    else:
+        click.echo(output)
+
+    end_time = time.time()
+    click.echo(f"\n[*] Secret scan finished in {end_time - start_time:.2f} seconds. Found {len(final_issues)} unbaselined issue(s).")
+    if len(issues) > len(final_issues):
+        click.echo(f"[*] Ignored {len(issues) - len(final_issues)} finding(s) based on severity level or baseline.")
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    if fail_on_findings and final_issues:
+        sys.exit(1)
+
+
+@secrets.command(name="baseline", help="Snapshot current secret findings into .pyspector_baseline.json for incremental adoption on legacy repos.")
+@click.argument('path', type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), required=False, default=Path('.'))
+@click.option('-c', '--config', 'config_path', type=click.Path(exists=True, path_type=Path), help="Path to a pyspector config TOML file.")
+@click.option('--history', is_flag=True, default=False, help="Also include findings from the full git history in the baseline.")
+@click.option('--entropy-threshold', type=float, default=None, help="Override the Shannon-entropy threshold (bits/char) for the high-entropy rule.")
+def secrets_baseline_command(path: Path, config_path: Optional[Path], history: bool, entropy_threshold: Optional[float]):
+    """Non-interactively baseline all current secret findings (does not fail/exit non-zero)."""
+    click.echo(f"[*] Scanning '{path}' to build a secrets baseline...")
+
+    issues = _run_secrets_scan(path, config_path, history, staged_only=False, entropy_threshold=entropy_threshold)
+
+    baseline_path = path / ".pyspector_baseline.json"
+    existing_fingerprints = _load_ignored_fingerprints(baseline_path)
+    fingerprints = existing_fingerprints | {issue.get_fingerprint() for issue in issues}
+
+    baseline_path.write_text(
+        json.dumps({"ignored_fingerprints": sorted(fingerprints)}, indent=2),
+        encoding='utf-8',
+    )
+
+    click.echo(click.style(
+        f"[+] Baseline saved to '{baseline_path}' with {len(fingerprints)} ignored finding(s).",
+        fg="green",
+    ))
+    click.echo("[*] Run 'pyspector triage <report.json>' to interactively review or adjust the baseline later.")
+
+
+_SECRETS_PRE_COMMIT_HOOK = """#!/bin/bash
+
+# PySpector secret-detection pre-commit hook
+
+echo "[PySpector] Scanning staged changes for secrets..."
+
+pyspector secrets scan --staged-only --severity LOW
+
+SCAN_RESULT=$?
+
+if [ $SCAN_RESULT -ne 0 ]; then
+    echo ""
+    echo "[PySpector] Commit aborted: secret(s) detected in staged changes."
+    echo "[PySpector] Review the findings above, remove the secret(s), or add them to .pyspector_baseline.json if they are false positives (see 'pyspector secrets baseline')."
+    echo "[PySpector] To bypass in an emergency: git commit --no-verify (not recommended)."
+    exit 1
+fi
+
+echo "[PySpector] No secrets found. Proceeding with commit."
+exit 0
+"""
+
+
+@secrets.command(name="install-hook", help="Install a Git pre-commit hook that runs 'pyspector secrets scan --staged-only' before every commit.")
+@click.option('--force', is_flag=True, help="Overwrite an existing pre-commit hook.")
+def secrets_install_hook_command(force: bool):
+    """Installs the secret-detection pre-commit hook into the current repository."""
+    try:
+        repo_root = Path(subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        click.echo(click.style("Error: Not inside a Git repository.", fg="red"))
+        sys.exit(1)
+
+    hook_path = repo_root / ".git" / "hooks" / "pre-commit"
+
+    if hook_path.exists() and not force:
+        click.echo(click.style(f"Error: '{hook_path}' already exists. Use --force to overwrite.", fg="red"))
+        sys.exit(1)
+
+    hook_path.parent.mkdir(parents=True, exist_ok=True)
+    hook_path.write_text(_SECRETS_PRE_COMMIT_HOOK, encoding='utf-8', newline='\n')
+    hook_path.chmod(hook_path.stat().st_mode | 0o111)
+
+    click.echo(click.style(f"[+] Installed secret-detection pre-commit hook at '{hook_path}'.", fg="green"))
+
+
 # --- Plugin Management Commands ---
 
 @click.group(help="Manage PySpector plugins")
@@ -1153,3 +1370,4 @@ def remove(plugin_name: str, force: bool):
 cli.add_command(run_scan_command, name="scan")
 cli.add_command(triage_command,   name="triage")
 cli.add_command(plugin)
+cli.add_command(secrets)

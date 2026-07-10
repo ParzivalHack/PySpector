@@ -20,14 +20,16 @@ fn severity_rank(s: &Severity) -> u8 {
 }
 
 mod ast_analysis;
-mod config_analysis;
+pub mod config_analysis;
 mod taint_analysis;
+pub mod entropy;
 
 pub struct AnalysisContext<'a> {
     pub root_path: String,
     pub exclusions: Vec<String>,
     pub ruleset: RuleSet,
     pub py_files: &'a [PythonFile],
+    pub entropy_threshold: Option<f64>,
 }
 
 pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
@@ -43,10 +45,10 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         }
     }
     println!("[*] Starting analysis with {} rules", context.ruleset.rules.len());
-    
+
     let root_path = Path::new(&context.root_path);
     let mut files_to_scan: Vec<String> = Vec::new();
-    
+
     // Add common test fixture patterns to exclusions
     let mut enhanced_exclusions = context.exclusions.clone();
     enhanced_exclusions.extend(vec![
@@ -55,7 +57,7 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         "*_test.py".to_string(),
         "*/test_*.py".to_string(),
     ]);
-    
+
     for entry in WalkDir::new(root_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
         // Collect all files (not just .py) for regex scanning
@@ -65,20 +67,34 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
             }
         }
     }
-    
+
     println!("[+] Found {} files to scan ({} non-Python)", files_to_scan.len(),
              files_to_scan.iter().filter(|f| !f.ends_with(".py")).count());
 
-    // Scan all files with regex patterns
+    // Entropy rules' token regexes are compiled once per run, not once per file.
+    let compiled_entropy_rules = config_analysis::compile_entropy_rules(&context.ruleset);
+
+    // Scan all files with regex + entropy patterns
     let t_config = std::time::Instant::now();
     let mut issues: Vec<Issue> = files_to_scan
         .par_iter()
         .flat_map(|file_path| {
-            if let Ok(content) = fs::read_to_string(file_path) {
-                config_analysis::scan_file(file_path, &content, &context.ruleset)
-            } else {
-                Vec::new()
+            let Ok(bytes) = fs::read(file_path) else {
+                return Vec::new();
+            };
+            if config_analysis::looks_binary(&bytes) {
+                return Vec::new();
             }
+            let content = String::from_utf8_lossy(&bytes);
+
+            let mut findings = config_analysis::scan_file(file_path, &content, &context.ruleset);
+            findings.extend(config_analysis::scan_file_entropy(
+                file_path,
+                &content,
+                &compiled_entropy_rules,
+                context.entropy_threshold,
+            ));
+            findings
         })
         .collect();
     println!("[*] Pattern/config scan: {:.2}s → {} issues", t_config.elapsed().as_secs_f64(), issues.len());
@@ -109,7 +125,7 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
     let taint_issues = taint_analysis::analyze_program_for_taint(&call_graph, &context.ruleset);
     println!("[+] Found {} issues from taint analysis", taint_issues.len());
     issues.extend(taint_issues);
-    
+
     let mut seen = HashSet::new();
     issues.retain(|issue| seen.insert(issue.get_fingerprint()));
 
@@ -157,11 +173,11 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
 fn is_excluded(path: &Path, exclusions: &[String]) -> bool {
     let path_str = path.to_str().unwrap_or_default();
     let path_filename = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
-    
+
     exclusions.iter().any(|ex| {
         // Handle glob patterns
         if ex.contains('*') {
-            wildmatch::WildMatch::new(ex).matches(path_str) || 
+            wildmatch::WildMatch::new(ex).matches(path_str) ||
             wildmatch::WildMatch::new(ex).matches(path_filename)
         } else {
             // Handle simple substring matching

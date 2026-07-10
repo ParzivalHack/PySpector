@@ -50,6 +50,13 @@ pub struct Rule {
     /// output for downstream tooling.
     #[serde(default)]
     pub cwe: Option<String>,
+    /// When true, this rule matches secret material: the matched value (or its
+    /// first capture group, if any) is redacted before the match is stored on
+    /// an `Issue`, and the Python-literal comment/string heuristic in
+    /// `config_analysis::is_in_comment_or_string` is bypassed, since secrets
+    /// routinely live inside string literals (.env/.json/.yaml values).
+    #[serde(default)]
+    pub redact: bool,
 }
 
 impl Rule {
@@ -90,6 +97,28 @@ impl Rule {
 }
 
 fn default_confidence() -> String { "Medium".to_string() }
+
+fn default_token_pattern() -> String { r"[A-Za-z0-9+/_=-]{20,}".to_string() }
+
+fn default_min_length() -> usize { 20 }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct EntropyRule {
+    pub id: String,
+    pub description: String,
+    pub severity: Severity,
+    #[serde(default = "default_confidence")]
+    pub confidence: String,
+    #[serde(default)]
+    pub remediation: String,
+    #[serde(default)]
+    pub file_pattern: Option<String>,
+    #[serde(default = "default_token_pattern")]
+    pub token_pattern: String,
+    #[serde(default = "default_min_length")]
+    pub min_length: usize,
+    pub threshold: f64,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct TaintSourceRule {
@@ -162,4 +191,6 @@ pub struct RuleSet {
     pub taint_sinks: Vec<TaintSinkRule>,
     #[serde(default, rename = "taint_sanitizer")]
     pub taint_sanitizers: Vec<TaintSanitizerRule>,
+    #[serde(default, rename = "entropy_rule")]
+    pub entropy_rules: Vec<EntropyRule>,
 }
