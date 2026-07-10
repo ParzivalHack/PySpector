@@ -25,11 +25,6 @@ tests:
       - pyspector scan . --supply-chain
 
   negative:
-    # Don't parse binaries as plugins
-    plugin_install:
-      - pyspector plugin install /bin/ls 
-    scan_plugin-config:
-      - pyspector scan . --plugin-config=/etc/hostname
     # Don't throw SyntaxWarnings
     SyntaxWarning:
       - pyspector scan --url=https://github.com/Instagram/LibCST

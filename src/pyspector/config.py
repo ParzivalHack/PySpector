@@ -1,13 +1,16 @@
 import re
+from copy import deepcopy
 from pathlib import Path
-import toml # type: ignore
-import click # type: ignore
+
+import click  # type: ignore
+import toml  # type: ignore
+
 try:
     # Python 3.9+
     import importlib.resources as pkg_resources
 except ImportError:
     # Fallback for older Python versions
-    import importlib_resources as pkg_resources # type: ignore
+    import importlib_resources as pkg_resources  # type: ignore
 
 # Sentinel placed inside any rule's `exclude_pattern` to inherit the shared
 # placeholder regex declared at [defaults].exclude_pattern_placeholder. The

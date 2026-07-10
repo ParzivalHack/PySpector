@@ -8,15 +8,17 @@ import os
 import subprocess
 import tempfile
 import sys
+import threading
 import warnings
 from importlib.metadata import version as _pkg_version, PackageNotFoundError
 from pathlib import Path
 from typing import Optional, Dict, Any, List, cast
 
+from .ast_cache import IncrementalAstCache, get_cache
+from ._ast_encode import AstEncoder
 from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
-from .plugin_system import get_plugin_manager, PluginSecurity
 from .stats import StatsCollector
 from .git_history import iter_all_blobs, iter_staged_files
 import requests
@@ -49,11 +51,6 @@ def get_startup_note():
         pass
     return random.choice(fallbacks)
 
-_list = list
-_tuple = tuple
-_ast_AST = ast.AST
-
-
 def _dbg(debug: bool, msg: str = "", **style_kwargs) -> None:
     """Emit *msg* via click.echo only when --debug is enabled.
 
@@ -83,6 +80,14 @@ _BANNER = r"""
                 o                        |
              __/>                       / \
 """
+
+
+_SEV_COLOR: Dict[str, str] = {
+    "CRITICAL": "bright_red",
+    "HIGH":     "red",
+    "MEDIUM":   "yellow",
+    "LOW":      "blue",
+}
 
 
 @contextlib.contextmanager
@@ -128,47 +133,6 @@ def _print_banner() -> None:
     click.echo("Made with <3 by github.com/ParzivalHack\n")
     note = get_startup_note()
     click.echo(click.style(f"{note}\n", fg="bright_black", italic=True))
-
-
-_ast_iter_fields = ast.iter_fields
-
-# --- Helper function for AST serialization ---
-class AstEncoder(json.JSONEncoder):
-    def default(self, node):
-        if isinstance(node, _ast_AST):
-            fields = {
-                "node_type": node.__class__.__name__,
-                "lineno": getattr(node, 'lineno', -1),
-                "col_offset": getattr(node, 'col_offset', -1),
-            }
-            child_nodes = {}
-            simple_fields = {}
-            for field, value in _ast_iter_fields(node):
-                if type(value).__name__ == 'list':
-                    if value and all(isinstance(n, _ast_AST) for n in value):
-                        child_nodes[field] = value
-                    else:
-                        simple_fields[field] = str(value) if value else []
-                elif isinstance(value, _ast_AST):
-                    child_nodes[field] = [value]
-                else:
-                    if isinstance(value, bytes):
-                        simple_fields[field] = value.decode('utf-8', errors='replace')
-                    elif isinstance(value, int) and value.bit_length() > 14000:
-                        simple_fields[field] = 0
-                    elif isinstance(value, (int, float, str, bool)) or value is None:
-                        simple_fields[field] = value
-                    else:
-                        simple_fields[field] = str(value)
-
-            fields["children"] = child_nodes
-            fields["fields"] = simple_fields
-            return fields
-        elif isinstance(node, bytes):
-            return node.decode('utf-8', errors='replace')
-        elif hasattr(node, '__dict__'):
-            return str(node)
-        return super().default(node)
 
 
 def should_skip_file(file_path: Path) -> bool:
@@ -221,6 +185,7 @@ def get_python_file_asts(
     _stats_meta: Optional[Dict[str, int]] = None,
     debug: bool = False,
     exclude: Optional[List[str]] = None,
+    cache: Optional[IncrementalAstCache] = None,
 ) -> List[Dict[str, Any]]:
     """
     Recursively finds Python files and returns their content and AST.
@@ -233,6 +198,11 @@ def get_python_file_asts(
             ``{'skipped': N, 'errors': N}`` for use by StatsCollector.
             Defaults to None (no tracking).  Backward-compatible: callers
             that do not pass this argument are unaffected.
+        cache: Optional incremental AST cache. When supplied (and syntax
+            warnings are not being promoted to errors), the cached AST JSON
+            is reused instead of re-running ast.parse + json.dumps. The cache
+            suppresses SyntaxWarning internally, so it is bypassed whenever
+            ``enable_syntax_warnings`` is True to preserve that diagnostic.
     """
     if _stats_meta is not None:
         _stats_meta['skipped'] = 0
@@ -273,8 +243,11 @@ def get_python_file_asts(
 
                 try:
                     content = py_file.read_text(encoding="utf-8")
-                    parsed_ast = ast.parse(content, filename=str(py_file))
-                    ast_json = json.dumps(parsed_ast, cls=AstEncoder)
+                    if cache is not None and not enable_syntax_warnings:
+                        ast_json = cache.get_ast_json(py_file, content)
+                    else:
+                        parsed_ast = ast.parse(content, filename=str(py_file))
+                        ast_json = json.dumps(parsed_ast, cls=AstEncoder)
                     results.append(
                         {
                             "file_path": str(py_file.resolve()),
@@ -325,93 +298,141 @@ def get_python_file_asts(
     return results
 
 
-def _normalize_plugin_name_cli(raw_name: str) -> tuple[str, bool]:
-    """Normalise plugin identifiers for CLI usage."""
-    stripped = raw_name.strip()
-    normalised = stripped.replace("-", "_")
-    if not normalised:
-        raise click.ClickException("Plugin name cannot be empty.")
-    if not normalised.isidentifier():
-        raise click.ClickException(
-            "Plugin names must be valid Python identifiers "
-            "(letters, numbers, underscores)."
-        )
-    return normalised, normalised != stripped
+def _scan_to_issues(
+    scan_path:      Path,
+    config_path:    Optional[Path],
+    severity_level: str,
+    ai_scan:        bool,
+    syntax_warnings: bool = False,
+    debug:          bool  = False,
+    cache:          Optional[IncrementalAstCache] = None,
+) -> List:
+    """Run a scan and return the filtered issue list. Used by watch mode."""
+    config         = load_config(config_path)
+    rules_toml_str = get_default_rules(ai_scan)
 
+    if cache is None:
+        cache = get_cache(scan_path)
 
-def execute_plugins(
-    findings: list,
-    scan_path: Path,
-    plugin_names: list,
-    plugin_config: dict | None = None,
-    debug: bool = False,
-):
-    """Execute specified plugins on scan results."""
-    if not plugin_names:
-        return
-
-    _dbg(debug, f"\n[*] Loading {len(plugin_names)} plugin(s)...")
-
-    plugin_manager = get_plugin_manager()
-    plugin_config = plugin_config or {}
-
-    for plugin_name in plugin_names:
-        plugin = plugin_manager.load_plugin(
-            plugin_name,
-            require_trusted=True,
-            force_load=False,
-        )
-
-        if not plugin:
-            click.echo(
-                click.style(
-                    f"[!] Failed to load plugin: {plugin_name}",
-                    fg="yellow",
-                )
-            )
-            continue
-
-        config = plugin_config.get(plugin_name, {})
-        original_argv = sys.argv.copy()
-        sys.argv = [original_argv[0] if original_argv else "pyspector"]
-
+    baseline_path = (
+        scan_path / ".pyspector_baseline.json"
+        if scan_path.is_dir()
+        else scan_path.parent / ".pyspector_baseline.json"
+    )
+    ignored_fingerprints: set = set()
+    if baseline_path.exists():
         try:
-            result = plugin_manager.execute_plugin(
-                plugin,
-                findings,
-                scan_path,
-                config,
-            )
-        finally:
-            sys.argv = original_argv
-
-        if result.get("success"):
-            _dbg(
-                debug,
-                f"[+] {plugin.metadata.name}: {result.get('message', 'Success')}",
-                fg="green",
-            )
-            if result.get("output_files"):
-                _dbg(debug, "[*] Generated files:")
-                for file_path in result["output_files"]:
-                    _dbg(debug, f"    - {file_path}")
-        else:
-            click.echo(
-                click.style(
-                    f"[!] {plugin.metadata.name}: {result.get('message', 'Failed')}",
-                    fg="red",
+            with baseline_path.open("r") as f:
+                ignored_fingerprints = set(
+                    json.load(f).get("ignored_fingerprints", [])
                 )
-            )
+        except json.JSONDecodeError:
+            pass
+
+    python_files_data = get_python_file_asts(
+        scan_path,
+        enable_syntax_warnings=syntax_warnings,
+        debug=debug,
+        exclude=list(config.get("exclude", [])),
+        cache=cache,
+    )
+
+    with _silence_fd1(not debug):
+        raw_issues = run_scan(
+            str(scan_path.resolve()), rules_toml_str, config, python_files_data
+        )
+
+    severity_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+    min_sev = severity_map[severity_level.upper()]
+
+    return [
+        issue for issue in raw_issues
+        if severity_map[str(issue.severity).split(".")[-1].upper()] >= min_sev
+        and issue.get_fingerprint() not in ignored_fingerprints
+    ]
+
+
+def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
+    """Format one issue as a compact single-line string for watch-mode diffs."""
+    sev = str(issue.severity).split(".")[-1].upper()
+    return (
+        click.style(f"  {tag:<10}", fg=tag_color, bold=True)
+        + "  "
+        + click.style(f"[{sev}]", fg=_SEV_COLOR.get(sev, "white"))
+        + f"  {issue.rule_id}"
+        + f"  {issue.file_path}:{issue.line_number}"
+        + f"  `{issue.code.strip()[:60]}`"
+    )
 
 
 # --- Main CLI Logic ---
 
 @click.group()
-def cli():
+@click.option('--ai', 'ai_scan', is_flag=True, default=False,
+              help="Enable the specialized ruleset for AI/LLM vulnerability scanning.")
+@click.option('-s', '--severity', 'severity_level',
+              type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+              default='LOW', show_default=True,
+              help="Minimum severity level to report.")
+@click.option('-f', '--format', 'report_format',
+              type=click.Choice(['console', 'json', 'sarif', 'html']),
+              default='console', show_default=True,
+              help="Output format: console, json, sarif, or html.")
+@click.option('-c', '--config', 'config_path',
+              type=click.Path(path_type=Path),
+              help="Path to a pyspector.toml configuration file.")
+@click.option('-o', '--output', 'output_file',
+              type=click.Path(path_type=Path),
+              help="Path to write the report to (default: stdout).")
+@click.option('-u', '--url', 'repo_url', type=str,
+              help="URL of a public GitHub or GitLab repository to clone and scan.")
+@click.option('--supply-chain', is_flag=True, default=False,
+              help="Check project dependencies against the OSV database for known CVEs.")
+@click.option('--stats', 'show_stats', is_flag=True, default=False,
+              help="Print a performance and findings statistics table after the scan.")
+@click.option('--debug', is_flag=True, default=False,
+              help="Show all informational/progress messages.")
+@click.option('--wizard', is_flag=True, default=False,
+              help="Launch interactive guided scan mode — ideal for first-time users.")
+@click.pass_context
+def cli(
+    ctx: click.Context,
+    ai_scan: bool,
+    severity_level: str,
+    report_format: str,
+    config_path: Optional[Path],
+    output_file: Optional[Path],
+    repo_url: Optional[str],
+    supply_chain: bool,
+    show_stats: bool,
+    debug: bool,
+    wizard: bool,
+):
     """
     PySpector: A high-performance, security-focused static analysis tool
     for Python, powered by Rust.
     """
+    ctx.ensure_object(dict)
+    ctx.default_map = {
+        'scan': {
+            'ai_scan':        ai_scan,
+            'severity_level': severity_level,
+            'report_format':  report_format,
+            'config_path':    config_path,
+            'output_file':    output_file,
+            'repo_url':       repo_url,
+            'supply_chain':   supply_chain,
+            'show_stats':     show_stats,
+            'debug':          debug,
+            'wizard':         wizard,
+        },
+        'watch': {
+            'ai_scan':        ai_scan,
+            'severity_level': severity_level,
+            'config_path':    config_path,
+            'debug':          debug,
+        },
+    }
 
 
 def run_wizard():
@@ -448,6 +469,7 @@ def run_wizard():
     supply_chain = click.confirm("Check dependencies for CVE vulnerabilities?", default=False)
     syntax_warnings = click.confirm("Treat Python SyntaxWarnings as errors?", default=False)
     show_stats = click.confirm("Show scan performance statistics at the end?", default=False)
+    debug = click.confirm("Show verbose debug output?", default=False)
 
     output_file = None
     if report_format != "console":
@@ -467,11 +489,15 @@ def run_wizard():
         "supply_chain_scan": supply_chain,
         "syntax_warnings": syntax_warnings,
         "show_stats":      show_stats,
+        "debug":           debug,
     }
 
 
 @click.command(
-    help="Scan a directory, file, or remote Git repository for vulnerabilities."
+    help=(
+        "Scan a file, directory, or remote Git repository for vulnerabilities.\n\n"
+        "PATH: local file or directory to scan. Omit PATH and use --url to scan a remote repo."
+    )
 )
 @click.argument(
     'path',
@@ -480,38 +506,34 @@ def run_wizard():
         readable=True, path_type=Path
     ),
     required=False,
+    metavar='[PATH]',
 )
 @click.option('-u', '--url', 'repo_url', type=str,
-              help="URL of a public GitHub/GitLab repository to clone and scan.")
+              help="URL of a public GitHub or GitLab repository to clone and scan.")
 @click.option('-c', '--config', 'config_path',
               type=click.Path(exists=True, path_type=Path),
-              help="Path to a pyspector.toml config file.")
+              help="Path to a pyspector.toml config file (overrides defaults).")
 @click.option('-o', '--output', 'output_file',
               type=click.Path(path_type=Path),
-              help="Path to write the report to.")
+              help="Path to write the report to (default: print to stdout).")
 @click.option('-f', '--format', 'report_format',
               type=click.Choice(['console', 'json', 'sarif', 'html']),
               default='console',
-              help="Format of the report.")
+              show_default=True,
+              help="Output format: console, json, sarif, or html.")
 @click.option('-s', '--severity', 'severity_level',
               type=click.Choice(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
               default='LOW',
+              show_default=True,
               help="Minimum severity level to report.")
 @click.option('--ai', 'ai_scan', is_flag=True, default=False,
-              help="Enable specialized scanning for AI/LLM vulnerabilities.")
-@click.option('--plugin', 'plugins', multiple=True,
-              help="Load and execute a plugin (can be specified multiple times)")
-@click.option('--plugin-config', 'plugin_config_file',
-              type=click.Path(exists=True, path_type=Path),
-              help="Path to plugin configuration JSON file")
-@click.option('--list-plugins', 'list_plugins', is_flag=True,
-              help="List available plugins and exit")
+              help="Enable the specialized ruleset for AI/LLM vulnerability scanning.")
 @click.option('--supply-chain', is_flag=True, default=False,
-              help="Scan dependencies for known CVE vulnerabilities.")
+              help="Check project dependencies against the OSV database for known CVEs.")
 @click.option('--syntax-warnings', is_flag=True, default=False,
-              help="Treat SyntaxWarning as errors during parsing.")
+              help="Treat Python SyntaxWarnings as errors and exclude affected files.")
 @click.option('--wizard', is_flag=True,
-              help="Interactive guided scan for first-time users")
+              help="Launch interactive guided scan mode — ideal for first-time users.")
 @click.option('--stats', 'show_stats', is_flag=True, default=False,
               help=(
                   "Print a detailed performance and findings statistics table "
@@ -529,16 +551,13 @@ def run_scan_command(
     report_format:    str,
     severity_level:   str,
     ai_scan:          bool,
-    plugins:          tuple,
-    plugin_config_file: Optional[Path],
-    list_plugins:     bool,
     supply_chain:     bool,
     syntax_warnings:  bool,
     wizard:           bool,
     show_stats:       bool,
     debug:            bool,
 ):
-    """The main scan command with plugin and stats support."""
+    """The main scan command with stats support."""
 
     _print_banner()
 
@@ -558,7 +577,7 @@ def run_scan_command(
                     "URL must be a public GitHub or GitLab repository."
                 )
             with tempfile.TemporaryDirectory() as temp_dir:
-                _dbg(debug, f"[*] Cloning '{params['repo_url']}' into temporary directory...")
+                _dbg(params["debug"], f"[*] Cloning '{params['repo_url']}' into temporary directory...")
                 subprocess.run(
                     ['git', 'clone', '--depth', '1', params["repo_url"], temp_dir],
                     check=True, capture_output=True, text=True,
@@ -570,12 +589,10 @@ def run_scan_command(
                     params["report_format"],
                     params["severity_level"],
                     params["ai_scan"],
-                    plugins=(),
-                    plugin_config={},
                     supply_chain_scan=params["supply_chain_scan"],
                     syntax_warnings=params["syntax_warnings"],
                     show_stats=params["show_stats"],
-                    debug=debug,
+                    debug=params["debug"],
                 )
         else:
             _execute_scan(
@@ -585,54 +602,17 @@ def run_scan_command(
                 params["report_format"],
                 params["severity_level"],
                 params["ai_scan"],
-                plugins=(),
-                plugin_config={},
                 supply_chain_scan=params["supply_chain_scan"],
                 syntax_warnings=params["syntax_warnings"],
                 show_stats=params["show_stats"],
-                debug=debug,
+                debug=params["debug"],
             )
-        return
-
-    # Handle --list-plugins
-    if list_plugins:
-        plugin_manager = get_plugin_manager()
-        available  = plugin_manager.list_available_plugins()
-        registered = plugin_manager.registry.list_plugins()
-
-        click.echo("\n=== Available Plugins ===")
-        if not available:
-            click.echo("No plugins found")
-            click.echo(f"Plugin directory: {plugin_manager.plugin_dir}")
-        else:
-            for plugin_name in available:
-                info = next((p for p in registered if p["name"] == plugin_name), None)
-                if info:
-                    status = "trusted" if info.get("trusted") else "untrusted"
-                    click.echo(
-                        f"  - {plugin_name} ({status}) "
-                        f"- v{info.get('version', 'unknown')}"
-                    )
-                else:
-                    click.echo(f"  - {plugin_name} (not registered)")
-        click.echo()
         return
 
     if not path and not repo_url:
         raise click.UsageError("You must provide either a PATH or a --url to scan.")
     if path and repo_url:
         raise click.UsageError("You cannot provide both a PATH and a --url.")
-
-    # Load plugin config if provided
-    plugin_config: Dict[str, Any] = {}
-    if plugin_config_file:
-        try:
-            with open(plugin_config_file, 'r') as f:
-                plugin_config = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            click.echo(
-                click.style(f"Warning: Could not load plugin config: {e}", fg="yellow")
-            )
 
     if repo_url:
         try:
@@ -656,7 +636,7 @@ def run_scan_command(
                 _execute_scan(
                     Path(temp_dir), config_path, output_file,
                     report_format, severity_level, ai_scan,
-                    plugins, plugin_config, supply_chain,
+                    supply_chain,
                     syntax_warnings, show_stats, debug,
                 )
             except subprocess.CalledProcessError as e:
@@ -679,7 +659,7 @@ def run_scan_command(
         _execute_scan(
             path, config_path, output_file,
             report_format, severity_level, ai_scan,
-            plugins, plugin_config, supply_chain,
+            supply_chain,
             syntax_warnings, show_stats, debug,
         )
 
@@ -691,8 +671,6 @@ def _execute_scan(
     report_format:    str,
     severity_level:   str,
     ai_scan:          bool,
-    plugins:          tuple,
-    plugin_config:    dict,
     supply_chain_scan: bool   = False,
     syntax_warnings:   bool   = False,
     show_stats:        bool   = False,
@@ -722,6 +700,9 @@ def _execute_scan(
         stats.record_rules(rules_toml_str)
 
     _dbg(debug, f"[*] Starting PySpector scan on '{scan_path}'...")
+
+    # ── AST Cache ─────────────────────────────────────────────────────────
+    cache = get_cache(scan_path)
 
     # ── Load Baseline ─────────────────────────────────────────────────────
     baseline_path = (
@@ -759,6 +740,7 @@ def _execute_scan(
         _stats_meta=ast_stats_meta,
         debug=debug,
         exclude=list(config.get("exclude", [])),
+        cache=cache,
     )
     _dbg(debug, f"[*] Successfully parsed {len(python_files_data)} Python files in {time.time()-t_parse:.2f}s")
 
@@ -883,26 +865,6 @@ def _execute_scan(
             severity_filtered=_severity_filtered,
             baseline_ignored=_baseline_ignored,
         )
-
-    # ── Plugins ────────────────────────────────────────────────────────────
-    findings_dict = [
-        {
-            "rule_id":     issue.rule_id,
-            "description": issue.description,
-            "file":        issue.file_path,
-            "line":        issue.line_number,
-            "code":        issue.code,
-            "severity":    str(issue.severity).split('.')[-1],
-            "remediation": issue.remediation,
-        }
-        for issue in final_issues
-    ]
-
-    if plugins:
-        try:
-            execute_plugins(findings_dict, scan_path, list(plugins), plugin_config, debug=debug)
-        except click.ClickException as exc:
-            click.echo(click.style(f"[!] Plugin error: {exc}", fg="red"))
 
     # ── Generate Report ────────────────────────────────────────────────────
     reporter = Reporter(final_issues, report_format)
@@ -1236,134 +1198,201 @@ def list_plugins_command():
     click.echo("="*60 + "\n")
 
 
-@plugin.command(help="Trust a plugin")
-@click.argument('plugin_name')
-def trust(plugin_name: str):
-    """Trust a plugin"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-    plugin_manager.trust_plugin(plugin_name)
-
-
-@plugin.command(help="Show plugin information")
-@click.argument('plugin_name')
-def info(plugin_name: str):
-    """Show detailed plugin information"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-
-    plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
-
-    if not plugin_path.exists():
-        click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
-        return
-
-    info_data = plugin_manager.registry.get_plugin_info(plugin_name)
-
-    click.echo(f"\n{'='*60}")
-    click.echo(f"Plugin: {plugin_name}")
-    click.echo('='*60)
-
-    if info_data:
-        trusted = (
-            click.style("Yes", fg="green")
-            if info_data.get('trusted')
-            else click.style("No", fg="red")
+@click.command(
+    help=(
+        "Watch a directory or file and re-scan on every .py change.\n\n"
+        "Runs a full initial scan on startup, then re-scans whenever a\n"
+        ".py file is created, modified, or deleted. Only new and resolved\n"
+        "findings are printed after each re-scan."
+    )
+)
+@click.argument(
+    "path",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True,
+        readable=True, path_type=Path,
+    ),
+)
+@click.option(
+    "-s", "--severity", "severity_level",
+    type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+    default="LOW", show_default=True,
+    help="Minimum severity level to report.",
+)
+@click.option(
+    "--ai", "ai_scan", is_flag=True, default=False,
+    help="Enable specialized scanning for AI/LLM vulnerabilities.",
+)
+@click.option(
+    "-c", "--config", "config_path",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to a pyspector.toml config file.",
+)
+@click.option(
+    "--debounce", default=1.0, show_default=True, metavar="SECONDS",
+    help="Wait this many seconds after the last change before re-scanning.",
+)
+@click.option(
+    "--debug", is_flag=True, default=False,
+    help="Show verbose progress output.",
+)
+def watch_command(
+    path:           Path,
+    severity_level: str,
+    ai_scan:        bool,
+    config_path:    Optional[Path],
+    debounce:       float,
+    debug:          bool,
+) -> None:
+    """Continuous watch mode: re-scan on every .py file change."""
+    try:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+    except ImportError:
+        click.echo(
+            "Error: 'watchdog' is required for watch mode.\n"
+            "Install it with:  pip install 'watchdog>=3.0'"
         )
-        click.echo(f"Trusted: {trusted}")
-        click.echo(f"Version: {info_data.get('version', 'unknown')}")
-        click.echo(f"Author: {info_data.get('author', 'unknown')}")
-        click.echo(f"Category: {info_data.get('category', 'general')}")
-        click.echo(f"Path: {info_data.get('path', 'unknown')}")
+        sys.exit(1)
 
-        current_checksum = PluginSecurity.calculate_checksum(plugin_path)
-        stored_checksum  = info_data.get('checksum', '')
+    _print_banner()
+    click.echo(f"[*] Watch mode  —  " + click.style(str(path), bold=True))
+    click.echo(
+        f"    Severity : {severity_level}"
+        f"  |  AI rules : {'on' if ai_scan else 'off'}"
+        f"  |  Debounce : {debounce}s"
+        f"  |  Ctrl+C to stop\n"
+    )
 
-        if current_checksum == stored_checksum:
-            click.echo(f"Checksum: {click.style('valid', fg='green')}")
+    _DIVIDER      = "─" * 62
+    _BOLD_DIVIDER = "─" * 62
+
+    # ── Shared mutable state (accessed from background timer threads) ─────
+    cache   = get_cache(path)
+    # Use containers so nested functions can mutate without `nonlocal`
+    _state:   Dict[str, Any] = {"prev_fps": {}}  # fingerprint -> issue
+    _changed: set             = set()
+    _lock                     = threading.Lock()
+    _pending: List            = [None]            # [Optional[threading.Timer]]
+
+    # ── Initial full scan ─────────────────────────────────────────────────
+    click.echo("[~] Running initial scan...")
+    try:
+        initial = _scan_to_issues(
+            path, config_path, severity_level, ai_scan, debug=debug, cache=cache
+        )
+    except Exception as exc:
+        click.echo(f"[!] Initial scan failed: {exc}")
+        initial = []
+
+    _state["prev_fps"] = {iss.get_fingerprint(): iss for iss in initial}
+
+    if initial:
+        click.echo(f"\n[!] Initial scan: {len(initial)} issue(s) found:")
+        click.echo(Reporter(initial, "console").generate())
+    else:
+        click.echo("[+] Initial scan: clean — no issues found.")
+
+    click.echo("\n[*] Watching for changes...\n")
+
+    # ── Re-scan + diff ────────────────────────────────────────────────────
+    def _do_rescan() -> None:
+        with _lock:
+            changed_snapshot = set(_changed)
+            _changed.clear()
+            _pending[0] = None
+
+        ts = time.strftime("%H:%M:%S")
+        if changed_snapshot:
+            names = sorted(Path(p).name for p in changed_snapshot)
+            label = ", ".join(names[:3]) + (
+                f" (+{len(names) - 3} more)" if len(names) > 3 else ""
+            )
         else:
-            click.echo(f"Checksum: {click.style('modified', fg='red')}")
-    else:
-        click.echo(click.style("Not registered", fg="yellow"))
-        click.echo(f"Path: {plugin_path}")
+            label = "re-scan"
 
-    click.echo(f"\n{'='*60}\n")
+        click.echo(_BOLD_DIVIDER)
+        click.echo(f"[{ts}] " + click.style(label, bold=True))
+        click.echo(_BOLD_DIVIDER)
 
-
-@plugin.command(help="Install a plugin from a file")
-@click.argument('plugin_file', type=click.Path(exists=True, path_type=Path))
-@click.option('--name', help="Custom name for the plugin")
-@click.option('--trust', is_flag=True, help="Automatically trust the plugin")
-def install(plugin_file: Path, name: str, trust: bool):
-    """Install a plugin from a file"""
-    plugin_manager = get_plugin_manager()
-
-    plugin_name, renamed = _normalize_plugin_name_cli(name or plugin_file.stem)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
-
-    target_path     = plugin_manager.plugin_dir / f"{plugin_name}.py"
-    overwrite_allowed = False
-
-    if target_path.exists():
-        if not click.confirm(f"Plugin '{plugin_name}' already exists. Overwrite?"):
-            return
-        overwrite_allowed = True
-
-    is_safe, warning = PluginSecurity.validate_plugin_code(plugin_file)
-    if not is_safe:
-        click.echo(click.style(f"Security warning: {warning}", fg="red"))
-        if not trust and not click.confirm("Install anyway?"):
+        try:
+            new_issues = _scan_to_issues(
+                path, config_path, severity_level, ai_scan, debug=debug, cache=cache
+            )
+        except Exception as exc:
+            click.echo(f"  [!] Scan error: {exc}")
+            click.echo(_DIVIDER + "\n")
             return
 
-    if trust:
-        if not plugin_manager.trust_plugin(
-            plugin_name, plugin_file, overwrite=overwrite_allowed
-        ):
-            return
-        click.echo(click.style(f"[+] Plugin stored at {target_path}", fg="green"))
-    else:
-        staged_path = plugin_manager.install_plugin_file(
-            plugin_name, plugin_file, overwrite=overwrite_allowed,
+        new_fps  = {iss.get_fingerprint(): iss for iss in new_issues}
+        prev_fps = _state["prev_fps"]
+
+        appeared = [iss for fp, iss in new_fps.items()  if fp not in prev_fps]
+        resolved = [iss for fp, iss in prev_fps.items() if fp not in new_fps]
+
+        if not appeared and not resolved:
+            click.echo("  No change in findings.")
+        else:
+            for iss in appeared:
+                click.echo(_fmt_watch_issue(iss, "NEW", "red"))
+            for iss in resolved:
+                click.echo(_fmt_watch_issue(iss, "RESOLVED", "green"))
+
+        n_new = len(appeared)
+        n_res = len(resolved)
+        total = len(new_issues)
+        click.echo(_DIVIDER)
+        click.echo(
+            f"  {click.style(f'Active: {total}', bold=True)}"
+            f"  ·  +{n_new} new"
+            f"  ·  -{n_res} resolved\n"
         )
-        if not staged_path:
-            return
-        click.echo(click.style(f"[+] Plugin installed to {staged_path}", fg="green"))
-        click.echo(f"[*] Run 'pyspector plugin trust {plugin_name}' to trust it")
 
+        _state["prev_fps"] = new_fps
 
-@plugin.command(help="Remove a plugin")
-@click.argument('plugin_name')
-@click.option('--force', is_flag=True, help="Force removal without confirmation")
-def remove(plugin_name: str, force: bool):
-    """Remove a plugin"""
-    plugin_manager = get_plugin_manager()
-    plugin_name, renamed = _normalize_plugin_name_cli(plugin_name)
-    if renamed:
-        click.echo(f"[*] Normalised plugin name to '{plugin_name}'")
+    # ── Debounce scheduler ────────────────────────────────────────────────
+    def _schedule(file_path: str) -> None:
+        with _lock:
+            _changed.add(file_path)
+            if _pending[0] is not None:
+                _pending[0].cancel()
+            t = threading.Timer(debounce, _do_rescan)
+            _pending[0] = t
+            t.start()
 
-    plugin_path = plugin_manager.plugin_dir / f"{plugin_name}.py"
+    # ── Watchdog handler: only cares about .py files ──────────────────────
+    class _PyHandler(FileSystemEventHandler):
+        def _dispatch(self, event) -> None:
+            if event.is_directory:
+                return
+            for attr in ("src_path", "dest_path"):
+                p = getattr(event, attr, "")
+                if p and p.endswith(".py"):
+                    _schedule(p)
+                    return
 
-    if not plugin_path.exists():
-        click.echo(click.style(f"Plugin '{plugin_name}' not found", fg="red"))
-        return
+        def on_modified(self, event) -> None: self._dispatch(event)
+        def on_created(self,  event) -> None: self._dispatch(event)
+        def on_deleted(self,  event) -> None: self._dispatch(event)
+        def on_moved(self,    event) -> None: self._dispatch(event)
 
-    if not force:
-        if not click.confirm(f"Remove plugin '{plugin_name}'?"):
-            return
+    watch_root = str(path if path.is_dir() else path.parent)
+    observer   = Observer()
+    observer.schedule(_PyHandler(), path=watch_root, recursive=True)
+    observer.start()
 
     try:
-        plugin_path.unlink()
-        if plugin_name in plugin_manager.registry.plugins:
-            del plugin_manager.registry.plugins[plugin_name]
-            plugin_manager.registry.save_registry()
-        click.echo(click.style(f"[+] Plugin '{plugin_name}' removed", fg="green"))
-    except Exception as e:
-        click.echo(click.style(f"Error removing plugin: {e}", fg="red"))
+        while observer.is_alive():
+            observer.join(timeout=1.0)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        with _lock:
+            if _pending[0] is not None:
+                _pending[0].cancel()
+        observer.stop()
+        observer.join()
+        click.echo("\n[*] Watch mode stopped.")
 
 
 # Add commands to the CLI group

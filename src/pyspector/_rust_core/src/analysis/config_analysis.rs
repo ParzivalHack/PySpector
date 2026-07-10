@@ -8,15 +8,21 @@ pub fn scan_file(file_path: &str, content: &str, ruleset: &RuleSet) -> Vec<Issue
     let mut issues = Vec::new();
     let lines: Vec<&str> = content.lines().collect();
 
+    // is_in_comment_or_string() depends only on the line's own text, not on
+    // which rule is being checked. Computing it once per line here (instead of
+    // once per rule per line) turns an O(rules × lines) redundant recomputation
+    // into O(lines) for every file — regex rules run against every scanned file.
+    let code_line_mask: Vec<bool> = lines.iter().map(|line| !is_in_comment_or_string(line)).collect();
+
     for rule in &ruleset.rules {
         // Skip rules that only have AST patterns (no regex patterns)
         if rule.pattern.is_none() {
             continue;
         }
 
-        // Match file pattern if specified
-        if let Some(file_pattern) = &rule.file_pattern {
-            if !wildmatch::WildMatch::new(file_pattern).matches(file_path) {
+        // Match file pattern if specified (precompiled once in RuleSet::finalize())
+        if let Some(compiled_pattern) = &rule.compiled_file_pattern {
+            if !compiled_pattern.matches(file_path) {
                 continue;
             }
         }

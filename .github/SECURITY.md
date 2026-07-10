@@ -44,10 +44,9 @@ We consider valid reports for any security-relevant flaw that meaningfully affec
 
 **Code & Command Execution**
 - **Command Injection (CWE-77/78)**: like, unsanitized user input reaching `subprocess` calls in the CLI or Rust API, such as through the `--url` git clone functionality.
-- **Arbitrary Code Execution via Malicious Input (CWE-94)**: crafting a `.toml` ruleset, plugin, or scan target that causes PySpector to execute attacker-controlled code during a scan.
-- **Plugin Sandbox Escape (CWE-693)**: bypassing the plugin trust model, checksum verification, or AST-based static inspection to load and execute untrusted code.
+- **Arbitrary Code Execution via Malicious Input (CWE-94)**: crafting a `.toml` ruleset or scan target that causes PySpector to execute attacker-controlled code during a scan.
 **Path & File System**
-- **Path Traversal (CWE-22)**: manipulating scan paths, output file paths, or plugin file resolution to read or write files outside the intended scope.
+- **Path Traversal (CWE-22)**: manipulating scan paths or output file paths to read or write files outside the intended scope.
 - **Arbitrary File Write via Output Parameters (CWE-73)**: like, the REST API or CLI writing scan output to an attacker-controlled location on disk.
 **Network & API**
 - **Server-Side Request Forgery (CWE-918)**: abusing the REST API `/scan` endpoint's `url` parameter to make the server issue requests to internal or otherwise unreachable hosts.
@@ -71,6 +70,7 @@ The following are **not eligible** under this program:
 - Denial-of-Service attacks requiring unrealistic resource usage or physical access.
 - Vulnerabilities requiring root/admin privileges or prior access to developer secrets.
 - Attacks on PySpector's infrastructure (like, GitHub Actions, PyPI account, domain).
+- PySpector's plugin system was removed entirely in v0.2.1 due to hard-to-patch classes of vulnerabilities and low community use of the feature. It no longer exists in the codebase and is therefore out of scope.
 
 ## 🕒 Disclosure & Fix Timeline
 

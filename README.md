@@ -5,12 +5,15 @@
 [![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
-[![latest release](https://img.shields.io/badge/latest%20release-v0.1.9--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.1.9-beta)
+[![latest release](https://img.shields.io/badge/latest%20release-v0.2.0--beta-blue)](https://github.com/ParzivalHack/PySpector/releases/tag/v0.2.0-beta)
 [![PyPI version](https://img.shields.io/pypi/v/pyspector?color=blue&label=pypi%20package)](https://pypi.org/project/pyspector/)
 [![Python version](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Rust version](https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![CodeQL Status](https://github.com/ParzivalHack/PySpector/workflows/CodeQL/badge.svg)](https://github.com/ParzivalHack/PySpector/actions/workflows/github-code-scanning/codeql)
 [![Trusted By](https://img.shields.io/badge/Trusted_By-SatoriCI-97ca00?logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAxNi4wLjAsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4KCjxzdmcKICAgdmVyc2lvbj0iMS4xIgogICBpZD0iTGF5ZXJfMSIKICAgeD0iMHB4IgogICB5PSIwcHgiCiAgIHdpZHRoPSI1MTIiCiAgIGhlaWdodD0iNTEyIgogICB2aWV3Qm94PSIwIDAgNTExLjk5OTk5IDUxMS45OTk5OSIKICAgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMTE5MC41NTEgODQxLjg5IgogICB4bWw6c3BhY2U9InByZXNlcnZlIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzCiAgIGlkPSJkZWZzMjUiIC8+Cgo8cG9seWdvbgogICBmaWxsLXJ1bGU9ImV2ZW5vZGQiCiAgIGNsaXAtcnVsZT0iZXZlbm9kZCIKICAgZmlsbD0iIzBmM2I1ZiIKICAgcG9pbnRzPSI3MTYuMzkzLDUwMy43MjQgNjA0LjI1NCw1NjguNDY4IDQ5Mi4xMTksNTAzLjcyNCAzNzkuOTgsNDM4Ljk4MiAzNzkuOTgsMzA5LjQ4OSAzNzkuOTgsMjc4LjIzNCA2MjQuNjYxLDQxOS41MDEgNjAzLjA3OSw0MzEuOTYzIDQyMy4zMDIsMzI4LjE3OSA0MjMuMzAyLDQxMy45NjcgNTEzLjc3OSw0NjYuMjA2IDYwNC4yNTQsNTE4LjQ0MiA2OTQuNzMyLDQ2Ni4yMDYgNzc2LjUxMSw0MTguOTgyIDM3OS45OCwxOTAuMDM3IDM1OC42MTQsMTc3LjcwNyAzNTguNjE0LDI2NS45MDUgMzU4LjYxNCwzMDkuNDg5IDM1OC42MTQsNDUxLjMxMyA0ODEuNDMxLDUyMi4yMjEgNjA0LjI1NCw1OTMuMTM3IDcyNy4wNyw1MjIuMjIxIDg0MS4yMTEsNDU2LjMzIDgxOS44NDUsNDQ0ICIKICAgaWQ9InBvbHlnb24yIgogICB0cmFuc2Zvcm09Im1hdHJpeCgwLjg4MzQxMzk2LDAsMCwwLjg4MzQxMzk2LC0yNzcuNjM4NTcsLTE3LjUxNzc3MykiCiAgIHN0eWxlPSJmaWxsOiMwNWE1NTE7ZmlsbC1vcGFjaXR5OjEiIC8+PHBvbHlnb24KICAgZmlsbC1ydWxlPSJldmVub2RkIgogICBjbGlwLXJ1bGU9ImV2ZW5vZGQiCiAgIGZpbGw9IiNhNWNkMzkiCiAgIHBvaW50cz0iNDkxLjczNSwxMTUuNTA3IDYwMy44NzQsNTAuNzcgNzE2LjAwOSwxMTUuNTA3IDgyOC4xNDcsMTgwLjI0OCA4MjguMTQ3LDMwOS43MyA4MjguMTQ3LDM0MC45OTQgNTgzLjQ2NiwxOTkuNzI5IDYwNS4wNSwxODcuMjY1IDc4NC44MjgsMjkxLjA1MSA3ODQuODI4LDIwNS4yNjIgNjk0LjM0OSwxNTMuMDI0IDYwMy44NzQsMTAwLjc4NiA1MTMuMzk1LDE1My4wMjQgNDMxLjYxOCwyMDAuMjQ4IDgyOC4xNDcsNDI5LjE5MiA4NDkuNTE0LDQ0MS41MjIgODQ5LjUxNCwzNTMuMzI1IDg0OS41MTQsMzA5LjczIDg0OS41MTQsMTY3LjkxNyA3MjYuNjk3LDk3LjAwOCA2MDMuODc0LDI2LjA5MiA0ODEuMDU4LDk3LjAwOCAzNjYuOTE5LDE2Mi44OTggMzg4LjI4NSwxNzUuMjI5ICIKICAgaWQ9InBvbHlnb240IgogICB0cmFuc2Zvcm09Im1hdHJpeCgwLjg4MzQxMzk2LDAsMCwwLjg4MzQxMzk2LC0yNzcuNjM4NTcsLTE3LjUxNzc3MykiCiAgIHN0eWxlPSJmaWxsOiMwNmFlZWY7ZmlsbC1vcGFjaXR5OjEiIC8+PHBhdGgKICAgZmlsbC1ydWxlPSJldmVub2RkIgogICBjbGlwLXJ1bGU9ImV2ZW5vZGQiCiAgIGZpbGw9IiNhNWNkMzkiCiAgIGQ9Im0gMjU2LjE2Nzg0LDM0Mi42NjQyNCAxOC4wMjk2LDEwLjQxNTQ1IC0xOC4wMjk2LDEwLjQwNzUgdiA3Ni45OTMwNiBsIDc5LjkyNzc3LC00Ni4xNDk1NSA3Mi4yNDY0NywtNDEuNzE1NjkgaCAwLjAwNiBMIDI1Ni4xNjc4NCwyNjQuNzUwNjYgWiBtIDAsMTYzLjgwMzUgdiAtMjEuNzk1NTkgbCA5OS4wNjUxNiwtNTcuMTk5MjkgOTEuMzkwOTQsLTUyLjc1NjYgMTguODc1MDMsMTAuODkzMzggLTEwMC44Mjc1Nyw1OC4yMTUyMSB6IgogICBpZD0icGF0aDYiCiAgIHN0eWxlPSJzdHJva2Utd2lkdGg6MC44ODM0MTQ7ZmlsbDojYTZjZTM5O2ZpbGwtb3BhY2l0eToxIiAvPjxwYXRoCiAgIGZpbGwtcnVsZT0iZXZlbm9kZCIKICAgY2xpcC1ydWxlPSJldmVub2RkIgogICBmaWxsPSIjMGYzYjVmIgogICBkPSJtIDQ1My45NTgwNSwyODMuNzIyODYgLTEyMy4xMDEwOSwtNzEuMDcwNjUgLTY3LjQ3NjA0LDM4Ljk1MjM3IDE5MC41NzcxMywxMTAuMDMxODYgMTguODc1MDIsMTAuODkyNDkgViAyOTQuNjE0NDcgMjU2LjEwMjA0IDEzMC44MjI0NSBsIC0wLjEyMTkxLC0wLjA2ODkgLTE4Ljg3NDE0LDEwLjg5NDI2IDAuMTIxMDMsMC4wNjg5IHYgMTE0LjM4NTMzIHogbSAtMTA0LjAyOTA3LC04Mi4wODQxOCA2NS42MzU4OSwtMzcuODg5NjIgMC4xMjEwMywwLjA2NzEgdiA3NS43ODQ1NSB6IgogICBpZD0icGF0aDgiCiAgIHN0eWxlPSJzdHJva2Utd2lkdGg6MC44ODM0MTQ7ZmlsbDojMDA3NmJmO2ZpbGwtb3BhY2l0eToxIiAvPjwvc3ZnPgo=)](https://satori.ci/)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/dPq2N34hts)
+
+> Need more from PySpector? [Contact us!](mailto:pyspector@biz.securitycert.it)
 
 PySpector is a State-of-the-Art Static Analysis Security Testing (SAST) framework, built in Rust for next-gen performances, made for modern Python projects and large codebases. Unlike traditional linters, PySpector utilizes a **Flow-Sensitive, Inter-Procedural Taint Engine** to track untrusted data across complex function boundaries and control flow structures.
 
@@ -27,10 +30,10 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [How It Works](#how-it-works)
 - [Performance Benchmarks](#performance-benchmarks)
 - [Usage](#usage)
-- [Plugin System](#plugin-system-new-feature)
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
+- [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Quick Demo
 
@@ -190,7 +193,7 @@ pyspector scan /path/to/your/project -o report.html -f html
 pyspector scan --url https://github.com/username/repo.git
 ```
 
-### Wizard Mode for Beginners (NEW FEATURE🚀)
+### Wizard Mode for Beginners
 
 <img width="864" height="1098" alt="image" src="https://github.com/user-attachments/assets/5094fef9-73d1-4d34-b530-9498d923a514" />
 
@@ -199,6 +202,44 @@ pyspector scan --url https://github.com/username/repo.git
 ```bash
 pyspector scan --wizard
 ```
+
+### Watching for Changes
+
+The `watch` command continuously monitors a directory or file and re-runs the scan whenever a `.py` file is created, modified, or deleted, ideal for real-time feedback during development.
+
+```bash
+pyspector watch [PATH] [OPTIONS]
+```
+
+#### Options
+
+| Option | Description |
+|--------|-------------|
+| `path` | Directory or file to watch (required) |
+| `-s, --severity LEVEL` | Minimum severity to report: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (default: `LOW`) |
+| `--ai` | Enable AI/LLM vulnerability scanning rules |
+| `-c, --config FILE` | Path to a `pyspector.toml` config file |
+| `--debounce SECONDS` | Wait time after last change before re-scanning (default: 1.0s) |
+| `--debug` | Show verbose progress output |
+
+#### Examples
+
+- **Watch a project directory for changes:**
+```bash
+pyspector watch ./my-project
+```
+
+- **Watch with minimum HIGH severity:**
+```bash
+pyspector watch ./my-project --severity HIGH
+```
+
+- **Watch with debounce (wait 2s after last change):**
+```bash
+pyspector watch ./my-project --debounce 2.0
+```
+
+On each re-scan, only **new** and **resolved** findings are printed, so you can track your security posture as you code. Exit with `Ctrl+C`.
 
 ### Scan for AI and LLM Vulnerabilities
 
@@ -219,141 +260,6 @@ pyspector scan /path/to/your/project --ai
 ```bash
 pyspector scan /path/to/your/project --supply-chain
 ```
-
-## Plugin System
-
-<img width="1298" height="538" alt="image" src="https://github.com/user-attachments/assets/f2ad2a5e-c8e3-4723-a729-f318fef07e24" />
-PySpector ships with an extensible plugin architecture that lets you post-process findings, generate custom artefacts, or orchestrate follow-up actions after every scan. Plugins run in-process once the Rust core returns the final issue list, so they see exactly the same normalized data that drives the built-in reports.
-
-### Lifecycle Overview
-
-1. **Discovery** - Plugin files live in the repository's `plugins` directory (`PySpector/plugins`) and are discovered automatically.
-2. **Registration** - Trusted plugins are recorded in `PySpector/plugins/plugin_registry.json` together with their checksum and metadata.
-3. **Validation** - Before execution PySpector validates plugin configuration, statically inspects the source for dangerous APIs, and checks the on-disk checksum.
-4. **Execution** - The plugin is initialized, receives the full findings list, and can emit additional files or data. `cleanup()` is always called at the end.
-
-### Managing Plugins from the CLI
-
-The CLI exposes helper commands for maintaining your local catalogue:
-
-```bash
-pyspector plugin list               # Show discovered plugins, trust status, version, author
-pyspector plugin trust plugin_name     # Validate, checksum, and mark a plugin as trusted
-pyspector plugin info plugin_name     # Display stored metadata and checksum verification
-pyspector plugin install path/to/plugin.py --trust
-pyspector plugin remove legacy_plugin
-```
-
-Only trusted plugins are executed automatically. When you trust a plugin PySpector calculates its SHA256 checksum and stores the version, author, and description that the plugin declares via `PluginMetadata`. If the file is modified later you will be warned before it runs again. To trust a plugin:
-
-```bash
-pyspector plugin install ./PySpector/plugins/aipocgen.py --trust
-```
-
-### Running Plugins During a Scan
-
-Use one or more `--plugin` flags during `pyspector scan` and provide a JSON configuration file if the plugin expects custom settings:
-
-```bash
-pyspector scan vulnerableapp.py --plugin aipocgen --plugin-config ./PySpector/pluginconfig/aipocgen.json
-```
-
-The configuration file must be a JSON object whose keys match plugin names, for example:
-
-```json
-{
-  "aipocgen": {
-    "api_key": "YOUR-GROQ-KEY",
-    "model": "llama-3.3-70b",
-    "severity_filter": ["HIGH", "CRITICAL"],
-    "max_pocs": 5,
-    "output_dir": "pocs",
-    "dry_run": false
-  }
-}
-```
-
-Each plugin receives only its own configuration block. Results are printed in the CLI, and any paths returned in the `output_files` list are shown under “Generated files”.
-
-### Authoring a Plugin
-
-Create a new Python file in `~/.pyspector/plugins/<name>.py` and subclass `PySpectorPlugin`:
-
-```python
-from pathlib import Path
-from typing import Any, Dict, List
-
-from pyspector.plugin_system import PySpectorPlugin, PluginMetadata
-
-
-class MyPlugin(PySpectorPlugin):
-    @property
-    def metadata(self) -> PluginMetadata:
-        return PluginMetadata(
-            name="my_plugin",
-            version="0.1.0",
-            author="Your Name",
-            description="Summarises HIGH severity findings",
-            category="reporting",
-        )
-
-    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, str]:
-        if "output_file" not in config:
-            return False, "output_file is required"
-        return True, ""
-
-    def initialize(self, config: Dict[str, Any]) -> bool:
-        self.output = Path(config["output_file"]).resolve()
-        return True
-
-    def process_findings(
-        self,
-        findings: List[Dict[str, Any]],
-        scan_path: Path,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        highs = [f for f in findings if f.get("severity") == "HIGH"]
-        self.output.write_text(f"{len(highs)} HIGH findings\n", encoding="utf-8")
-        return {
-            "success": True,
-            "message": f"Summarised {len(highs)} HIGH findings",
-            "output_files": [str(self.output)],
-        }
-```
-
-Your plugin must implement the following:
-
-- **`metadata`** – Return a `PluginMetadata` instance describing the plugin.
-- **`validate_config(config)`** _(optional but recommended)_ – Abort gracefully when required settings are missing by returning `(False, "reason")`.
-- **`initialize(config)`** – Prepare state or dependencies; return `False` to skip execution.
-- **`process_findings(findings, scan_path, **kwargs)`\*\* – Receive every finding as a dictionary and return a result object containing:
-  - `success`: boolean status
-  - `message`: short summary for the CLI
-  - `data`: optional serializable payload
-  - `output_files`: optional list of generated file paths
-- **`cleanup()`** _(optional)_ – Release resources; called even if an exception occurs.
-
-Tip: Plugins are plain Python modules, so you can run `python my_plugin.py` while developing to perform quick checks before trusting them through the CLI.
-
-### Configuration Tips and Best Practices
-
-- Store API keys or long-lived secrets in environment variables and read them during `initialize`. Provide helpful error messages when credentials are missing.
-- Keep side-effects inside the scan directory. When PySpector scans a single file `scan_path` is that file, so the reference plugins switch to `scan_path.parent` before writing outputs.
-- Validate configuration early using `validate_config`; PySpector surfaces the error message in the CLI without executing the plugin.
-- Return meaningful `message` values and populate `output_files` so automation can pick up generated artifacts.
-- Document optional switches such as `dry_run` (see the bundled `aipocgen` plugin for an example) to support air-gapped testing.
-
-### Security Model
-
-The plugin manager enforces several safeguards:
-
-- **AST-based static inspection** blocks dangerous constructs (`eval`, `exec`, `subprocess.*`, etc.) and prints warnings when sensitive but acceptable calls (e.g., `open`) are used.
-- **Trust workflow** – you must explicitly trust a plugin before it can run; the CLI informs you about any warnings produced during validation.
-- **Checksum verification** – each trusted plugin has a stored SHA256 hash; changes are flagged before execution.
-- **Argument isolation** – the runner resets `sys.argv` to a minimal value so Click-based plugins cannot consume the parent CLI arguments accidentally.
-- **Structured error handling** – exceptions are caught, traced, and reported without aborting the main scan, and `cleanup()` still runs.
-
-Together these measures let you extend PySpector confidently while maintaining a secure supply chain for third-party automation.
 
 ## Triaging and Baselining Findings
 
@@ -477,3 +383,88 @@ For continuous monitoring, you can schedule regular scans of your projects using
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
+
+## Frequently Asked Questions
+
+<details>
+<summary>Why is my scan slow?</summary>
+
+If your scan is slow, it's probably because you aren't using PySpector, but rather something else (xD). Jokes apart, scan speed reduces as the codebase grows (so, for example, a 500k LoC codebase will take more time to get scanned, than a 10k LoC one), but recent benchmarks still demonstrate that PySpector is faster than other Python SASTs  
+
+</details>
+
+<details>
+<summary>Do I need Rust installed to use PySpector?</summary>
+
+Yes. PySpector includes a Rust analysis core, so local installation from source requires the Rust toolchain. Install Rust with [rustup](https://rustup.rs/), then verify the setup with `cargo --version` before installing or building PySpector.
+
+</details>
+
+<details>
+<summary>What can I scan?</summary>
+
+You can use `pyspector scan` with a local Python file, a local project directory, or a public Git repository URL:
+
+```bash
+pyspector scan ./my-python-project
+pyspector scan --url https://github.com/username/repo.git
+```
+
+</details>
+
+<details>
+<summary>How can I choose the report format?</summary>
+
+Use `-f` to select the output format and `-o` to write the report to a file. For example:
+
+```bash
+pyspector scan ./my-python-project -f json -o report.json
+pyspector scan ./my-python-project -f html -o report.html
+pyspector scan ./my-python-project -f sarif -o report.sarif
+```
+
+</details>
+
+<details>
+<summary>How should I handle false positives?</summary>
+
+Generate a JSON report, then open the triage TUI:
+
+```bash
+pyspector scan ./my-python-project -f json -o report.json
+pyspector triage report.json
+```
+
+Inside the TUI, mark findings as ignored (by pressing `i` inside the TUI) and save the baseline (with `s`). Future scans can use that baseline so already reviewed findings do not keep reappearing.
+
+</details>
+
+<details>
+<summary>When should I use the AI and supply-chain modes?</summary>
+
+Use `--ai` when scanning projects that integrate with LLMs or AI agents. Use `--supply-chain` when you want dependency checks for known CVEs:
+
+```bash
+pyspector scan ./my-python-project --ai
+pyspector scan ./my-python-project --supply-chain
+```
+
+</details>
+
+<details>
+<summary>How do I enable debug output?</summary>
+
+Use `--debug` to print verbose internal details during analysis, which is useful for troubleshooting false positives or unexpected results:
+
+```bash
+pyspector scan ./my-python-project --debug
+```
+
+</details>
+
+<details>
+<summary>How can I integrate PySpector into CI?</summary>
+
+For CI pipelines, generate SARIF with `-f sarif` and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use `./scripts/setup_hooks.sh` to install the provided pre-commit hook.
+
+</details>

@@ -41,6 +41,7 @@ setup(
         "sarif-om>=1.0",
         "jinja2>=3.0",
         "textual>=0.60",
+        "watchdog>=3.0",
         'importlib_resources; python_version < "3.9"',
     ],
     entry_points={
