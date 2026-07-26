@@ -389,7 +389,7 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 <details>
 <summary>Why is my scan slow?</summary>
 
-If your scan is slow, it's probably because you aren't using PySpector, but rather something else (xD). Jokes apart, scan speed reduces as the codebase grows (so, for example, a 500k LoC codebase will take more time to get scanned, than a 10k LoC one), but recent benchmarks still demonstrate that PySpector is faster than other Python SASTs  
+A slow scan? Are you sure you're using PySpector? (xD). Jokes apart, scan speed reduces as the codebase grows (so, for example, a 500k LoC codebase will take more time to get scanned, than a 10k LoC one), but recent benchmarks show that PySpector still achieves a scanning throughput substantially higher than other Python SAST tools
 
 </details>
 
