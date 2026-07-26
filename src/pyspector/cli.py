@@ -66,6 +66,13 @@ def _dbg(debug: bool, msg: str = "", **style_kwargs) -> None:
         click.echo(msg)
 
 
+def _write_stdout(text: str) -> None:
+    """Write text to stdout without going through Click's Windows console shim."""
+    stream = getattr(sys, "__stdout__", None) or sys.stdout
+    stream.write(text)
+    stream.flush()
+
+
 _BANNER = r"""
   o__ __o                   o__ __o                                         o
  <|     v\                 /v     v\                                       <|>
@@ -890,7 +897,7 @@ def _execute_scan(
         except IOError as e:
             click.echo(click.style(f"Error writing to output file: {e}", fg="red"))
     else:
-        click.echo(output)
+        _write_stdout(output)
 
     end_time = time.time()
     _dbg(
