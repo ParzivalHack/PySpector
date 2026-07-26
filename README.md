@@ -342,15 +342,19 @@ The generated `report.sarif` file can then be uploaded to supported security pla
 
 ### Git Pre-Commit Hook
 
-To ensure that no new high-severity issues are introduced into the codebase, you can set up a Git pre-commit hook. This hook will automatically scan staged Python files before each commit and block the commit if any HIGH or CRITICAL issues are found.
 
-**To set up the hook, run the following script from the root of your Git repository:**
+To ensure that no new high-severity issues enter your codebase, you can set up a Git pre-commit hook using the pre-commit (https://pre-commit.com) framework. The hook will scan your staged Python files before each commit and block it if any HIGH or CRITICAL issues are found.
 
-```bash
-./scripts/setup_hooks.sh
-```
+Add the following to your .pre-commit-config.yaml:
+repos:
+  - repo: https://github.com/ParzivalHack/PySpector
+    rev: v0.2.1-beta
+    hooks:
+      - id: pyspector
+Then install the hook:
+pre-commit install
 
-This script creates an executable .git/hooks/pre-commit file that performs the check. You can bypass the hook for a specific commit by using the --no-verify flag with your git commit command.
+You can bypass the hook for a single commit using git commit --no-verify.
 
 ## Scheduled Scans with Cron
 
@@ -465,6 +469,6 @@ pyspector scan ./my-python-project --debug
 <details>
 <summary>How can I integrate PySpector into CI?</summary>
 
-For CI pipelines, generate SARIF with `-f sarif` and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use `./scripts/setup_hooks.sh` to install the provided pre-commit hook.
+For CI pipelines, generate SARIF with -f sarif and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use the Git Pre-Commit Hook described above.
 
 </details>
