@@ -1,11 +1,9 @@
-repos:
-  - repo: local
-    hooks:
-      - id: pyspector
-        name: PySpector SAST
-        entry: pyspector
-        args: ["scan", "."]
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true
+- id: pyspector
+  name: PySpector
+  description: High-Performance Python/Rust Graph-Based SAST Framework
+  entry: pyspector scan .
+  language: python
+  types: [python]
+  pass_filenames: false
+  always_run: true
+  additional_dependencies: ['pyspector']
