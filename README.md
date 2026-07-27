@@ -221,6 +221,7 @@ pyspector watch [PATH] [OPTIONS]
 | `-c, --config FILE` | Path to a `pyspector.toml` config file |
 | `--debounce SECONDS` | Wait time after last change before re-scanning (default: 1.0s) |
 | `--debug` | Show verbose progress output |
+| `--msg BOOL` | Enable or disable the rotating contact message shown below the banner (`--msg=True` / `--msg=False`). The setting persists across future runs until changed again, so it only needs to be set once |
 
 #### Examples
 
@@ -458,6 +459,17 @@ Use `--debug` to print verbose internal details during analysis, which is useful
 
 ```bash
 pyspector scan ./my-python-project --debug
+```
+
+</details>
+
+<details>
+<summary>How do I disable the contact message shown below the banner?</summary>
+
+PySpector occasionally shows a rotating message below the banner with contact info. Use `--msg=False` to turn it off, or `--msg=True` to turn it back on. The setting is persisted to a per-user preferences file, so it only needs to be set once and applies to all future runs of `scan`, `watch`, and the wizard:
+
+```bash
+pyspector scan ./my-python-project --msg=False
 ```
 
 </details>
