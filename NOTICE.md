@@ -1,8 +1,8 @@
 PySpector - Copyright © 2025-2026 Tommaso Bona
 
-This product includes software developed by Tommaso Bona.
+This product includes software ("PySpector") developed by Tommaso Bona.
 
-Licensed under the Apache License,Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+Licensed under the Apache License,Version 2.0 (the "License"); you may not use this software except in compliance with the License.
 
 You may obtain a copy of the License at:
 http://www.apache.org/licenses/LICENSE-2.0  
