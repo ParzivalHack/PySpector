@@ -221,6 +221,7 @@ pyspector watch [PATH] [OPTIONS]
 | `-c, --config FILE` | Path to a `pyspector.toml` config file |
 | `--debounce SECONDS` | Wait time after last change before re-scanning (default: 1.0s) |
 | `--debug` | Show verbose progress output |
+| `--msg BOOL` | Enable or disable the rotating contact message shown below the banner (`--msg=True` / `--msg=False`). The setting persists across future runs until changed again, so it only needs to be set once |
 
 #### Examples
 
@@ -341,7 +342,6 @@ pyspector scan ./project -f sarif -o report.sarif
 The generated `report.sarif` file can then be uploaded to supported security platforms for analysis and visualization.
 
 ### Git Pre-Commit Hook
-
 
 To ensure that no new high-severity issues enter your codebase, you can set up a Git pre-commit hook using the [pre-commit](https://pre-commit.com) framework. The hook will scan your staged Python files before each commit and block it if any HIGH or CRITICAL issues are found.
 
@@ -474,8 +474,19 @@ pyspector scan ./my-python-project --debug
 </details>
 
 <details>
+<summary>How do I disable the contact message shown below the banner?</summary>
+
+PySpector occasionally shows a rotating message below the banner with contact info. Use `--msg=False` to turn it off, or `--msg=True` to turn it back on. The setting is persisted to a per-user preferences file, so it only needs to be set once and applies to all future runs of `scan`, `watch`, and the wizard:
+
+```bash
+pyspector scan ./my-python-project --msg=False
+```
+
+</details>
+
+<details>
 <summary>How can I integrate PySpector into CI?</summary>
 
-For CI pipelines, generate SARIF with -f sarif and upload it to a compatible security platform such as GitHub Code Scanning. For local guardrails, use the Git Pre-Commit Hook described above.
+For CI pipelines, generate SARIF with `-f sarif` and upload it to a compatible security platform, such as GitHub Code Scanning. For local guardrails, use the Git Pre-Commit Hook described above.
 
 </details>
