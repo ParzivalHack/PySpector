@@ -170,6 +170,7 @@ a.brand-sub:hover { color: #c084fc; }
   font-family: var(--font-mono); font-size: 0.72rem; color: var(--g4);
   border: 1px solid var(--g1); background: var(--bg1);
   padding: 4px 11px; border-radius: 999px; text-decoration: none;
+  white-space: nowrap;
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 .release-pill:hover { border-color: var(--high2); color: var(--white); }
@@ -655,7 +656,7 @@ section.block:not(.alt) .bench-panel { background: var(--bg1); }
 
 /* Footer */
 footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); padding: 56px 0 32px; }
-.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
 .footer-brand p { color: var(--g4); font-size: 0.86rem; margin-top: 14px; max-width: 36ch; }
 .footer-col h6 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--g3); margin-bottom: 14px; font-weight: 600; }
 .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
@@ -683,7 +684,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
   .bench-grid { grid-template-columns: 1fr; }
   .docs-layout { grid-template-columns: 1fr; gap: 0; }
   .docs-rail { display: none; }
-  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr; }
   .hof-grid { grid-template-columns: 1fr; }
 }
 
@@ -782,8 +783,9 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
 
     <div class="nav-actions">
       <a class="release-pill" id="release-link" href="https://github.com/ParzivalHack/PySpector/releases" target="_blank" rel="noopener">
-        <span class="release-dot"></span><span id="release-tag">v0.2.1-beta</span>
+        <span class="release-dot"></span><span id="release-tag">v0.2.1</span>
       </a>
+      <a class="btn ghost" href="mailto:pyspector@biz.securitycert.it">Talk to Sales</a>
       <a class="btn primary" href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">
         <svg class="gh-ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
         Star on GitHub
@@ -802,6 +804,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
   <a href="#security" onclick="toggleMobileMenu()">Security Policy</a>
   <a href="#community" onclick="toggleMobileMenu()">Community</a>
   <a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">GitHub ↗</a>
+  <a href="mailto:pyspector@biz.securitycert.it">Talk to Sales</a>
 </div>
 
 <!-- ============================================================ HERO -->
@@ -1582,7 +1585,7 @@ mypy src/">Copy</button></div>
 
           <details class="faq-item">
             <summary>Why is my scan slow?</summary>
-            <div class="faq-body">If your scan is slow, it's probably because you aren't using PySpector, but rather something else (xD). Jokes apart: scan time grows with the codebase (a 500k LoC project takes longer than a 10k one), but benchmarks consistently show PySpector outpacing other Python SASTs on the same workloads.</div>
+            <div class="faq-body">A slow scan? Are you sure you're using PySpector? (xD). Jokes apart, scan speed reduces as the codebase grows (so, for example, a 500k LoC codebase will take more time to get scanned, than a 10k LoC one), but recent benchmarks show that PySpector still achieves a scanning throughput substantially higher than other Python SAST tools.</div>
           </details>
           <details class="faq-item">
             <summary>Do I need Rust installed to use PySpector?</summary>
@@ -1603,6 +1606,10 @@ mypy src/">Copy</button></div>
           <details class="faq-item">
             <summary>When should I use the AI and supply-chain modes?</summary>
             <div class="faq-body">Use <code>--ai</code> for projects that integrate with LLMs or AI agents; use <code>--supply-chain</code> to check dependencies for known CVEs. They can be combined in a single scan.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How do I disable the contact message shown below the banner?</summary>
+            <div class="faq-body">PySpector occasionally shows a rotating message below the banner with contact info. Use <code>--msg=False</code> to turn it off, or <code>--msg=True</code> to turn it back on. The setting is persisted to a per-user preferences file, so it only needs to be set once and applies to all future runs of <code>scan</code>, <code>watch</code>, and the wizard: <code>pyspector scan ./my-python-project --msg=False</code> </div>
           </details>
           <details class="faq-item">
             <summary>How do I integrate PySpector into CI?</summary>
@@ -1792,7 +1799,13 @@ mypy src/">Copy</button></div>
           <li><a href="#security">Disclosure policy</a></li>
           <li><a href="#community">Hall of Fame</a></li>
           <li><a href="https://github.com/ParzivalHack/PySpector/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h6>Contacts</h6>
+        <ul>
           <li><a href="https://linkedin.com/showcase/pyspector/" target="_blank" rel="noopener">LinkedIn</a></li>
+          <li><a href="mailto:pyspector@biz.securitycert.it">Email Us</a></li>
         </ul>
       </div>
     </div>
@@ -1857,7 +1870,7 @@ async function fetchLatestRelease() {
     if (data && data.length > 0) {
       const tag = document.getElementById('release-tag');
       const link = document.getElementById('release-link');
-      if (tag) tag.textContent = data[0].tag_name;
+      if (tag) tag.textContent = String(data[0].tag_name).split('-')[0];
       if (link) link.href = data[0].html_url;
     }
   } catch (err) { console.error('Release fetch failed:', err); }
