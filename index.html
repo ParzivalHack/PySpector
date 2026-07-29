@@ -1481,39 +1481,20 @@ jobs:
           </div>
 
           <h4>Git pre-commit hook</h4>
-          <p>Block commits that introduce new HIGH or CRITICAL issues. The setup script creates an executable <code>.git/hooks/pre-commit</code> that scans staged Python files:</p>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="./scripts/setup_hooks.sh">Copy</button></div>
-            <pre><code><span class="c"># From the root of your Git repository:</span>
-<span class="p">$</span> ./scripts/setup_hooks.sh
-
-<span class="c"># Bypass for a specific commit if you must:</span>
-<span class="p">$</span> git <span class="f">commit</span> <span class="o">--no-verify</span></code></pre>
-          </div>
-
-          <h4>pre-commit framework</h4>
-          <p>If your team uses the <a href="https://pre-commit.com/" target="_blank" rel="noopener">pre-commit</a> framework, add PySpector as a local hook so it runs on staged Python files alongside your other checks:</p>
+          <p>Block commits that introduce new HIGH or CRITICAL issues. This hook uses the <a href="https://pre-commit.com/" target="_blank" rel="noopener">pre-commit</a> framework to scan staged Python files before each commit:</p>
           <div class="codeblock">
             <div class="codeblock-head"><span class="codeblock-lang">yaml · .pre-commit-config.yaml</span><button class="copy-btn" data-copy="repos:
-  - repo: local
+  - repo: https://github.com/ParzivalHack/PySpector
+    rev: v0.2.1-beta
     hooks:
-      - id: pyspector
-        name: PySpector SAST
-        entry: pyspector
-        args: [&quot;scan&quot;, &quot;.&quot;]
-        language: system
-        types: [python]">Copy</button></div>
+      - id: pyspector">Copy</button></div>
             <pre><code><span class="o">repos</span>:
-  - <span class="o">repo</span>: local
+  - <span class="o">repo</span>: https://github.com/ParzivalHack/PySpector
+    <span class="o">rev</span>: v0.2.1-beta
     <span class="o">hooks</span>:
-      - <span class="o">id</span>: pyspector
-        <span class="o">name</span>: PySpector SAST
-        <span class="o">entry</span>: pyspector
-        <span class="o">args</span>: [<span class="s">"scan"</span>, <span class="s">"."</span>]
-        <span class="o">language</span>: system
-        <span class="o">types</span>: [python]</code></pre>
+      - <span class="o">id</span>: pyspector</code></pre>
           </div>
-          <p>The bundled <code>./scripts/setup_hooks.sh</code> takes the stricter route: it installs a raw Git hook that scans only the staged files with <code>--severity HIGH</code> and blocks the commit on any HIGH or CRITICAL finding (bypass with <code>git commit --no-verify</code>).</p>
+          <p>Then run <code>pre-commit install</code> to activate the hook. Bypass with <code>git commit --no-verify</code>.</p>
 
           <h4>Scheduled scans with cron</h4>
           <p>For continuous monitoring outside CI, an interactive script generates the right crontab entry for your project:</p>
@@ -1613,7 +1594,7 @@ mypy src/">Copy</button></div>
           </details>
           <details class="faq-item">
             <summary>How do I integrate PySpector into CI?</summary>
-            <div class="faq-body">Generate SARIF with <code>-f sarif</code> and upload it to a compatible platform such as GitHub Code Scanning. For local guardrails, run <code>./scripts/setup_hooks.sh</code> to install the pre-commit hook.</div>
+            <div class="faq-body">Generate SARIF with <code>-f sarif</code> and upload it to a compatible platform such as GitHub Code Scanning. For local guardrails, use the Git Pre-Commit Hook described above.</div>
           </details>
           <details class="faq-item">
             <summary>Does my code ever leave my machine?</summary>
