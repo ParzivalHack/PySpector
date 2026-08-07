@@ -2,6 +2,7 @@
 
 # High-Performance Python/Rust Graph-Based SAST Framework
 
+[![Awesome](https://awesome.re/badge.svg)](https://github.com/ritwiktiwari/awesome-python-rs)
 [![Powered By](https://img.shields.io/badge/Powered%20By-SecurityCert-purple)](https://www.securitycert.it/)
 [![Total PyPI Downloads](https://static.pepy.tech/badge/pyspector)](https://pepy.tech/project/pyspector)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pyspector?period=weekly&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=downloads%2Fweek)](https://pepy.tech/projects/pyspector)
