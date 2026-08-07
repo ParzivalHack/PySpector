@@ -208,3 +208,167 @@ class TestAI202:
         rule = _ai_rule("AI202")
         assert re.search(rule["pattern"], code)
         assert re.search(rule["exclude_pattern"], code)
+
+
+# -------------------------------------------
+# Tests for AI600 - Unsafe Agent Behavior
+# -------------------------------------------
+
+class TestAI600AgentBehavior:
+    def test_ai601_metadata(self):
+        rule = _ai_rule("AI601")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-918"
+
+    def test_ai601_pattern_matches(self):
+        rule = _ai_rule("AI601")
+        assert re.search(rule["pattern"], "response = requests.get(url, headers=headers)")
+
+    def test_ai602_metadata(self):
+        rule = _ai_rule("AI602")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-78"
+
+    def test_ai602_pattern_matches(self):
+        rule = _ai_rule("AI602")
+        assert re.search(rule["pattern"], "subprocess.run(command, shell=True)")
+
+    def test_ai603_metadata(self):
+        rule = _ai_rule("AI603")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-22"
+
+    def test_ai604_metadata(self):
+        rule = _ai_rule("AI604")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-94"
+
+    def test_ai605_metadata(self):
+        rule = _ai_rule("AI605")
+        assert rule["severity"] == "Medium"
+        assert rule["cwe"] == "CWE-200"
+
+    def test_ai605_pattern_matches(self):
+        rule = _ai_rule("AI605")
+        assert re.search(rule["pattern"], "agent = initialize_agent(verbose=True)")
+
+    def test_ai606_metadata(self):
+        rule = _ai_rule("AI606")
+        assert rule["severity"] == "Medium"
+        assert rule["cwe"] == "CWE-209"
+
+    def test_ai606_pattern_matches(self):
+        rule = _ai_rule("AI606")
+        assert re.search(rule["pattern"], "agent = initialize_agent(handle_parsing_errors=False)")
+
+
+# -------------------------------------------
+# Tests for AI700 - RAG Security
+# -------------------------------------------
+
+class TestAI700RAGSecurity:
+    def test_ai701_metadata(self):
+        rule = _ai_rule("AI701")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-345"
+
+    def test_ai701_pattern_matches(self):
+        rule = _ai_rule("AI701")
+        assert re.search(rule["pattern"], "loader = DirectoryLoader('./docs')")
+
+    def test_ai702_metadata(self):
+        rule = _ai_rule("AI702")
+        assert rule["severity"] == "Medium"
+        assert rule["cwe"] == "CWE-20"
+
+    def test_ai703_metadata(self):
+        rule = _ai_rule("AI703")
+        assert rule["severity"] == "Medium"
+        assert rule["cwe"] == "CWE-400"
+
+    def test_ai704_metadata(self):
+        rule = _ai_rule("AI704")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-345"
+
+    def test_ai704_pattern_matches(self):
+        rule = _ai_rule("AI704")
+        assert re.search(rule["pattern"], "embeddings = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')")
+
+
+# -------------------------------------------
+# Tests for AI800 - API Key Management
+# -------------------------------------------
+
+class TestAI800APIKeyManagement:
+    def test_ai801_metadata(self):
+        rule = _ai_rule("AI801")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-798"
+
+    def test_ai801_pattern_matches(self):
+        rule = _ai_rule("AI801")
+        assert re.search(rule["pattern"], 'openai.api_key = "sk-abc123def456"')
+
+    def test_ai801_pattern_no_match_env_var(self):
+        rule = _ai_rule("AI801")
+        assert not re.search(rule["pattern"], 'openai.api_key = os.getenv("OPENAI_API_KEY")')
+
+    def test_ai802_metadata(self):
+        rule = _ai_rule("AI802")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-798"
+
+    def test_ai802_pattern_matches(self):
+        rule = _ai_rule("AI802")
+        assert re.search(rule["pattern"], 'anthropic.api_key = "sk-ant-abc123"')
+
+    def test_ai803_metadata(self):
+        rule = _ai_rule("AI803")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-598"
+
+    def test_ai804_metadata(self):
+        rule = _ai_rule("AI804")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-798"
+
+    def test_ai804_pattern_matches(self):
+        rule = _ai_rule("AI804")
+        assert re.search(rule["pattern"], "cohere.Client(api_key='abc123')")
+
+
+# -------------------------------------------
+# Tests for AI900 - Output Handling & DoS
+# -------------------------------------------
+
+class TestAI900OutputHandling:
+    def test_ai901_metadata(self):
+        rule = _ai_rule("AI901")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-502"
+
+    def test_ai901_pattern_matches(self):
+        rule = _ai_rule("AI901")
+        assert re.search(rule["pattern"], "data = yaml.load(llm_output)")
+
+    def test_ai901_excludes_safe_load(self):
+        rule = _ai_rule("AI901")
+        code = "data = yaml.safe_load(llm_output)"
+        assert re.search(rule["pattern"], code)
+        assert re.search(rule["exclude_pattern"], code)
+
+    def test_ai902_metadata(self):
+        rule = _ai_rule("AI902")
+        assert rule["severity"] == "Medium"
+        assert rule["cwe"] == "CWE-400"
+
+    def test_ai903_metadata(self):
+        rule = _ai_rule("AI903")
+        assert rule["severity"] == "Critical"
+        assert rule["cwe"] == "CWE-94"
+
+    def test_ai904_metadata(self):
+        rule = _ai_rule("AI904")
+        assert rule["severity"] == "High"
+        assert rule["cwe"] == "CWE-79"
