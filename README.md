@@ -24,7 +24,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 
 ## Table of Contents
 
-- [Quick Demo](#quick-demo)
+- [Demo Video](#demo-video)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Core Engine Architecture](#core-engine-architecture)
@@ -36,9 +36,9 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
 - [Frequently Asked Questions](#frequently-asked-questions)
 
-## Quick Demo
+## Demo Video
 
-https://github.com/user-attachments/assets/0fe03961-0b62-4964-83ba-849f2357efba
+https://github.com/user-attachments/assets/d91b9d8a-4411-4f90-84bd-69852d27a5b5
 
 ## Getting Started
 
