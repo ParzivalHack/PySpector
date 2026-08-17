@@ -132,6 +132,8 @@ img { max-width: 100%; display: block; }
   flex-shrink: 0;
 }
 .brand-mark svg { width: 18px; height: 18px; }
+.brand-logo-link { display: flex; align-items: center; flex-shrink: 0; text-decoration: none; }
+.brand-logo-img { height: 38px; width: auto; max-width: 200px; object-fit: contain; display: block; }
 .brand-name { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.3px; }
 .brand-name { text-decoration: none; color: var(--white); }
 .brand-sub { font-family: var(--font-mono); font-size: 0.62rem; color: var(--g3); letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; transition: color 0.18s ease; }
@@ -328,7 +330,7 @@ a.brand-sub:hover { color: #c084fc; }
    Trusted in production section
    ============================================================ */
 .trusted { border-top: 1px solid var(--g1); border-bottom: 1px solid var(--g1); background: var(--bg1); padding: 52px 0; }
-.trusted-inner { display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
+.trusted-inner { display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
 .trusted-label {
   font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 2.5px;
   color: var(--g3); font-weight: 600;
@@ -338,30 +340,34 @@ a.brand-sub:hover { color: #c084fc; }
   content: ""; flex: 1; height: 1px; width: 48px; background: linear-gradient(90deg, transparent, var(--g1));
 }
 .trusted-label::after { background: linear-gradient(90deg, var(--g1), transparent); }
-.trusted-cards { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
-.trusted-card {
+
+/* Single wide spotlight banner, not a grid/list item */
+.trusted-spotlight {
+  display: flex; align-items: center; gap: 32px;
+  max-width: 680px; width: 100%;
   background: var(--bg2); border: 1px solid var(--g1); border-radius: var(--radius-lg);
-  padding: 28px 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;
-  text-decoration: none; max-width: 340px; width: 100%;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
+  padding: 30px 42px;
+  text-decoration: none;
   position: relative; overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
 }
-.trusted-card::before {
+.trusted-spotlight::before {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(249,115,22,0.35), transparent);
   opacity: 0; transition: opacity 0.25s ease;
 }
-.trusted-card:hover { border-color: var(--g2); box-shadow: 0 8px 32px -12px rgba(0,0,0,0.7); transform: translateY(-3px); }
-.trusted-card:hover::before { opacity: 1; }
-.trusted-logo {
-  height: 36px; width: auto; max-width: 160px;
-  filter: brightness(0) invert(1) opacity(0.7);
+.trusted-spotlight:hover { border-color: var(--g2); box-shadow: 0 8px 32px -12px rgba(0,0,0,0.7); transform: translateY(-3px); }
+.trusted-spotlight:hover::before { opacity: 1; }
+.trusted-spotlight-logo {
+  height: 46px; width: auto; max-width: 170px; flex-shrink: 0;
+  filter: brightness(0) invert(1) opacity(0.75);
   transition: opacity 0.2s ease;
 }
-.trusted-card:hover .trusted-logo { filter: brightness(0) invert(1) opacity(1); }
-.trusted-card-body { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.trusted-desc { font-size: 0.82rem; color: var(--g3); line-height: 1.55; max-width: 30ch; text-align: center; }
-.trusted-desc strong { color: var(--g4); font-weight: 600; }
+.trusted-spotlight:hover .trusted-spotlight-logo { filter: brightness(0) invert(1) opacity(1); }
+.trusted-spotlight-divider { width: 1px; align-self: stretch; background: var(--g1); flex-shrink: 0; }
+.trusted-spotlight-body { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; }
+.trusted-desc { font-size: 0.88rem; color: var(--g4); line-height: 1.55; }
+.trusted-desc strong { color: var(--g5); font-weight: 600; }
 .trusted-badge { font-family: var(--font-mono); font-size: 0.62rem; padding: 3px 9px; border-radius: 4px; letter-spacing: 0.5px; }
 .trusted-badge.green { color: var(--low3); background: var(--lowb); border: 1px solid rgba(34,197,94,0.25); }
 
@@ -409,13 +415,17 @@ section.block.alt { background: var(--bg1); border-top: 1px solid var(--g1); bor
 .stage-lang.rs { color: var(--high3); background: var(--highb); border: 1px solid rgba(249,115,22,0.25); }
 
 /* Feature grid */
-.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.features-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
 .feature-card {
+  grid-column: span 2;
   background: var(--bg1); border: 1px solid var(--g1); border-radius: var(--radius-lg);
   padding: 26px; display: flex; flex-direction: column; gap: 12px;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
   position: relative; overflow: hidden;
 }
+/* Last row has only 2 cards (8 total in a 3-per-row layout) — center them as a pair */
+.features-grid .feature-card:nth-child(7) { grid-column: 2 / span 2; }
+.features-grid .feature-card:nth-child(8) { grid-column: 4 / span 2; }
 .feature-card::before {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
   background: var(--grad-h); opacity: 0; transition: opacity 0.25s ease;
@@ -681,6 +691,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
   .stage:nth-child(4) { border-top: none; border-radius: 0 0 var(--radius-lg) 0; }
   .stage:nth-child(2)::after { display: none; }
   .features-grid { grid-template-columns: 1fr 1fr; }
+  .features-grid .feature-card { grid-column: auto; }
   .bench-grid { grid-template-columns: 1fr; }
   .docs-layout { grid-template-columns: 1fr; gap: 0; }
   .docs-rail { display: none; }
@@ -712,7 +723,9 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
   .bar-row { grid-template-columns: 70px 1fr 84px; }
   .hero-proof { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .trusted-inner { gap: 20px; }
-  .trusted-card { padding: 22px 24px 20px; }
+  .trusted-spotlight { flex-direction: column; text-align: center; padding: 26px 24px; gap: 18px; }
+  .trusted-spotlight-divider { width: 100%; height: 1px; }
+  .trusted-spotlight-body { align-items: center; text-align: center; }
 }
 @media (min-width: 761px) { .mobile-menu { display: none !important; } }
 
@@ -763,13 +776,10 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
 <nav class="topnav">
   <div class="topnav-inner">
     <div class="brand">
-      <a class="brand-mark" href="#top" aria-label="PySpector home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#e8f0f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18 V6 h5.5 a4 4 0 0 1 0 8 H9"/></svg>
+      <a class="brand-logo-link" href="#top" aria-label="PySpector home">
+        <img class="brand-logo-img" src="logo.png" alt="PySpector" />
       </a>
-      <span>
-        <a class="brand-name" href="#top">PySpector</a><br/>
-        <a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a>
-      </span>
+      <a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a>
     </div>
 
     <ul class="nav-links" id="main-nav">
@@ -831,10 +841,10 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
       <div class="hero-proof">
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="71" data-suffix="%">71%</em> faster</span><span class="proof-label">than Bandit</span></div>
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="16.6" data-decimals="1" data-suffix="×">16.6×</em> faster</span><span class="proof-label">than Semgrep</span></div>
-        <div class="proof-item"><span class="proof-num"><em class="count" data-count="25000" data-suffix="+">25,000+</em></span><span class="proof-label">lines / second</span></div>
+        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em id="star-count">145+</em></span><span class="proof-label">GitHub stars</span></a></div>
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="3">3</em></span><span class="proof-label">analysis engines</span></div>
-        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="15000" data-suffix="+">15,000+</em></span><span class="proof-label">downloads</span></a></div>
-        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="15" data-suffix="+">15+</em></span><span class="proof-label">unique contributors</span></a></div>
+        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="30000" data-suffix="+">30,000+</em></span><span class="proof-label">downloads</span></a></div>
+        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="20" data-suffix="">20</em></span><span class="proof-label">unique contributors</span></a></div>
       </div>
     </div>
 
@@ -883,15 +893,14 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
 <div class="trusted">
   <div class="container trusted-inner">
     <span class="trusted-label">Trusted by</span>
-    <div class="trusted-cards">
-      <a class="trusted-card" href="https://satori.ci/" target="_blank" rel="noopener" aria-label="SatoriCI — core scan engine">
-        <img class="trusted-logo" src="https://satori.ci/img/logo.svg" alt="SatoriCI" loading="lazy" />
-        <div class="trusted-card-body">
-          <p class="trusted-desc"><strong>SatoriCI</strong> integrated PySpector as a <strong>core SAST scanning engine</strong>, using it actively to scan <strong>30,000+ repositories</strong> at scale across the Satori platform.</p>
-          <span class="trusted-badge green">Production-Proven✔</span>
-        </div>
-      </a>
-    </div>
+    <a class="trusted-spotlight" href="https://satori.ci/" target="_blank" rel="noopener" aria-label="SatoriCI — core scan engine">
+      <img class="trusted-spotlight-logo" src="https://satori.ci/img/logo.svg" alt="SatoriCI" loading="lazy" />
+      <div class="trusted-spotlight-divider"></div>
+      <div class="trusted-spotlight-body">
+        <p class="trusted-desc"><strong>SatoriCI</strong> integrated PySpector as a <strong>core SAST scanning engine</strong>, using it actively to scan <strong>30,000+ repositories</strong> at scale across the Satori platform.</p>
+        <span class="trusted-badge green">Production-Proven✔</span>
+      </div>
+    </a>
   </div>
 </div>
 
@@ -1750,8 +1759,10 @@ mypy src/">Copy</button></div>
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="brand">
-          <a class="brand-mark" href="#top" aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="#e8f0f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18 V6 h5.5 a4 4 0 0 1 0 8 H9"/></svg></a>
-          <span><a class="brand-name" href="#top">PySpector</a><br/><a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a></span>
+          <a class="brand-logo-link" href="#top" aria-label="Back to top">
+            <img class="brand-logo-img" src="logo.png" alt="PySpector" />
+          </a>
+          <a class="brand-sub" href="https://www.securitycert.it/" target="_blank" rel="noopener">Powered by SecurityCert</a>
         </div>
         <p>High-performance, graph-based static analysis security testing for modern Python projects and large codebases.</p>
       </div>
@@ -1783,16 +1794,17 @@ mypy src/">Copy</button></div>
         </ul>
       </div>
       <div class="footer-col">
-        <h6>Contacts</h6>
+        <h6>Contacts & Community</h6>
         <ul>
           <li><a href="https://linkedin.com/showcase/pyspector/" target="_blank" rel="noopener">LinkedIn</a></li>
+          <li><a href="https://discord.gg/dPq2N34hts" target="_blank" rel="noopener">Discord</a></li>
           <li><a href="mailto:pyspector@biz.securitycert.it">Email Us</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2025-2026 Tommaso Bona · Apache License 2.0</span>
-      <span class="mono">Powered by SecurityCert · Trusted by SatoriCI</span>
+      <span class="mono">Powered by SecurityCert</span>
     </div>
   </div>
 </footer>
@@ -1855,6 +1867,19 @@ async function fetchLatestRelease() {
       if (link) link.href = data[0].html_url;
     }
   } catch (err) { console.error('Release fetch failed:', err); }
+}
+
+// ---------- GitHub live star count ----------
+async function fetchGithubStars() {
+  try {
+    const res = await fetch('https://api.github.com/repos/ParzivalHack/PySpector');
+    if (!res.ok) return;
+    const data = await res.json();
+    const el = document.getElementById('star-count');
+    if (el && typeof data.stargazers_count === 'number') {
+      el.textContent = data.stargazers_count.toLocaleString('en-US');
+    }
+  } catch (err) { console.error('Star count fetch failed:', err); }
 }
 
 // ---------- Taint path geometry (hero) ----------
@@ -1955,6 +1980,7 @@ function setupCounts() {
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchLatestRelease();
+  fetchGithubStars();
   drawTaintPath();
   setupScrollSpy();
   setupReveals();
