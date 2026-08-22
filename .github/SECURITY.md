@@ -32,11 +32,11 @@ We believe valid security research **deserves meaningful recognition**. For ever
 
 - **CVE Assignment**: We will formally request a **CVE ID** on your behalf through **GitHub's CNA partnership**, giving your finding a **permanent, citable record** in the public vulnerability database.
 - **Public Credit**: You will be named in the GitHub Security Advisory and in the release notes (unless you request anonymity).
-- **Hall of Fame**: Reporters of High or Critical severity findings will be listed in a dedicated Security HoF section in the repository.
+- **Hall of Fame**: Reporters of Medium severity (or higher) findings will be listed in a dedicated Security HoF section in the repository.
 
 Anonymous submissions (using "N/A") **are processed equally and respected**, though CVE credit will be listed as "Anonymous Researcher" unless you provide a name.
 
-Duplicate or low-impact findings may receive private acknowledgement only, and **will not be eligible** for CVE requests.
+Duplicate or low-impact findings may receive private acknowledgement only, and may **not be eligible** for CVE requests.
 
 ## 🧩 In-Scope Vulnerabilities
 
