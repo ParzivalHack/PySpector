@@ -575,6 +575,8 @@ def run_wizard():
               help="Treat Python SyntaxWarnings as errors and exclude affected files.")
 @click.option('--wizard', is_flag=True,
               help="Launch interactive guided scan mode — ideal for first-time users.")
+@click.option('--no-baseline', 'no_baseline', is_flag=True, default=False,
+              help="Ignore any .pyspector_baseline.json found in the scanned tree.")
 @click.option('--stats', 'show_stats', is_flag=True, default=False,
               help=(
                   "Print a detailed performance and findings statistics table "
@@ -599,6 +601,7 @@ def run_scan_command(
     supply_chain:     bool,
     syntax_warnings:  bool,
     wizard:           bool,
+    no_baseline:      bool,
     show_stats:       bool,
     debug:            bool,
     show_msg:         Optional[bool],
@@ -685,6 +688,7 @@ def run_scan_command(
                     report_format, severity_level, ai_scan,
                     supply_chain,
                     syntax_warnings, show_stats, debug,
+                    no_baseline=no_baseline,
                 )
             except subprocess.CalledProcessError as e:
                 click.echo(
@@ -708,6 +712,7 @@ def run_scan_command(
             report_format, severity_level, ai_scan,
             supply_chain,
             syntax_warnings, show_stats, debug,
+            no_baseline=no_baseline,
         )
 
 
@@ -722,6 +727,7 @@ def _execute_scan(
     syntax_warnings:   bool   = False,
     show_stats:        bool   = False,
     debug:             bool   = False,
+    no_baseline:       bool   = False,
 ):
     """
     Core scan orchestrator.
@@ -758,7 +764,9 @@ def _execute_scan(
         else scan_path.parent / ".pyspector_baseline.json"
     )
     ignored_fingerprints: set = set()
-    if baseline_path.exists():
+    if no_baseline and baseline_path.exists():
+        _dbg(debug, f"[*] Ignoring baseline '{baseline_path}' (--no-baseline).")
+    elif baseline_path.exists():
         try:
             with baseline_path.open('r') as f:
                 baseline_data = json.load(f)
@@ -905,6 +913,17 @@ def _execute_scan(
 
     _severity_filtered = len(raw_issues) - len(severity_passed)
     _baseline_ignored  = len(severity_passed) - len(final_issues)
+
+    # The baseline is read from inside the tree being scanned, so when that tree
+    # came from somewhere else the file that suppressed these findings did too.
+    # Say so unconditionally rather than only under --stats, so a scan can never
+    # report clean while quietly dropping results.
+    if _baseline_ignored:
+        click.echo(click.style(
+            f"[!] {_baseline_ignored} finding(s) suppressed by "
+            f"'{baseline_path}'. Use --no-baseline to ignore it.",
+            fg="yellow"
+        ))
 
     if stats:
         stats.record_final_issues(
