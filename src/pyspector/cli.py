@@ -186,6 +186,25 @@ def _is_path_excluded(file_path: Path, root: Path, patterns: List[str]) -> bool:
     return False
 
 
+def _resolves_outside_root(file_path: Path, root: Path) -> bool:
+    """Return True if *file_path* resolves to a location outside *root*.
+
+    A symbolic link inside the scanned tree can point anywhere on the
+    filesystem. Following one makes the scanner read a file the caller never
+    asked for and report its absolute path, and with -f sarif the matched
+    source line, back to whoever reads the report. Everything that leaves the
+    tree is skipped.
+    """
+    try:
+        real_root = root.resolve()
+        real_path = file_path.resolve()
+    except (OSError, RuntimeError):
+        # Broken link, a symlink loop, or a permission error on a path
+        # component. Nothing readable here, so treat it as out of scope.
+        return True
+    return real_path != real_root and real_root not in real_path.parents
+
+
 def get_python_file_asts(
     path: Path,
     enable_syntax_warnings: bool = False,
@@ -219,10 +238,18 @@ def get_python_file_asts(
     exclude_patterns = list(exclude or [])
     root = path if path.is_dir() else path.parent
     if path.is_dir():
-        files_to_scan = [
-            p for p in path.glob("**/*.py")
-            if not _is_path_excluded(p, root, exclude_patterns)
-        ]
+        files_to_scan = []
+        for p in path.glob("**/*.py"):
+            if _is_path_excluded(p, root, exclude_patterns):
+                continue
+            if _resolves_outside_root(p, root):
+                _dbg(
+                    debug,
+                    f"Info: Skipped {p} (link resolves outside the scanned directory)",
+                    fg="blue",
+                )
+                continue
+            files_to_scan.append(p)
     else:
         files_to_scan = [path]
 
