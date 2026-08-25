@@ -464,11 +464,11 @@ cwe = "CWE-345"
 
 [[rule]]
 id = "AI702"
-description = "Vector store similarity search uses an explicit score_threshold; ensure the threshold is high enough to filter out low-quality or adversarial retrievals."
+description = "Vector store similarity search uses a low score_threshold (< 0.5), risking retrieval of low-quality or adversarial documents."
 severity = "Medium"
 confidence = "Low"
 remediation = "Set a reasonable similarity threshold (e.g., > 0.7) to filter out low-quality or adversarial retrievals. Monitor retrieval quality metrics."
-pattern = "similarity_search\\s*\\([^)]*score_threshold\\s*=\\s*0\\.[0-9]+"
+pattern = "similarity_search\\s*\\([^)]*score_threshold\\s*=\\s*0\\.(?:[0-4]|50*)"
 file_pattern = "*.py"
 cwe = "CWE-20"
 
