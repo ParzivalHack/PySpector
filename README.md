@@ -288,6 +288,11 @@ Inside the TUI, you can navigate with the arrow keys, press i to toggle the "ign
 
 PySpector ships with a `SKILL.md`, following the [Agent Skills](https://github.com/anthropics/skills) format supported by agents such as Claude Code, OpenAI Codex, Google Antigravity, and other agentic coding tools. It allows your agent to conduct a **complete security audit** of your Python codebase with the help of **PySpector's power and speed**: the agent installs PySpector (including the Rust toolchain via rustup, if missing), verifies the setup, inspects `pyspector --help` and `pyspector scan --help` to learn the current flags, selects scan options appropriate to your codebase (i.e. `--ai` for LLM-integrated projects, `--supply-chain` for dependency CVE checks), runs the scan, statically re-verifies each finding against your source files before reporting it, and produces a report you can read directly.
 
+To add a skill to Claude Code, simply create the necessary directories by running `mkdir -p ~/.claude/skills/pyspector`, then drop PySpector's SKILL.md file there, launch Claude Code inside your local codebase directory with `claude` and invoke it simply with `/pyspector-security-audit`.
+
+<img width="1920" height="131" alt="image" src="https://github.com/user-attachments/assets/2e63876b-c13a-49ec-ad09-ba432e944327" />
+
+
 See [`SKILL.md`](./SKILL.md) for the full workflow definition.
 
 ## Automation and Integration
