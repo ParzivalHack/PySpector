@@ -13,7 +13,7 @@ def create_fingerprint(issue: Dict[str, Any]) -> str:
     # Use rule ID, file path relative to a potential project root, and the line content
     # This makes the fingerprint stable across different checkout directories
     unique_string = f"{issue.get('rule_id', '')}|{issue.get('file_path', '')}|{issue.get('line_number', '')}|{issue.get('code', '').strip()}"
-    return hashlib.sha256(unique_string.encode('utf-8')).hexdigest()
+    return hashlib.sha1(unique_string.encode('utf-8')).hexdigest()
 
 class PySpectorTriage(App):
     """An interactive TUI for triaging PySpector findings."""
