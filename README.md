@@ -290,7 +290,7 @@ PySpector ships with a `SKILL.md`, following the [Agent Skills](https://github.c
 
 To add a skill to Claude Code, simply create the necessary directories by running `mkdir -p ~/.claude/skills/pyspector`, then drop PySpector's SKILL.md file there, launch Claude Code inside your local codebase directory with `claude` and invoke it simply with `/pyspector`.
 
-<img width="1920" height="131" alt="image" src="https://github.com/user-attachments/assets/2e63876b-c13a-49ec-ad09-ba432e944327" />
+<img width="1600" height="253" alt="image" src="https://github.com/user-attachments/assets/de539a62-8a7e-4674-a77d-264e0ef42ca0" />
 
 
 See [`SKILL.md`](./SKILL.md) for the full workflow definition.
