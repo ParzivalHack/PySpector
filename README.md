@@ -33,6 +33,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [Usage](#usage)
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
+- [PySpector AI Agent Skill](#pyspector-ai-agent-skill)
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
 - [Frequently Asked Questions](#frequently-asked-questions)
 
@@ -283,9 +284,15 @@ pyspector triage report.json
 
 Inside the TUI, you can navigate with the arrow keys, press i to toggle the "ignored" status of an issue, and s to save your changes to a .pyspector_baseline.json file. This baseline file will be automatically loaded on subsequent scans.
 
+## PySpector AI Agent Skill
+
+PySpector ships with a `SKILL.md`, following the [Agent Skills](https://github.com/anthropics/skills) format supported by agents such as Claude Code, OpenAI Codex, Google Antigravity, and other agentic coding tools. It allows your agent to conduct a **complete security audit** of your Python codebase with the help of **PySpector's power and speed**: the agent installs PySpector (including the Rust toolchain via rustup, if missing), verifies the setup, inspects `pyspector --help` and `pyspector scan --help` to learn the current flags, selects scan options appropriate to your codebase (i.e. `--ai` for LLM-integrated projects, `--supply-chain` for dependency CVE checks), runs the scan, statically re-verifies each finding against your source files before reporting it, and produces a report you can read directly.
+
+See [`SKILL.md`](./SKILL.md) for the full workflow definition.
+
 ## Automation and Integration
 
-PySpector includes Shell helper scripts to integrate security scanning directly into your development and operational workflows.
+PySpector includes Shell helper scripts, a pre-commit hook, and much more, to integrate security scanning directly into your operational workflows and CI/CD pipelines.
 
 ## SARIF Output and Security Tool Integration
 
