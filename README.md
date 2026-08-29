@@ -93,7 +93,7 @@ pip install pyspector
 
   - **Graph Engine:** Advanced CFG and Call-Graph-based data flow analysis for complex vulnerability chains.
 
-- **Fastest Market Performances:** Core analysis engine implemented in Rust with `Rayon` for multi-threaded parallelization (allowing PySpector to scan 71% faster than Bandit, and 16.6x faster than Semgrep).
+- **Fastest Market Performances:** Core analysis engine implemented in Rust with `Rayon` for multi-threaded parallelization.
 
 - **AI-Agent Security:** Specialized rulesets designed to identify prompt injection, insecure tool use, and data leakage in LLM-integrated Python applications.
 
