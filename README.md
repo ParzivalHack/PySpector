@@ -124,44 +124,50 @@ This architecture combines the best of both worlds: a flexible, user-friendly in
 
 Performance benchmarks demonstrate PySpector's competitive advantages in SAST scanning speed while maintaining comprehensive security analysis.
 
-> Performance benchmarks were executed in a deterministic and controlled environment using automated stress-testing scripts, ensuring repeatable and unbiased measurements
+> Performance benchmarks were executed in a deterministic and controlled environment, ensuring repeatable and unbiased measurements
+
+You can read and download for free the full technical whitepaper here:
+[PySpector Performance Benchmark: A Comparative Speed and Resource-Efficiency Analysis Against Bandit and Semgrep Across Eight Open-Source Python Codebases.pdf](https://github.com/user-attachments/files/31597398/PySpector.Performance.Benchmark.A.Comparative.Speed.and.Resource-Efficiency.Analysis.Against.Bandit.and.Semgrep.Across.Eight.Open-Source.Python.Codebases.pdf)
+
 
 ### Benchmark Results
 
-<img width="4471" height="3529" alt="speed_benchmark_charts" src="https://github.com/user-attachments/assets/9ca0cd7a-82eb-4365-b5c3-94a60eb6d3d9" />
+<img width="3780" height="2190" alt="pyspector_benchmark_graphs" src="https://github.com/user-attachments/assets/6d45ff1a-6cae-4e0c-946c-1418b76d438a" />
 
-#### Comparative analysis across major Python codebases (Django, Flask, Pandas, Scikit-learn, Requests) shows:
+#### Comparative analysis across eight real-world Python codebases (Flask, Click, FastAPI, Scrapy, Ansible, Keras, Pandas, Django), ranging from 10,493 to 348,032 lines of Python code, shows:
 
 | Metric | PySpector | Bandit | Semgrep |
 |--------|-----------|---------|---------|
-| **Throughput** | 25,607 lines/sec | 14,927 lines/sec | 1,538 lines/sec |
-| **Performance Advantage** | **71% faster** than Bandit | Baseline | 16.6x slower |
-| **Memory Usage** | 1.4 GB average | 111 MB average | 277 MB average |
-| **CPU Utilization** | 120% (multi-core) | 100% (single-core) | 40% |
+| **Average Throughput** | 18,448 lines/sec | 8,891 lines/sec | 5,039 lines/sec |
+| **Relative to PySpector** | Fastest (reference) | 2.1x slower | 3.7x slower |
+| **Peak Memory Usage** | 973 MB average | Not measured in this benchmark | Not measured in this benchmark |
+| **CPU Utilization** | 4.09 of 16 cores average (multi-core, scales with codebase size) | Not measured in this benchmark | Not measured in this benchmark |
+
+> **Note on throughput figures:** the numbers above reflect this specific, controlled benchmark's average across eight repositories under identical, dedicated resource allocation, and are the figures we stand behind as objective and reproducible. Under more favorable, less constrained conditions, PySpector has independently been observed **exceeding 50,000 to 55,000 lines of code per second** on large codebases such as Django. That figure was not produced under the controlled methodology described here, so it is not included in the comparison table above, but we can confirm we have measured it multiple times, on different large codebases, in unrelated tests.
 
 ### Key Performance Characteristics
 
-- **Speed**: Delivers 71% faster scanning than traditional tools through Rust-powered parallel analysis
-- **Scalability**: Maintains high throughput on large codebases (500k+ lines of code)
-- **Resource Profile**: Optimized for modern multi-core environments with adequate memory allocation
-- **Consistency**: Stable performance across different project types and sizes
+- **Speed**: Achieves an average of 18,448 lines of code per second, roughly 2.1x faster than Bandit and 3.7x faster than Semgrep, across codebases ranging from 10k to 348k lines of Python
+- **Scalability**: Maintains a clear throughput lead over both comparison tools even on the largest codebases tested (up to 348k lines of Python)
+- **Resource Profile**: Multi-core Rust engine automatically scales CPU utilization from around 2 cores on small codebases up to 8 or more cores on large ones
+- **Consistency**: Lower run-to-run variance than both comparison tools across repeated runs on the same codebase
 
 ### System Requirements for Optimal Performance
 
-- **Minimum**: 2 CPU cores, 2 GB RAM
-- **Recommended**: 4+ CPU cores, 4+ GB RAM for large codebases
+- **Minimum**: 4 CPU cores, 2 GB RAM
+- **Recommended**: 8+ CPU cores, 4+ GB RAM for large codebases (peak observed memory usage was approximately 2.2 GB on the largest tested repository)
 - **Storage**: SSD recommended for large repository scanning
 
 ### Benchmark Methodology
 
 Performance testing conducted on:
 
-- **Test Environment**: Debian-based Linux VM (2 cores, 4GB RAM)
-- **Test Projects**: 5 major Python repositories (13k-530k lines of code)
-- **Measurement**: Average of multiple runs with CPU settling periods
-- **Comparison**: Head-to-head against Bandit and Semgrep using identical configurations
+- **Test Environment**: Dedicated Linux-based cloud compute instances via Satori CI (16 vCPUs, 120 GB RAM)
+- **Test Projects**: 8 real-world Python repositories spanning multiple domains (10,493 to 348,032 lines of Python code)
+- **Measurement**: Median and average across 5 runs per tool per repository
+- **Comparison**: Head-to-head against Bandit and Semgrep, scanning identical codebases under identical resource allocation
 
-_Benchmark data available in the project repository for transparency and reproducibility._
+_Full benchmark data, including raw per-run results, and the exact tool configurations, is available in [benchmarks/speed](https://github.com/ParzivalHack/PySpector/tree/main/benchmarks/speed) for transparency and reproducibility._
 
 ## Usage
 
