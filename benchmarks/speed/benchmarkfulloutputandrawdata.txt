@@ -1,0 +1,542 @@
+┌──(kali㉿kali)-[~/Desktop/pyspectorspeedbenchmarks]
+└─$ bash benchmark.sh
+GitHub repo to scan (owner/name), or 'full' for all 8 benchmark repos: full
+Number of repetitions per tool (e.g. 1 for a test run, 5 for real): 5
+
+Repos to scan: pallets/flask pallets/click scrapy/scrapy fastapi/fastapi keras-team/keras ansible/ansible django/django pandas-dev/pandas
+Repetitions per tool: 5
+
+=== [pallets/flask] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 0.50s | throughput: 20,959 LoC/sec | mem: 125 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 203% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 0.51s | throughput: 20,599 LoC/sec | mem: 121 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 196% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 0.50s | throughput: 20,926 LoC/sec | mem: 124 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 203% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 0.36s | throughput: 29,397 LoC/sec | mem: 124 MB | cpu cores: 3.9 / 16 logical cores | cpu%: 393% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 0.51s | throughput: 20,756 LoC/sec | mem: 126 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 199% (multi-core, can exceed 100%)
+
+=== [pallets/flask] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m4.558s | throughput: 2302 LoC/sec
+  Run 2/5...
+    real time: 0m6.574s | throughput: 1596 LoC/sec
+  Run 3/5...
+    real time: 0m6.511s | throughput: 1612 LoC/sec
+  Run 4/5...
+    real time: 0m6.593s | throughput: 1592 LoC/sec
+  Run 5/5...
+    real time: 0m8.013s | throughput: 1309 LoC/sec
+
+=== [pallets/flask] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m0.813s | throughput: 12907 LoC/sec
+  Run 2/5...
+    real time: 0m1.424s | throughput: 7369 LoC/sec
+  Run 3/5...
+    real time: 0m1.590s | throughput: 6599 LoC/sec
+  Run 4/5...
+    real time: 0m0.809s | throughput: 12970 LoC/sec
+  Run 5/5...
+    real time: 0m1.470s | throughput: 7138 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — pallets/flask (5 run(s))                     ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 10,493                                       ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    0.50s          20926 LoC/sec                                ║
+║ Semgrep      6.574s         1596 LoC/sec                                 ║
+║ Bandit       1.424s         7369 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          126 MB                                           ║
+║   CPU cores utilized:   2.0 / 16 logical cores                           ║
+║   Avg CPU utilization:  199% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   0.50s 0.51s 0.50s 0.36s 0.51s
+  PySpector throughput:   20,959 LoC/sec 20,599 LoC/sec 20,926 LoC/sec 29,397 LoC/sec 20,756 LoC/sec
+  Semgrep real times:     0m4.558s 0m6.574s 0m6.511s 0m6.593s 0m8.013s
+  Semgrep throughput:     2302 LoC/sec 1596 LoC/sec 1612 LoC/sec 1592 LoC/sec 1309 LoC/sec
+  Bandit real times:      0m0.813s 0m1.424s 0m1.590s 0m0.809s 0m1.470s
+  Bandit throughput:      12907 LoC/sec 7369 LoC/sec 6599 LoC/sec 12970 LoC/sec 7138 LoC/sec
+
+=== [pallets/click] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 0.73s | throughput: 19,219 LoC/sec | mem: 120 MB | cpu cores: 1.3 / 16 logical cores | cpu%: 128% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 0.75s | throughput: 18,828 LoC/sec | mem: 121 MB | cpu cores: 1.3 / 16 logical cores | cpu%: 127% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 0.79s | throughput: 17,818 LoC/sec | mem: 168 MB | cpu cores: 1.9 / 16 logical cores | cpu%: 189% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 0.75s | throughput: 18,803 LoC/sec | mem: 116 MB | cpu cores: 1.3 / 16 logical cores | cpu%: 129% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 0.50s | throughput: 28,323 LoC/sec | mem: 167 MB | cpu cores: 3.7 / 16 logical cores | cpu%: 366% (multi-core, can exceed 100%)
+
+=== [pallets/click] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m8.012s | throughput: 1761 LoC/sec
+  Run 2/5...
+    real time: 0m10.884s | throughput: 1296 LoC/sec
+  Run 3/5...
+    real time: 0m8.325s | throughput: 1695 LoC/sec
+  Run 4/5...
+    real time: 0m8.923s | throughput: 1581 LoC/sec
+  Run 5/5...
+    real time: 0m8.655s | throughput: 1630 LoC/sec
+
+=== [pallets/click] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m2.483s | throughput: 5683 LoC/sec
+  Run 2/5...
+    real time: 0m2.293s | throughput: 6154 LoC/sec
+  Run 3/5...
+    real time: 0m1.483s | throughput: 9515 LoC/sec
+  Run 4/5...
+    real time: 0m1.442s | throughput: 9786 LoC/sec
+  Run 5/5...
+    real time: 0m2.350s | throughput: 6005 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — pallets/click (5 run(s))                     ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 14,111                                       ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    0.75s          18828 LoC/sec                                ║
+║ Semgrep      8.655s         1630 LoC/sec                                 ║
+║ Bandit       2.293s         6154 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          167 MB                                           ║
+║   CPU cores utilized:   3.7 / 16 logical cores                           ║
+║   Avg CPU utilization:  366% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   0.73s 0.75s 0.79s 0.75s 0.50s
+  PySpector throughput:   19,219 LoC/sec 18,828 LoC/sec 17,818 LoC/sec 18,803 LoC/sec 28,323 LoC/sec
+  Semgrep real times:     0m8.012s 0m10.884s 0m8.325s 0m8.923s 0m8.655s
+  Semgrep throughput:     1761 LoC/sec 1296 LoC/sec 1695 LoC/sec 1581 LoC/sec 1630 LoC/sec
+  Bandit real times:      0m2.483s 0m2.293s 0m1.483s 0m1.442s 0m2.350s
+  Bandit throughput:      5683 LoC/sec 6154 LoC/sec 9515 LoC/sec 9786 LoC/sec 6005 LoC/sec
+
+=== [scrapy/scrapy] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 2.19s | throughput: 18,911 LoC/sec | mem: 344 MB | cpu cores: 2.2 / 16 logical cores | cpu%: 217% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 2.14s | throughput: 19,359 LoC/sec | mem: 344 MB | cpu cores: 2.2 / 16 logical cores | cpu%: 220% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 2.15s | throughput: 19,294 LoC/sec | mem: 344 MB | cpu cores: 2.2 / 16 logical cores | cpu%: 220% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 2.16s | throughput: 19,184 LoC/sec | mem: 343 MB | cpu cores: 2.2 / 16 logical cores | cpu%: 220% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 2.19s | throughput: 18,955 LoC/sec | mem: 345 MB | cpu cores: 2.2 / 16 logical cores | cpu%: 217% (multi-core, can exceed 100%)
+
+=== [scrapy/scrapy] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m5.929s | throughput: 6999 LoC/sec
+  Run 2/5...
+    real time: 0m10.305s | throughput: 4027 LoC/sec
+  Run 3/5...
+    real time: 0m9.253s | throughput: 4484 LoC/sec
+  Run 4/5...
+    real time: 0m9.419s | throughput: 4405 LoC/sec
+  Run 5/5...
+    real time: 0m9.114s | throughput: 4553 LoC/sec
+
+=== [scrapy/scrapy] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m8.107s | throughput: 5118 LoC/sec
+  Run 2/5...
+    real time: 0m8.137s | throughput: 5100 LoC/sec
+  Run 3/5...
+    real time: 0m4.531s | throughput: 9158 LoC/sec
+  Run 4/5...
+    real time: 0m4.498s | throughput: 9225 LoC/sec
+  Run 5/5...
+    real time: 0m4.472s | throughput: 9279 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — scrapy/scrapy (5 run(s))                     ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 41,495                                       ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    2.16s          19184 LoC/sec                                ║
+║ Semgrep      9.253s         4484 LoC/sec                                 ║
+║ Bandit       4.531s         9158 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          345 MB                                           ║
+║   CPU cores utilized:   2.2 / 16 logical cores                           ║
+║   Avg CPU utilization:  217% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   2.19s 2.14s 2.15s 2.16s 2.19s
+  PySpector throughput:   18,911 LoC/sec 19,359 LoC/sec 19,294 LoC/sec 19,184 LoC/sec 18,955 LoC/sec
+  Semgrep real times:     0m5.929s 0m10.305s 0m9.253s 0m9.419s 0m9.114s
+  Semgrep throughput:     6999 LoC/sec 4027 LoC/sec 4484 LoC/sec 4405 LoC/sec 4553 LoC/sec
+  Bandit real times:      0m8.107s 0m8.137s 0m4.531s 0m4.498s 0m4.472s
+  Bandit throughput:      5118 LoC/sec 5100 LoC/sec 9158 LoC/sec 9225 LoC/sec 9279 LoC/sec
+
+=== [fastapi/fastapi] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 1.72s | throughput: 19,876 LoC/sec | mem: 231 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 201% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 1.71s | throughput: 19,981 LoC/sec | mem: 232 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 202% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 1.17s | throughput: 29,113 LoC/sec | mem: 212 MB | cpu cores: 2.6 / 16 logical cores | cpu%: 257% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 1.78s | throughput: 19,164 LoC/sec | mem: 229 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 196% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 1.72s | throughput: 19,923 LoC/sec | mem: 232 MB | cpu cores: 2.0 / 16 logical cores | cpu%: 203% (multi-core, can exceed 100%)
+
+=== [fastapi/fastapi] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m31.006s | throughput: 1103 LoC/sec
+  Run 2/5...
+    real time: 0m20.438s | throughput: 1674 LoC/sec
+  Run 3/5...
+    real time: 0m31.692s | throughput: 1079 LoC/sec
+  Run 4/5...
+    real time: 0m31.067s | throughput: 1101 LoC/sec
+  Run 5/5...
+    real time: 0m30.907s | throughput: 1107 LoC/sec
+
+=== [fastapi/fastapi] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m7.551s | throughput: 4530 LoC/sec
+  Run 2/5...
+    real time: 0m7.844s | throughput: 4361 LoC/sec
+  Run 3/5...
+    real time: 0m4.724s | throughput: 7240 LoC/sec
+  Run 4/5...
+    real time: 0m7.784s | throughput: 4394 LoC/sec
+  Run 5/5...
+  !!! FAILED: bandit run 5 for fastapi/fastapi (satori exit code: 1). Raw output saved to: /home/kali/Desktop/pyspectorspeedbenchmarks/failed_runs/fastapi_fastapi_bandit_run5_20260828_145113.log
+    real time: FAILED | throughput: FAILED
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — fastapi/fastapi (5 run(s))                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 34,204                                       ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    1.72s          19923 LoC/sec                                ║
+║ Semgrep      31.006s        1103 LoC/sec                                 ║
+║ Bandit       7.668s         4462 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          232 MB                                           ║
+║   CPU cores utilized:   2.0 / 16 logical cores                           ║
+║   Avg CPU utilization:  203% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   1.72s 1.71s 1.17s 1.78s 1.72s
+  PySpector throughput:   19,876 LoC/sec 19,981 LoC/sec 29,113 LoC/sec 19,164 LoC/sec 19,923 LoC/sec
+  Semgrep real times:     0m31.006s 0m20.438s 0m31.692s 0m31.067s 0m30.907s
+  Semgrep throughput:     1103 LoC/sec 1674 LoC/sec 1079 LoC/sec 1101 LoC/sec 1107 LoC/sec
+  Bandit real times:      0m7.551s 0m7.844s 0m4.724s 0m7.784s FAILED
+  Bandit throughput:      4530 LoC/sec 4361 LoC/sec 7240 LoC/sec 4394 LoC/sec FAILED
+
+=== [keras-team/keras] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 12.63s | throughput: 16,849 LoC/sec | mem: 1590 MB | cpu cores: 5.4 / 16 logical cores | cpu%: 537% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 13.09s | throughput: 16,254 LoC/sec | mem: 1591 MB | cpu cores: 5.4 / 16 logical cores | cpu%: 545% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 8.49s | throughput: 25,052 LoC/sec | mem: 1592 MB | cpu cores: 4.9 / 16 logical cores | cpu%: 493% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 12.86s | throughput: 16,554 LoC/sec | mem: 1595 MB | cpu cores: 5.3 / 16 logical cores | cpu%: 532% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 12.64s | throughput: 16,833 LoC/sec | mem: 1592 MB | cpu cores: 5.6 / 16 logical cores | cpu%: 561% (multi-core, can exceed 100%)
+
+=== [keras-team/keras] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m39.454s | throughput: 5394 LoC/sec
+  Run 2/5...
+    real time: 0m22.636s | throughput: 9401 LoC/sec
+  Run 3/5...
+    real time: 0m20.547s | throughput: 10357 LoC/sec
+  Run 4/5...
+    real time: 0m39.875s | throughput: 5337 LoC/sec
+  Run 5/5...
+    real time: 0m36.347s | throughput: 5855 LoC/sec
+
+=== [keras-team/keras] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m30.865s | throughput: 6895 LoC/sec
+  Run 2/5...
+    real time: 0m13.293s | throughput: 16009 LoC/sec
+  Run 3/5...
+    real time: 0m17.634s | throughput: 12068 LoC/sec
+  Run 4/5...
+    real time: 0m28.456s | throughput: 7478 LoC/sec
+  Run 5/5...
+    real time: 0m30.790s | throughput: 6912 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — keras-team/keras (5 run(s))                  ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 212,806                                      ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    12.64s         16833 LoC/sec                                ║
+║ Semgrep      36.347s        5855 LoC/sec                                 ║
+║ Bandit       28.456s        7478 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          1592 MB                                          ║
+║   CPU cores utilized:   5.6 / 16 logical cores                           ║
+║   Avg CPU utilization:  561% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   12.63s 13.09s 8.49s 12.86s 12.64s
+  PySpector throughput:   16,849 LoC/sec 16,254 LoC/sec 25,052 LoC/sec 16,554 LoC/sec 16,833 LoC/sec
+  Semgrep real times:     0m39.454s 0m22.636s 0m20.547s 0m39.875s 0m36.347s
+  Semgrep throughput:     5394 LoC/sec 9401 LoC/sec 10357 LoC/sec 5337 LoC/sec 5855 LoC/sec
+  Bandit real times:      0m30.865s 0m13.293s 0m17.634s 0m28.456s 0m30.790s
+  Bandit throughput:      6895 LoC/sec 16009 LoC/sec 12068 LoC/sec 7478 LoC/sec 6912 LoC/sec
+
+=== [ansible/ansible] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 12.52s | throughput: 16,690 LoC/sec | mem: 1457 MB | cpu cores: 4.7 / 16 logical cores | cpu%: 470% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 13.57s | throughput: 15,397 LoC/sec | mem: 1450 MB | cpu cores: 4.5 / 16 logical cores | cpu%: 448% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 12.44s | throughput: 16,789 LoC/sec | mem: 1458 MB | cpu cores: 4.7 / 16 logical cores | cpu%: 470% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 13.80s | throughput: 15,142 LoC/sec | mem: 1461 MB | cpu cores: 4.4 / 16 logical cores | cpu%: 443% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 13.51s | throughput: 15,460 LoC/sec | mem: 1458 MB | cpu cores: 4.5 / 16 logical cores | cpu%: 453% (multi-core, can exceed 100%)
+
+=== [ansible/ansible] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m30.366s | throughput: 6879 LoC/sec
+  Run 2/5...
+    real time: 0m24.805s | throughput: 8422 LoC/sec
+  Run 3/5...
+    real time: 0m25.941s | throughput: 8053 LoC/sec
+  Run 4/5...
+    real time: 0m25.063s | throughput: 8335 LoC/sec
+  Run 5/5...
+    real time: 0m24.980s | throughput: 8363 LoC/sec
+
+=== [ansible/ansible] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m11.899s | throughput: 17556 LoC/sec
+  Run 2/5...
+    real time: 0m8.671s | throughput: 24092 LoC/sec
+  Run 3/5...
+    real time: 0m13.989s | throughput: 14933 LoC/sec
+  Run 4/5...
+    real time: 0m20.805s | throughput: 10041 LoC/sec
+  Run 5/5...
+    real time: 0m19.842s | throughput: 10528 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — ansible/ansible (5 run(s))                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 208,900                                      ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    13.51s         15460 LoC/sec                                ║
+║ Semgrep      25.063s        8335 LoC/sec                                 ║
+║ Bandit       13.989s        14933 LoC/sec                                ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          1458 MB                                          ║
+║   CPU cores utilized:   4.5 / 16 logical cores                           ║
+║   Avg CPU utilization:  453% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   12.52s 13.57s 12.44s 13.80s 13.51s
+  PySpector throughput:   16,690 LoC/sec 15,397 LoC/sec 16,789 LoC/sec 15,142 LoC/sec 15,460 LoC/sec
+  Semgrep real times:     0m30.366s 0m24.805s 0m25.941s 0m25.063s 0m24.980s
+  Semgrep throughput:     6879 LoC/sec 8422 LoC/sec 8053 LoC/sec 8335 LoC/sec 8363 LoC/sec
+  Bandit real times:      0m11.899s 0m8.671s 0m13.989s 0m20.805s 0m19.842s
+  Bandit throughput:      17556 LoC/sec 24092 LoC/sec 14933 LoC/sec 10041 LoC/sec 10528 LoC/sec
+
+=== [django/django] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 22.63s | throughput: 15,379 LoC/sec | mem: 2164 MB | cpu cores: 5.7 / 16 logical cores | cpu%: 574% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 23.55s | throughput: 14,781 LoC/sec | mem: 2169 MB | cpu cores: 5.6 / 16 logical cores | cpu%: 557% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 22.33s | throughput: 15,586 LoC/sec | mem: 2167 MB | cpu cores: 5.7 / 16 logical cores | cpu%: 575% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 23.34s | throughput: 14,914 LoC/sec | mem: 2163 MB | cpu cores: 5.5 / 16 logical cores | cpu%: 553% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 22.41s | throughput: 15,532 LoC/sec | mem: 2167 MB | cpu cores: 5.7 / 16 logical cores | cpu%: 574% (multi-core, can exceed 100%)
+
+=== [django/django] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 1m0.576s | throughput: 5745 LoC/sec
+  Run 2/5...
+    real time: 1m1.488s | throughput: 5660 LoC/sec
+  Run 3/5...
+    real time: 0m38.358s | throughput: 9073 LoC/sec
+  Run 4/5...
+    real time: 0m37.678s | throughput: 9237 LoC/sec
+  Run 5/5...
+    real time: 1m0.779s | throughput: 5726 LoC/sec
+
+=== [django/django] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m29.244s | throughput: 11901 LoC/sec
+  Run 2/5...
+    real time: 0m29.334s | throughput: 11864 LoC/sec
+  Run 3/5...
+    real time: 0m49.845s | throughput: 6982 LoC/sec
+  Run 4/5...
+    real time: 0m29.301s | throughput: 11878 LoC/sec
+  Run 5/5...
+    real time: 0m49.203s | throughput: 7073 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — django/django (5 run(s))                     ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 348,032                                      ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    22.63s         15379 LoC/sec                                ║
+║ Semgrep      60.576s        5745 LoC/sec                                 ║
+║ Bandit       29.334s        11864 LoC/sec                                ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          2167 MB                                          ║
+║   CPU cores utilized:   5.7 / 16 logical cores                           ║
+║   Avg CPU utilization:  574% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   22.63s 23.55s 22.33s 23.34s 22.41s
+  PySpector throughput:   15,379 LoC/sec 14,781 LoC/sec 15,586 LoC/sec 14,914 LoC/sec 15,532 LoC/sec
+  Semgrep real times:     1m0.576s 1m1.488s 0m38.358s 0m37.678s 1m0.779s
+  Semgrep throughput:     5745 LoC/sec 5660 LoC/sec 9073 LoC/sec 9237 LoC/sec 5726 LoC/sec
+  Bandit real times:      0m29.244s 0m29.334s 0m49.845s 0m29.301s 0m49.203s
+  Bandit throughput:      11901 LoC/sec 11864 LoC/sec 6982 LoC/sec 11878 LoC/sec 7073 LoC/sec
+
+=== [pandas-dev/pandas] Running PySpector (5 run(s)) ===
+  Run 1/5...
+    scan time: 20.78s | throughput: 14,164 LoC/sec | mem: 1736 MB | cpu cores: 8.6 / 16 logical cores | cpu%: 862% (multi-core, can exceed 100%)
+  Run 2/5...
+    scan time: 21.09s | throughput: 13,955 LoC/sec | mem: 1736 MB | cpu cores: 8.6 / 16 logical cores | cpu%: 860% (multi-core, can exceed 100%)
+  Run 3/5...
+    scan time: 20.47s | throughput: 14,374 LoC/sec | mem: 1731 MB | cpu cores: 8.6 / 16 logical cores | cpu%: 863% (multi-core, can exceed 100%)
+  Run 4/5...
+    scan time: 21.34s | throughput: 13,792 LoC/sec | mem: 1737 MB | cpu cores: 8.5 / 16 logical cores | cpu%: 851% (multi-core, can exceed 100%)
+  Run 5/5...
+    scan time: 19.59s | throughput: 15,018 LoC/sec | mem: 1737 MB | cpu cores: 8.8 / 16 logical cores | cpu%: 876% (multi-core, can exceed 100%)
+
+=== [pandas-dev/pandas] Running Semgrep (5 run(s)) ===
+  Run 1/5...
+    real time: 0m33.051s | throughput: 8903 LoC/sec
+  Run 2/5...
+    real time: 0m35.439s | throughput: 8303 LoC/sec
+  Run 3/5...
+    real time: 0m34.421s | throughput: 8549 LoC/sec
+  Run 4/5...
+    real time: 0m33.298s | throughput: 8837 LoC/sec
+  Run 5/5...
+    real time: 0m35.785s | throughput: 8223 LoC/sec
+
+=== [pandas-dev/pandas] Running Bandit (5 run(s)) ===
+  Run 1/5...
+    real time: 0m40.137s | throughput: 7332 LoC/sec
+  Run 2/5...
+    real time: 0m40.004s | throughput: 7356 LoC/sec
+  Run 3/5...
+    real time: 1m6.439s | throughput: 4429 LoC/sec
+  Run 4/5...
+    real time: 1m7.089s | throughput: 4386 LoC/sec
+  Run 5/5...
+    real time: 1m5.516s | throughput: 4492 LoC/sec
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ SPEED BENCHMARK SUMMARY — pandas-dev/pandas (5 run(s))                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Total LoC (from PySpector): 294,267                                      ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Median time    Throughput                                   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    20.78s         14164 LoC/sec                                ║
+║ Semgrep      34.421s        8549 LoC/sec                                 ║
+║ Bandit       65.516s        4492 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector resource usage (last run):                                     ║
+║   Peak memory:          1737 MB                                          ║
+║   CPU cores utilized:   8.8 / 16 logical cores                           ║
+║   Avg CPU utilization:  876% (multi-core, can exceed 100%)               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Raw per-run values:
+  PySpector scan times:   20.78s 21.09s 20.47s 21.34s 19.59s
+  PySpector throughput:   14,164 LoC/sec 13,955 LoC/sec 14,374 LoC/sec 13,792 LoC/sec 15,018 LoC/sec
+  Semgrep real times:     0m33.051s 0m35.439s 0m34.421s 0m33.298s 0m35.785s
+  Semgrep throughput:     8903 LoC/sec 8303 LoC/sec 8549 LoC/sec 8837 LoC/sec 8223 LoC/sec
+  Bandit real times:      0m40.137s 0m40.004s 1m6.439s 1m7.089s 1m5.516s
+  Bandit throughput:      7332 LoC/sec 7356 LoC/sec 4429 LoC/sec 4386 LoC/sec 4492 LoC/sec
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║ CROSS-REPO SUMMARY (8 repos, 5 run(s) each)                                                                                        ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ Repo                   LoC        PySpector      PS Throughput    Semgrep        SG Throughput    Bandit         BD Throughput     ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ pallets/flask          10,493     0.50s          20926 LoC/sec    6.574s         1596 LoC/sec     1.424s         7369 LoC/sec      ║
+║ pallets/click          14,111     0.75s          18828 LoC/sec    8.655s         1630 LoC/sec     2.293s         6154 LoC/sec      ║
+║ scrapy/scrapy          41,495     2.16s          19184 LoC/sec    9.253s         4484 LoC/sec     4.531s         9158 LoC/sec      ║
+║ fastapi/fastapi        34,204     1.72s          19923 LoC/sec    31.006s        1103 LoC/sec     7.668s         4462 LoC/sec      ║
+║ keras-team/keras       212,806    12.64s         16833 LoC/sec    36.347s        5855 LoC/sec     28.456s        7478 LoC/sec      ║
+║ ansible/ansible        208,900    13.51s         15460 LoC/sec    25.063s        8335 LoC/sec     13.989s        14933 LoC/sec     ║
+║ django/django          348,032    22.63s         15379 LoC/sec    60.576s        5745 LoC/sec     29.334s        11864 LoC/sec     ║
+║ pandas-dev/pandas      294,267    20.78s         14164 LoC/sec    34.421s        8549 LoC/sec     65.516s        4492 LoC/sec      ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ OVERALL BENCHMARK AVERAGES — 8 repo(s), 5 run(s) each                  ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Arithmetic mean across all successful runs                               ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Tool         Average time   Avg throughput                               ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector    9.198s         18448 LoC/sec                                ║
+║ Semgrep      24.677s        5039 LoC/sec                                 ║
+║ Bandit       18.876s        8891 LoC/sec                                 ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ PySpector average resource consumption:                                  ║
+║   Peak memory:          973.0 MB                                         ║
+║   CPU cores utilized:   4.093 / 16 logical cores                         ║
+║   Avg CPU utilization:  409.6% (multi-core, can exceed 100%)             ║
+║   CPU resource samples: 40 / 40                                          ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ Successful runs:                                                         ║
+║   PySpector:             40 / 40                                         ║
+║   Semgrep:               40 / 40                                         ║
+║   Bandit:                39 / 40                                         ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Full results written to: /home/kali/Desktop/pyspectorspeedbenchmarks/benchmark_results_20260828_132828.csv
+Columns: repo,loc,tool,median_time_s,throughput_locsec — ready for pandas/numpy import.
+
+⚠ 1 run(s) never produced expected output and were excluded from medians/averages/throughput:
+  - fastapi/fastapi / bandit / run 5 (satori exit code 1) → /home/kali/Desktop/pyspectorspeedbenchmarks/failed_runs/fastapi_fastapi_bandit_run5_20260828_145113.log
+Inspect the log files above to determine cause (timeout, clone failure, container crash, etc.).
