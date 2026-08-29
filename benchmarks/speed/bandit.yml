@@ -1,0 +1,19 @@
+settings:
+  name: "Bandit (benchmark fork): Find common security issues in Python"
+  description: "Bandit processes each file, builds an AST from it, and runs appropriate plugins against the AST nodes. This fork wraps the scan with `time`, since Bandit has no built-in self-reported timing, so its runtime is visible in stdout separate from install/clone/report overhead."
+  image: python
+  author:
+    - https://github.com/PyCQA
+  example: satori run ./bandit.yml --repo satorici/satori-cli --report --output
+
+bandit:
+  install:
+    - pip install bandit -U -q --disable-pip-version-check
+
+  test:
+    assertStdoutNotContains:
+      - "Severity: High"
+      - "Severity: Medium"
+      - "Severity: Low"
+    run:
+      - bash -c "time bandit -r ./ -f json -o results.json -q"

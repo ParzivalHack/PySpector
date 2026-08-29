@@ -1,0 +1,36 @@
+settings:
+  name: "PySpector (benchmark fork)"
+  description: "PySpector is a static analysis security testing (SAST) Framework engineered for modern Python development workflows. It leverages a powerful Rust core to deliver high-speed, accurate vulnerability scanning, wrapped in a developer-friendly Python CLI. This fork runs with --stats instead of --ai to expose PySpector's self-reported scan time for benchmarking, installs psutil for full resource-usage stats, and writes findings to JSON to keep stdout clean."
+  image: satori
+  author:
+    - https://github.com/ParzivalHack
+  example: satori run ./pyspector.yml --repo satorici/satori-cli --report --output
+
+pyspector:
+  install:
+    - command -v pyspector >/dev/null || pip install pyspector -U -q --root-user-action=ignore --disable-pip-version-check
+    - pip install psutil -q --disable-pip-version-check --root-user-action=ignore
+
+  test:
+    run:
+      - pyspector scan . --stats -f json -o report.json
+
+    CRITICAL:
+      setOutput: pyspector.test.run
+      setSeverity: 1
+      assertStdoutNotContains: "CRITICAL"
+
+    HIGH:
+      setOutput: pyspector.test.run
+      setSeverity: 2
+      assertStdoutNotContains: "HIGH"
+
+    MEDIUM:
+      setOutput: pyspector.test.run
+      setSeverity: 3
+      assertStdoutNotContains: "MEDIUM"
+
+    LOW:
+      setOutput: pyspector.test.run
+      setSeverity: 4
+      assertStdoutNotContains: "LOW"

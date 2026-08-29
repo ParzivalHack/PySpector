@@ -1,0 +1,24 @@
+settings:
+  name: "Semgrep (benchmark fork): static source code analysis"
+  description: "Semgrep is a code analysis tool that searches for patterns in source code to detect vulnerabilities, enforce best practices, and identify code structure issues. This fork captures Semgrep's own internal profiling time (--time) alongside wall-clock time, so tool runtime can be isolated from container/orchestration overhead."
+  image: python:3.10-slim
+  author:
+    - https://github.com/semgrep
+  example: satori run ./semgrep.yml --repo satorici/satori-cli --report --output
+
+semgrep:
+  install:
+    - pip install semgrep -U -q --disable-pip-version-check --root-user-action=ignore
+
+  run:
+    - bash -c "time semgrep --config auto --time -q --json -o results.json"
+
+  high:
+    setOutput: semgrep.run
+    setSeverity: 2
+    assertStdoutNotContains: " ❯❯❱ "
+
+  medium:
+    setOutput: semgrep.run
+    setSeverity: 3
+    assertStdoutNotContains: " ❯❱ "
