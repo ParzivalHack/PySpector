@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="description" content="PySpector is a state-of-the-art Python SAST framework with a Rust core: flow-sensitive, inter-procedural taint analysis, AI/LLM security rules, and SARIF output." />
 <meta property="og:title" content="PySpector: Trace taint. Catch vulns. Ship safely." />
-<meta property="og:description" content="Graph-based Python SAST with a Rust core. 71% faster than Bandit, 16.6× faster than Semgrep." />
+<meta property="og:description" content="Graph-based Python SAST with a Rust core. 2.1× faster than Bandit, 3.7× faster than Semgrep." />
 <meta property="og:type" content="website" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -442,7 +442,7 @@ section.block.alt { background: var(--bg1); border-top: 1px solid var(--g1); bor
 .feature-desc code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--g5); background: var(--bg3); padding: 1px 6px; border-radius: 4px; }
 
 /* Benchmarks */
-.bench-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: stretch; }
+.bench-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start; }
 .bench-panel { background: var(--bg0); border: 1px solid var(--g1); border-radius: var(--radius-lg); padding: 26px; }
 section.block:not(.alt) .bench-panel { background: var(--bg1); }
 .bench-panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--g4); margin-bottom: 22px; font-weight: 600; }
@@ -827,7 +827,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
       </span>
       <h1>Trace taint across your entire codebase. <span class="grad-text">Before attackers do.</span></h1>
       <p class="hero-lede">
-        PySpector is a graph-based SAST framework for modern Python. A <strong>Rust analysis core</strong> builds the call graph and control flow graph of your project, then propagates taint from <strong>sources to sinks</strong> across function boundaries, at an average of <strong>25,000 lines/second</strong>.
+        PySpector is a graph-based SAST framework for modern Python. A <strong>Rust analysis core</strong> builds the call graph and control flow graph of your project, then propagates taint from <strong>sources to sinks</strong> across function boundaries, at an average of <strong>18,448 lines/second</strong>.
       </p>
       <div class="hero-ctas">
         <span class="install-cmd">
@@ -839,12 +839,12 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
         <a class="btn ghost" href="#docs">Read the docs</a>
       </div>
       <div class="hero-proof">
-        <div class="proof-item"><span class="proof-num"><em class="count" data-count="71" data-suffix="%">71%</em> faster</span><span class="proof-label">than Bandit</span></div>
-        <div class="proof-item"><span class="proof-num"><em class="count" data-count="16.6" data-decimals="1" data-suffix="×">16.6×</em> faster</span><span class="proof-label">than Semgrep</span></div>
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="2.1" data-decimals="1" data-suffix="×">2.1×</em> faster</span><span class="proof-label">than Bandit</span></div>
+        <div class="proof-item"><span class="proof-num"><em class="count" data-count="3.7" data-decimals="1" data-suffix="×">3.7×</em> faster</span><span class="proof-label">than Semgrep</span></div>
         <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em id="star-count">145+</em></span><span class="proof-label">GitHub stars</span></a></div>
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="3">3</em></span><span class="proof-label">analysis engines</span></div>
-        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="30000" data-suffix="+">30,000+</em></span><span class="proof-label">downloads</span></a></div>
-        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="20" data-suffix="">20</em></span><span class="proof-label">unique contributors</span></a></div>
+        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="40000" data-suffix="+">40,000+</em></span><span class="proof-label">downloads</span></a></div>
+        <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="20" data-suffix="+">20+</em></span><span class="proof-label">unique contributors</span></a></div>
       </div>
     </div>
 
@@ -999,7 +999,17 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
     <div class="section-head reveal">
       <div class="section-eyebrow">Benchmarks</div>
       <h2>Measured against the tools you already run.</h2>
-      <p>Head-to-head against Bandit and Semgrep with identical configurations, across five major Python codebases (Django, Flask, Pandas, Scikit-learn, Requests) from 13k to 530k lines of code.</p>
+      <p>Head-to-head against Bandit and Semgrep with identical configurations and resource allocation, across eight real-world Python codebases (Flask, Click, FastAPI, Scrapy, Ansible, Keras, Pandas, Django) from 10,493 to 348,032 lines of Python code.</p>
+    </div>
+    <div class="callout tip reveal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4.5-2 7H7c0-2.5-2-4-2-7a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/></svg>
+      <span><strong>Controlled-benchmark average, not a ceiling.</strong> PySpector has independently been observed exceeding <strong>50,000 to 55,000 lines of code per second</strong> on large codebases such as Django.</span>
+    </div>
+    <div style="display:flex; justify-content:center; margin: 4px 0 32px;">
+      <a class="btn ghost" href="https://github.com/user-attachments/files/31597398/PySpector.Performance.Benchmark.A.Comparative.Speed.and.Resource-Efficiency.Analysis.Against.Bandit.and.Semgrep.Across.Eight.Open-Source.Python.Codebases.pdf" target="_blank" rel="noopener">
+        <svg class="gh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Read the Whitepaper
+      </a>
     </div>
     <div class="bench-grid">
       <div class="bench-panel reveal">
@@ -1008,33 +1018,33 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
           <div class="bar-row lead">
             <span class="bar-name">PySpector</span>
             <span class="bar-track"><span class="bar-fill pys" style="width:100%"></span></span>
-            <span class="bar-val">25,607 l/s</span>
+            <span class="bar-val">18,448 l/s</span>
           </div>
           <div class="bar-row">
             <span class="bar-name">Bandit</span>
-            <span class="bar-track"><span class="bar-fill other" style="width:58.3%"></span></span>
-            <span class="bar-val">14,927 l/s</span>
+            <span class="bar-track"><span class="bar-fill other" style="width:48.2%"></span></span>
+            <span class="bar-val">8,891 l/s</span>
           </div>
           <div class="bar-row">
             <span class="bar-name">Semgrep</span>
-            <span class="bar-track"><span class="bar-fill other" style="width:6%"></span></span>
-            <span class="bar-val">1,538 l/s</span>
+            <span class="bar-track"><span class="bar-fill other" style="width:27.3%"></span></span>
+            <span class="bar-val">5,039 l/s</span>
           </div>
         </div>
-        <p class="bench-note">Debian-based Linux VM (2 cores, 4 GB RAM). Values are averages over multiple runs with CPU settling periods between executions. Raw benchmark data is available in the <a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener">repository</a> for reproducibility.</p>
+        <p class="bench-note">Dedicated cloud compute via Satori CI (16 vCPUs, 120 GB RAM). Values are the average across five runs per tool per repository. Raw benchmark data, tool configurations, and the full technical whitepaper are available in the <a href="https://github.com/ParzivalHack/PySpector/tree/main/benchmarks/speed" target="_blank" rel="noopener">repository</a> for reproducibility.</p>
       </div>
       <div class="bench-panel reveal">
         <h3>Comparative profile</h3>
         <table class="bench-table">
           <thead><tr><th>Metric</th><th>PySpector</th><th>Bandit</th><th>Semgrep</th></tr></thead>
           <tbody>
-            <tr><td>Relative speed</td><td><span class="tag win">71% faster</span></td><td><span class="tag dim">baseline</span></td><td><span class="tag dim">16.6× slower</span></td></tr>
-            <tr><td>Memory usage</td><td class="mono">1.4 GB avg</td><td class="mono">111 MB avg</td><td class="mono">277 MB avg</td></tr>
-            <tr><td>CPU utilization</td><td class="mono">120% multi-core</td><td class="mono">100% single</td><td class="mono">40%</td></tr>
+            <tr><td>Relative speed</td><td><span class="tag win">Fastest (reference)</span></td><td><span class="tag dim">2.1× slower</span></td><td><span class="tag dim">3.7× slower</span></td></tr>
+            <tr><td>Peak memory usage</td><td class="mono">973 MB avg</td><td class="mono">Not measured</td><td class="mono">Not measured</td></tr>
+            <tr><td>CPU utilization</td><td class="mono">4.09 of 16 cores avg</td><td class="mono">Not measured</td><td class="mono">Not measured</td></tr>
             <tr><td>Analysis depth</td><td><span class="tag ok">Graph + Taint + AST + RegEx</span></td><td><span class="tag dim">AST patterns</span></td><td><span class="tag dim">Patterns</span></td></tr>
           </tbody>
         </table>
-        <p class="bench-note">PySpector trades a larger memory footprint for full graph construction and multi-core saturation. Recommended: 4+ cores and 4+ GB RAM for large codebases; 2 cores / 2 GB minimum.</p>
+        <p class="bench-note">PySpector trades a larger memory footprint for full graph construction and multi-core saturation. Recommended: 8+ cores and 4+ GB RAM for large codebases (peak observed memory was approximately 2.2 GB on the largest tested repository), 4 cores/2 GB minimum.</p>
       </div>
     </div>
   </div>
