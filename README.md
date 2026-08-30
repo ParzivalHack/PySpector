@@ -72,7 +72,7 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.14 ven
   .\venv\bin\Activate.ps1
   ```
 
-With PySpector now officially on PyPI🎉, installation is as simple as running:
+With PySpector being on PyPI, installation is as simple as running:
 
 ```bash
 pip install pyspector
