@@ -33,6 +33,7 @@ PySpector is designed to be both comprehensive and intuitive, offering a multi-l
 - [Usage](#usage)
 - [Triaging and Baselining](#triaging-and-baselining-findings)
 - [Automation and Integration](#automation-and-integration)
+- [PySpector AI Agent Skill](#pyspector-ai-agent-skill)
 - [SARIF Output and Security Tool Integration](#sarif-output-and-security-tool-integration)
 - [Frequently Asked Questions](#frequently-asked-questions)
 
@@ -71,7 +72,7 @@ It is **highly recommended** to install PySpector in a dedicated Python 3.14 ven
   .\venv\bin\Activate.ps1
   ```
 
-With PySpector now officially on PyPI🎉, installation is as simple as running:
+With PySpector being on PyPI, installation is as simple as running:
 
 ```bash
 pip install pyspector
@@ -92,7 +93,7 @@ pip install pyspector
 
   - **Graph Engine:** Advanced CFG and Call-Graph-based data flow analysis for complex vulnerability chains.
 
-- **Fastest Market Performances:** Core analysis engine implemented in Rust with `Rayon` for multi-threaded parallelization (allowing PySpector to scan 71% faster than Bandit, and 16.6x faster than Semgrep).
+- **Fastest Market Performances:** Core analysis engine implemented in Rust with `Rayon` for multi-threaded parallelization.
 
 - **AI-Agent Security:** Specialized rulesets designed to identify prompt injection, insecure tool use, and data leakage in LLM-integrated Python applications.
 
@@ -123,44 +124,50 @@ This architecture combines the best of both worlds: a flexible, user-friendly in
 
 Performance benchmarks demonstrate PySpector's competitive advantages in SAST scanning speed while maintaining comprehensive security analysis.
 
-> Performance benchmarks were executed in a deterministic and controlled environment using automated stress-testing scripts, ensuring repeatable and unbiased measurements
+> Performance benchmarks were executed in a deterministic and controlled environment, ensuring repeatable and unbiased measurements
+
+You can read and download for free the full technical whitepaper here:
+[PySpector Performance Benchmark: A Comparative Speed and Resource-Efficiency Analysis Against Bandit and Semgrep Across Eight Open-Source Python Codebases.pdf](https://github.com/user-attachments/files/31597398/PySpector.Performance.Benchmark.A.Comparative.Speed.and.Resource-Efficiency.Analysis.Against.Bandit.and.Semgrep.Across.Eight.Open-Source.Python.Codebases.pdf)
+
 
 ### Benchmark Results
 
-<img width="4471" height="3529" alt="speed_benchmark_charts" src="https://github.com/user-attachments/assets/9ca0cd7a-82eb-4365-b5c3-94a60eb6d3d9" />
+<img width="3780" height="2190" alt="pyspector_benchmark_graphs" src="https://github.com/user-attachments/assets/6d45ff1a-6cae-4e0c-946c-1418b76d438a" />
 
-#### Comparative analysis across major Python codebases (Django, Flask, Pandas, Scikit-learn, Requests) shows:
+#### Comparative analysis across eight real-world Python codebases (Flask, Click, FastAPI, Scrapy, Ansible, Keras, Pandas, Django), ranging from 10,493 to 348,032 lines of Python code, shows:
 
 | Metric | PySpector | Bandit | Semgrep |
 |--------|-----------|---------|---------|
-| **Throughput** | 25,607 lines/sec | 14,927 lines/sec | 1,538 lines/sec |
-| **Performance Advantage** | **71% faster** than Bandit | Baseline | 16.6x slower |
-| **Memory Usage** | 1.4 GB average | 111 MB average | 277 MB average |
-| **CPU Utilization** | 120% (multi-core) | 100% (single-core) | 40% |
+| **Average Throughput** | 18,448 lines/sec | 8,891 lines/sec | 5,039 lines/sec |
+| **Relative to PySpector** | Fastest (reference) | 2.1x slower | 3.7x slower |
+| **Peak Memory Usage** | 973 MB average | Not measured in this benchmark | Not measured in this benchmark |
+| **CPU Utilization** | 4.09 of 16 cores average (multi-core, scales with codebase size) | Not measured in this benchmark | Not measured in this benchmark |
+
+> **Note on throughput figures:** the numbers above reflect this specific, controlled benchmark's average across eight repositories under identical, dedicated resource allocation, and are the figures we stand behind as objective and reproducible. Under more favorable, less constrained conditions, PySpector has independently been observed **exceeding 50,000 to 55,000 lines of code per second** on large codebases such as Django. That figure was not produced under the controlled methodology described here, so it is not included in the comparison table above, but we can confirm we have measured it multiple times, on different large codebases, in unrelated tests.
 
 ### Key Performance Characteristics
 
-- **Speed**: Delivers 71% faster scanning than traditional tools through Rust-powered parallel analysis
-- **Scalability**: Maintains high throughput on large codebases (500k+ lines of code)
-- **Resource Profile**: Optimized for modern multi-core environments with adequate memory allocation
-- **Consistency**: Stable performance across different project types and sizes
+- **Speed**: Achieves an average of 18,448 lines of code per second, roughly 2.1x faster than Bandit and 3.7x faster than Semgrep, across codebases ranging from 10k to 348k lines of Python
+- **Scalability**: Maintains a clear throughput lead over both comparison tools even on the largest codebases tested (up to 348k lines of Python)
+- **Resource Profile**: Multi-core Rust engine automatically scales CPU utilization from around 2 cores on small codebases up to 8 or more cores on large ones
+- **Consistency**: Lower run-to-run variance than both comparison tools across repeated runs on the same codebase
 
 ### System Requirements for Optimal Performance
 
-- **Minimum**: 2 CPU cores, 2 GB RAM
-- **Recommended**: 4+ CPU cores, 4+ GB RAM for large codebases
+- **Minimum**: 4 CPU cores, 2 GB RAM
+- **Recommended**: 8+ CPU cores, 4+ GB RAM for large codebases (peak observed memory usage was approximately 2.2 GB on the largest tested repository)
 - **Storage**: SSD recommended for large repository scanning
 
 ### Benchmark Methodology
 
 Performance testing conducted on:
 
-- **Test Environment**: Debian-based Linux VM (2 cores, 4GB RAM)
-- **Test Projects**: 5 major Python repositories (13k-530k lines of code)
-- **Measurement**: Average of multiple runs with CPU settling periods
-- **Comparison**: Head-to-head against Bandit and Semgrep using identical configurations
+- **Test Environment**: Dedicated Linux-based cloud compute instances via Satori CI (16 vCPUs, 120 GB RAM)
+- **Test Projects**: 8 real-world Python repositories spanning multiple domains (10,493 to 348,032 lines of Python code)
+- **Measurement**: Median and average across 5 runs per tool per repository
+- **Comparison**: Head-to-head against Bandit and Semgrep, scanning identical codebases under identical resource allocation
 
-_Benchmark data available in the project repository for transparency and reproducibility._
+_Full benchmark data, including raw per-run results, and the exact tool configurations, is available in [benchmarks/speed](https://github.com/ParzivalHack/PySpector/tree/main/benchmarks/speed) for transparency and reproducibility._
 
 ## Usage
 
@@ -283,9 +290,20 @@ pyspector triage report.json
 
 Inside the TUI, you can navigate with the arrow keys, press i to toggle the "ignored" status of an issue, and s to save your changes to a .pyspector_baseline.json file. This baseline file will be automatically loaded on subsequent scans.
 
+## PySpector AI Agent Skill
+
+PySpector ships with a `SKILL.md`, following the [Agent Skills](https://github.com/anthropics/skills) format supported by agents such as Claude Code, OpenAI Codex, Google Antigravity, and other agentic coding tools. It allows your agent to conduct a **complete security audit** of your Python codebase with the help of **PySpector's power and speed**: the agent installs PySpector (including the Rust toolchain via rustup, if missing), verifies the setup, inspects `pyspector --help` and `pyspector scan --help` to learn the current flags, selects scan options appropriate to your codebase (i.e. `--ai` for LLM-integrated projects, `--supply-chain` for dependency CVE checks), runs the scan, statically re-verifies each finding against your source files before reporting it, and produces a report you can read directly.
+
+To add a skill to Claude Code, simply create the necessary directories by running `mkdir -p ~/.claude/skills/pyspector`, then drop PySpector's SKILL.md file there, launch Claude Code inside your local codebase directory with `claude` and invoke it simply with `/pyspector`.
+
+<img width="1600" height="253" alt="image" src="https://github.com/user-attachments/assets/de539a62-8a7e-4674-a77d-264e0ef42ca0" />
+
+
+See [`SKILL.md`](./SKILL.md) for the full workflow definition.
+
 ## Automation and Integration
 
-PySpector includes Shell helper scripts to integrate security scanning directly into your development and operational workflows.
+PySpector includes Shell helper scripts, a pre-commit hook, and much more, to integrate security scanning directly into your operational workflows and CI/CD pipelines.
 
 ## SARIF Output and Security Tool Integration
 
