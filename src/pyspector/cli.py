@@ -12,7 +12,7 @@ import threading
 import warnings
 from importlib.metadata import version as _pkg_version, PackageNotFoundError
 from pathlib import Path
-from typing import Optional, Dict, Any, List, cast
+from typing import Optional, Dict, Any, List, Tuple, cast
 
 from .ast_cache import IncrementalAstCache, get_cache
 from ._ast_encode import AstEncoder
@@ -205,6 +205,26 @@ def _resolves_outside_root(file_path: Path, root: Path) -> bool:
     return real_path != real_root and real_root not in real_path.parents
 
 
+def _trusted_baseline_path(scan_path: Path) -> Tuple[Path, Optional[Path]]:
+    """Return the baseline to honour, and any in-tree baseline that was ignored.
+
+    A baseline lists findings the scan will not report, so whoever writes it
+    decides what the scan is allowed to say. When the file sits inside the tree
+    being scanned, that is the scanned code deciding, and a repository can
+    silence its own findings just by committing one. The baseline is therefore
+    only read from beside the target, never from within it.
+
+    PySpector's own triage writes the baseline next to the report file, so a
+    baseline produced that way is still honoured as long as the report does not
+    live inside the scanned tree.
+    """
+    trusted = scan_path.parent / ".pyspector_baseline.json"
+    in_tree = scan_path / ".pyspector_baseline.json" if scan_path.is_dir() else None
+    if in_tree is not None and not in_tree.exists():
+        in_tree = None
+    return trusted, in_tree
+
+
 def get_python_file_asts(
     path: Path,
     enable_syntax_warnings: bool = False,
@@ -348,11 +368,7 @@ def _scan_to_issues(
     if cache is None:
         cache = get_cache(scan_path)
 
-    baseline_path = (
-        scan_path / ".pyspector_baseline.json"
-        if scan_path.is_dir()
-        else scan_path.parent / ".pyspector_baseline.json"
-    )
+    baseline_path, _ = _trusted_baseline_path(scan_path)
     ignored_fingerprints: set = set()
     if baseline_path.exists():
         try:
@@ -575,8 +591,6 @@ def run_wizard():
               help="Treat Python SyntaxWarnings as errors and exclude affected files.")
 @click.option('--wizard', is_flag=True,
               help="Launch interactive guided scan mode — ideal for first-time users.")
-@click.option('--no-baseline', 'no_baseline', is_flag=True, default=False,
-              help="Ignore any .pyspector_baseline.json found in the scanned tree.")
 @click.option('--stats', 'show_stats', is_flag=True, default=False,
               help=(
                   "Print a detailed performance and findings statistics table "
@@ -601,7 +615,6 @@ def run_scan_command(
     supply_chain:     bool,
     syntax_warnings:  bool,
     wizard:           bool,
-    no_baseline:      bool,
     show_stats:       bool,
     debug:            bool,
     show_msg:         Optional[bool],
@@ -688,7 +701,6 @@ def run_scan_command(
                     report_format, severity_level, ai_scan,
                     supply_chain,
                     syntax_warnings, show_stats, debug,
-                    no_baseline=no_baseline,
                 )
             except subprocess.CalledProcessError as e:
                 click.echo(
@@ -712,7 +724,6 @@ def run_scan_command(
             report_format, severity_level, ai_scan,
             supply_chain,
             syntax_warnings, show_stats, debug,
-            no_baseline=no_baseline,
         )
 
 
@@ -727,7 +738,6 @@ def _execute_scan(
     syntax_warnings:   bool   = False,
     show_stats:        bool   = False,
     debug:             bool   = False,
-    no_baseline:       bool   = False,
 ):
     """
     Core scan orchestrator.
@@ -758,15 +768,15 @@ def _execute_scan(
     cache = get_cache(scan_path)
 
     # ── Load Baseline ─────────────────────────────────────────────────────
-    baseline_path = (
-        scan_path / ".pyspector_baseline.json"
-        if scan_path.is_dir()
-        else scan_path.parent / ".pyspector_baseline.json"
-    )
+    baseline_path, _in_tree_baseline = _trusted_baseline_path(scan_path)
     ignored_fingerprints: set = set()
-    if no_baseline and baseline_path.exists():
-        _dbg(debug, f"[*] Ignoring baseline '{baseline_path}' (--no-baseline).")
-    elif baseline_path.exists():
+    if _in_tree_baseline is not None:
+        click.echo(click.style(
+            f"[!] Ignoring '{_in_tree_baseline}': a baseline inside the scanned "
+            f"tree is supplied by the code under scan, not by you.",
+            fg="yellow",
+        ))
+    if baseline_path.exists():
         try:
             with baseline_path.open('r') as f:
                 baseline_data = json.load(f)
@@ -914,14 +924,11 @@ def _execute_scan(
     _severity_filtered = len(raw_issues) - len(severity_passed)
     _baseline_ignored  = len(severity_passed) - len(final_issues)
 
-    # The baseline is read from inside the tree being scanned, so when that tree
-    # came from somewhere else the file that suppressed these findings did too.
-    # Say so unconditionally rather than only under --stats, so a scan can never
-    # report clean while quietly dropping results.
+    # Say this unconditionally rather than only under --stats, so a scan can
+    # never report clean while quietly dropping results.
     if _baseline_ignored:
         click.echo(click.style(
-            f"[!] {_baseline_ignored} finding(s) suppressed by "
-            f"'{baseline_path}'. Use --no-baseline to ignore it.",
+            f"[!] {_baseline_ignored} finding(s) suppressed by '{baseline_path}'.",
             fg="yellow"
         ))
 
