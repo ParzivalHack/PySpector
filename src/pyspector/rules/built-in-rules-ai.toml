@@ -252,6 +252,7 @@ description = "Use of joblib.load can be insecure for untrusted model files."
 severity = "High"
 remediation = "Joblib can use pickle under the hood. Treat .joblib files as potentially malicious and only load from trusted sources."
 pattern = "joblib\\.load"
+exclude_pattern = "^\\s*#"
 file_pattern = "*.py"
 cwe = "CWE-502"
 
@@ -397,3 +398,196 @@ remediation = "Avoid giving LLMs direct SQL execution capabilities. If necessary
 pattern = "create_sql_agent"
 file_pattern = "*.py"
 cwe = "CWE-89"
+
+# -------------------------------------------
+# SECTION: AI600 - Unsafe Agent Behavior & Tool Poisoning
+# -------------------------------------------
+
+# AI601 (agent web browsing / SSRF) was removed: its regex could not reliably
+# match multiline or separately-defined agent tools, and its taint sink
+# (requests.get) duplicated the existing AISK08 sink. Agent-side SSRF is
+# already covered by AI501/AISK08 taint analysis.
+
+[[rule]]
+id = "AI602"
+description = "LLM agent has a tool that executes subprocess calls with shell=True, risking arbitrary command execution."
+severity = "Critical"
+confidence = "Low"
+remediation = "Never give LLM agents direct subprocess execution. If shell access is required, use a sandboxed environment with strict command whitelisting. Prefer shell=False with explicit argument lists."
+pattern = "subprocess\\.(?:run|call|Popen|check_output)\\s*\\([^)]*shell\\s*=\\s*True"
+file_pattern = "*.py"
+cwe = "CWE-78"
+
+# AI603 (unrestricted file write in agent tools) was removed: its pattern had
+# an ungrouped alternation that matched unrelated code (e.g. mode = "a"), and
+# ordinary file writes cannot be attributed to an agent tool via line-based
+# regex. Agent-side filesystem access is already covered by AI502/AISK09
+# taint analysis.
+
+# AI604 (tool output concatenated into prompts) was removed: detecting
+# unsanitized tool output requires data-flow analysis. The equivalent flow
+# (LLM/tool output reaching a prompt template) is covered by AITS04 -> AISK01
+# (AI101) taint analysis.
+
+[[rule]]
+id = "AI605"
+description = "LLM agent is configured with `verbose=True`, which may expose internal reasoning and sensitive data in logs."
+severity = "Medium"
+confidence = "Low"
+remediation = "Disable verbose logging in production. If debugging is needed, ensure logs are stored securely and not exposed to end users."
+pattern = "verbose\\s*=\\s*True"
+file_pattern = "*.py"
+cwe = "CWE-200"
+
+[[rule]]
+id = "AI606"
+description = "Agent uses `handle_parsing_errors=False`, which may cause unhandled exceptions to leak internal state."
+severity = "Medium"
+remediation = "Always enable parsing error handling and provide safe fallback responses instead of exposing raw error messages."
+pattern = "handle_parsing_errors\\s*=\\s*False"
+file_pattern = "*.py"
+cwe = "CWE-209"
+
+# -------------------------------------------
+# SECTION: AI700 - RAG Security
+# -------------------------------------------
+
+[[rule]]
+id = "AI701"
+description = "Documents are loaded into a RAG pipeline without content validation, risking embedding poisoning and retrieval manipulation."
+severity = "High"
+confidence = "Low"
+remediation = "Validate and sanitize all documents before embedding. Implement content filtering to reject adversarial or malformed inputs."
+pattern = "DirectoryLoader|TextLoader|PDFLoader|UnstructuredFileLoader"
+file_pattern = "*.py"
+cwe = "CWE-345"
+
+[[rule]]
+id = "AI702"
+description = "Vector store similarity search uses a low score_threshold (< 0.5), risking retrieval of low-quality or adversarial documents."
+severity = "Medium"
+confidence = "Low"
+remediation = "Set a reasonable similarity threshold (e.g., > 0.7) to filter out low-quality or adversarial retrievals. Monitor retrieval quality metrics."
+pattern = "similarity_search\\s*\\([^)]*score_threshold\\s*=\\s*0\\.(?:[0-4]|50*)"
+file_pattern = "*.py"
+cwe = "CWE-20"
+
+[[rule]]
+id = "AI703"
+description = "Retrieved context is injected into prompt without size limits, risking context window overflow and DoS."
+severity = "Medium"
+confidence = "Low"
+remediation = "Limit the number of retrieved documents and total context length. Implement truncation strategies to stay within model context limits."
+pattern = "combine_docs|stuff_documents_chain"
+file_pattern = "*.py"
+cwe = "CWE-400"
+
+[[rule]]
+id = "AI704"
+description = "Embedding model loaded from an untrusted source can be poisoned to manipulate retrieval results."
+severity = "High"
+confidence = "Low"
+remediation = "Use embedding models from trusted, verified sources. Pin model versions and verify checksums when loading from disk."
+pattern = "HuggingFaceEmbeddings|SentenceTransformerEmbeddings"
+file_pattern = "*.py"
+cwe = "CWE-345"
+
+# -------------------------------------------
+# SECTION: AI800 - API Key & Credential Management
+# -------------------------------------------
+
+[[rule]]
+id = "AI801"
+description = "OpenAI API key is hardcoded in the source file."
+severity = "Critical"
+remediation = "Store API keys in environment variables or a secrets manager. Never commit credentials to source control."
+pattern = "openai\\.api_key\\s*=\\s*[\"']sk-"
+file_pattern = "*.py"
+cwe = "CWE-798"
+
+[[rule]]
+id = "AI802"
+description = "Anthropic API key is hardcoded in the source file."
+severity = "Critical"
+remediation = "Store API keys in environment variables or a secrets manager. Never commit credentials to source control."
+pattern = "anthropic\\.api_key\\s*=\\s*[\"']sk-ant-"
+file_pattern = "*.py"
+cwe = "CWE-798"
+
+[[rule]]
+id = "AI803"
+description = "API key is passed as a URL query parameter, risking exposure in logs and referrer headers."
+severity = "High"
+remediation = "Pass API keys in request headers (e.g., Authorization header), never in URL query parameters."
+pattern = "key\\s*=\\s*[\"'].*api.*key|api_key\\s*=.*url"
+file_pattern = "*.py"
+cwe = "CWE-598"
+
+[[rule]]
+id = "AI804"
+description = "Cohere API key is hardcoded in the source file."
+severity = "Critical"
+remediation = "Store API keys in environment variables or a secrets manager. Never commit credentials to source control."
+pattern = "cohere\\.Client\\s*\\(.*api_key\\s*=\\s*[\"']"
+file_pattern = "*.py"
+cwe = "CWE-798"
+
+# -------------------------------------------
+# SECTION: AI900 - Output Handling & DoS
+# -------------------------------------------
+
+[[rule]]
+id = "AI901"
+description = "Unsafe YAML parsing of LLM output can lead to arbitrary object instantiation and RCE."
+severity = "Critical"
+remediation = "Use yaml.safe_load() or yaml.safe_loads() instead of yaml.load() with untrusted LLM output."
+pattern = "yaml\\.load\\s*\\("
+exclude_pattern = "yaml\\.safe_load"
+file_pattern = "*.py"
+cwe = "CWE-502"
+
+[[rule]]
+id = "AI902"
+description = "JSON parsing of LLM output without size limits can lead to memory exhaustion DoS."
+severity = "Medium"
+confidence = "Low"
+remediation = "Limit the maximum size of LLM output before parsing. Use streaming JSON parsers for large responses."
+pattern = "json\\.loads\\s*\\(\\s*\\w*(?:output|response|completion)\\w*\\s*\\)"
+file_pattern = "*.py"
+cwe = "CWE-400"
+
+[[rule]]
+id = "AI903"
+description = "LLM output is passed directly to exec() or eval(), risking arbitrary code execution."
+severity = "Critical"
+remediation = "Never execute LLM-generated code without sandboxing. Use ast.literal_eval() for data structures or a restricted execution environment."
+pattern = "(?:exec|eval)\\s*\\(\\s*\\w*(?:llm|response|output|completion)\\w*\\s*\\)"
+file_pattern = "*.py"
+cwe = "CWE-94"
+
+[[rule]]
+id = "AI904"
+description = "LLM response is directly rendered as HTML without sanitization, risking XSS."
+severity = "High"
+remediation = "Sanitize LLM output before rendering as HTML. Use a markup sanitizer like bleach to strip dangerous tags and attributes."
+pattern = "innerHTML\\s*=|dangerouslySetInnerHTML|render_template_string\\s*\\([^)]*llm"
+exclude_pattern = "sanitize|bleach"
+file_pattern = "*.py"
+cwe = "CWE-79"
+
+# -------------------------------------------
+# NEW TAINT SOURCES & SINKS for AI600-AI900
+# -------------------------------------------
+
+[[taint_source]]
+id = "AITS11"
+description = "Data retrieved from a vector store in a RAG pipeline is considered tainted."
+function_call = ".similarity_search"
+taint_target = "return"
+
+[[taint_sink]]
+id = "AISK12"
+vulnerability_id = "AI901"
+description = "Tainted data is passed to yaml.load for deserialization."
+function_call = "yaml.load"
+vulnerable_parameter_index = 0
