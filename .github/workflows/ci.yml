@@ -1,0 +1,156 @@
+name: CI
+
+"on":
+  push:
+  pull_request:
+
+# Least-privilege default: none of these jobs need to write to the repo,
+# open PRs, or touch packages - read-only checkout is all they require.
+permissions:
+  contents: read
+
+# Cancel any in-progress run for the same branch/PR when a new commit lands,
+# so consecutive pushes don't queue up redundant runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # setup.py declares python_requires=">=3.8" with no upper bound.
+        # 3.8 is excluded here because it is EOL (Oct 2024); 3.12 is the
+        # version CONTRIBUTING.md recommends for development.
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install PySpector in editable mode (builds the Rust/PyO3 extension)
+        run: pip install -e .
+
+      - name: Smoke test the Rust extension import
+        # The build above only proves _rust_core compiles - it doesn't prove the
+        # resulting artifact actually loads under this Python. None of the tests
+        # in tests/unit import it (see test-coverage audit), so without this step
+        # a broken/incompatible _rust_core build would go unnoticed by CI.
+        run: python -c "import pyspector._rust_core"
+
+      - name: Install test dependencies
+        # pytest and beautifulsoup4 are required by tests/unit (e.g. reporting_test.py)
+        # but are not declared in requirements.txt/setup.py, so they are installed here.
+        run: pip install pytest beautifulsoup4
+
+      - name: Run test suite
+        run: pytest tests/unit -v
+
+  python-quality:
+    # Runs once (not per Python-version matrix entry) to avoid linting/type-checking
+    # the same source 4x. Ruff and mypy are pure static analysis - they don't need the
+    # Rust extension built or requirements.txt installed, so this job skips both and
+    # stays fast. Not declared in requirements.txt/setup.py (no dev-dependency group
+    # exists in this project yet), so both tools are installed directly here - same
+    # approach already used for pytest/beautifulsoup4 in the `test` job.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Ruff and mypy
+        run: pip install ruff mypy
+
+      - name: Run mypy (non-blocking)
+        # Known baseline: 8-10 pre-existing type errors (see audit). Not fixed yet,
+        # so this step is explicitly allowed to fail without failing the job/pipeline.
+        # Promote to blocking by deleting the `continue-on-error` line below once the
+        # baseline is clean.
+        continue-on-error: true
+        run: mypy src/pyspector --ignore-missing-imports
+
+      - name: Run Ruff (blocking)
+        run: ruff check .
+
+  rust-quality:
+    # Runs once on Ubuntu only - Clippy's findings don't depend on the OS, and this
+    # avoids re-running it once per Python version. No pip installs here: Clippy is
+    # a `cargo` command and doesn't need the Python runtime dependencies, only a
+    # Python interpreter on PATH for PyO3's build script (provided by setup-python).
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Check formatting (rustfmt)
+        # Blocking: the workspace was formatted with `cargo fmt` in a prior commit, so
+        # this should always pass. Only `--check` is used here - `cargo fmt` itself is
+        # never invoked in CI, so this step never rewrites files.
+        run: cargo fmt --check
+
+      - name: Cache Cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Clippy
+        # Intentionally no `-D warnings`: ~39 pre-existing warnings (see audit) are not
+        # fixed yet. This still fails the job on actual compile errors (Clippy runs on
+        # top of a real `cargo check`), it just doesn't escalate warnings to errors.
+        run: cargo clippy --workspace --all-targets --all-features
+
+  docker-build:
+    # Smoke-tests the Dockerfile itself (multi-stage Rust+Python build) on every
+    # push/PR. Build-only, no push/registry - this repo has no configured registry
+    # credentials yet, so promoting this to publish images is a separate step.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

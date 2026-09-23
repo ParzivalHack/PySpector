@@ -30,3 +30,19 @@ Dockerfile
 dist/
 build/
 *.egg-info/
+
+# Locally-built native extension artifacts (rebuilt fresh inside the image;
+# a stray local one, e.g. a Windows .pyd from `pip install -e .` on a dev
+# machine, must never be picked up as the Linux extension).
+*.pyd
+*.so
+*.dylib
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+venv*/
+
+# Frontend dependencies - not used by this image
+frontend/node_modules/
+frontend/.angular/
