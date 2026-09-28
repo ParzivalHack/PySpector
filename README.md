@@ -403,6 +403,7 @@ For continuous monitoring, you can schedule regular scans of your projects using
       <td align="center" valign="top" width="14.28%"><a href="https://satori.ci/"><img src="https://avatars.githubusercontent.com/u/89515805?v=4?s=100" width="100px;" alt="satoridev01"/><br /><sub><b>satoridev01</b></sub></a><br /><a href="#security-satoridev01" title="Security">🛡️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Shinigami81"><img src="https://avatars.githubusercontent.com/u/122274261?v=4?s=100" width="100px;" alt="Shinigami"/><br /><sub><b>Shinigami</b></sub></a><br /><a href="#security-Shinigami81" title="Security">🛡️</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://youtube.com/fantasm"><img src="https://avatars.githubusercontent.com/u/35772301?v=4?s=100" width="100px;" alt="fg0x0"/><br /><sub><b>fg0x0</b></sub></a><br /><a href="#security-fg0x0" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/arpitjain099"><img src="https://avatars.githubusercontent.com/u/3242828?v=4?s=100" width="100px;" alt="arpitjain099"/><br /><sub><b>arpitjain099</b></sub></a><br /><a href="#security-arpitjain099" title="Security">🛡️</a></td>
     </tr>
   </tbody>
 </table>
