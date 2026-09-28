@@ -1522,23 +1522,6 @@ jobs:
             <pre><code><span class="p">$</span> ./scripts/setup_cron.sh</code></pre>
           </div>
 
-          <h4>REST API & Docker</h4>
-          <p>PySpector also ships a small Rust HTTP service (<code>pyspector-api</code>, built on actix-web) that exposes scanning over the network. It accepts <code>POST /scan</code> on port <code>10000</code> with a JSON body and is rate-limited (12 requests/second, burst of 5):</p>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy='curl -X POST http://localhost:10000/scan \
-  -H &quot;Content-Type: application/json&quot; \
-  -d &apos;{&quot;url&quot;: &quot;https://github.com/psf/requests.git&quot;, &quot;ai&quot;: false, &quot;json_output&quot;: true}&apos;'>Copy</button></div>
-            <pre><code><span class="p">$</span> curl <span class="o">-X</span> POST <span class="s">http://localhost:10000/scan</span> \
-  <span class="o">-H</span> <span class="s">"Content-Type: application/json"</span> \
-  <span class="o">-d</span> <span class="s">'{"url": "...", "ai": false, "json_output": true}'</span></code></pre>
-          </div>
-          <p>The body takes either <code>url</code> (a public repo to clone) or <code>path</code> (a server-side directory), plus the <code>ai</code> and <code>json_output</code> booleans. A <code>Dockerfile</code> is included to build and run the service in a container:</p>
-          <div class="codeblock">
-            <div class="codeblock-head"><span class="codeblock-lang">bash</span><button class="copy-btn" data-copy="docker build -t pyspector-api .
-docker run -p 10000:10000 pyspector-api">Copy</button></div>
-            <pre><code><span class="p">$</span> docker <span class="f">build</span> <span class="o">-t</span> pyspector-api .
-<span class="p">$</span> docker <span class="f">run</span> <span class="o">-p</span> 10000:10000 pyspector-api</code></pre>
-          </div>
         </article>
 
         <!-- CONTRIBUTING -->
@@ -1681,8 +1664,6 @@ mypy src/">Copy</button></div>
               <li>Command injection (CWE-77/78): e.g. unsanitized input reaching <code>subprocess</code> via <code>--url</code> git clone</li>
               <li>Arbitrary code execution via malicious <code>.toml</code> rulesets or scan targets (CWE-94)</li>
               <li>Path traversal & arbitrary file write (CWE-22/73)</li>
-              <li>SSRF via the REST API <code>/scan</code> endpoint's <code>url</code> parameter (CWE-918)</li>
-              <li>Auth/authorization bypass on the REST API (CWE-306/862)</li>
               <li>Rust core memory corruption, UAF, buffer or integer overflow (CWE-119/416/190)</li>
               <li>Supply chain: tampered PyPI package, dependency confusion (CWE-494/829)</li>
               <li>Information disclosure via output or error messages (CWE-200/532)</li>
