@@ -1222,6 +1222,9 @@ remediation = "Use yaml.safe_load() or yaml.load(..., Loader=yaml.SafeLoader)."
 pattern = "\\byaml\\.load\\s*\\([^)]*\\)"
 exclude_pattern = "Loader\\s*=\\s*(yaml\\.)?(SafeLoader|CSafeLoader|BaseLoader)|\\bsafe_load\\b"
 file_pattern = "*.py"
+# ruamel.yaml YAML() round-trip is safe (same exclusion as PY302); unsafe ruamel
+# usage is covered by RUAMEL_UNSAFE001.
+file_content_exclude = "from ruamel\\.yaml|import ruamel"
 cwe = "CWE-502"
 
 [[rule]]

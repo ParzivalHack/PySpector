@@ -117,8 +117,11 @@ class TestYamlLoad:
     def test_unsafe_yaml_load_flagged_py302(self):
         """yaml.load() without Loader IS dangerous — PY302 must still fire."""
         code = "import yaml\ndata = yaml.load(user_input)\n"
-        assert findings_for_rule(code, "PY302", filename="loader.py") != [], \
-            "PY302 should still fire for bare yaml.load() without Loader"
+        # YAML001 (Critical) shares CWE-502 and wins the CWE-aware dedup (#56)
+        findings = findings_for_rule(code, "PY302", filename="loader.py") + \
+            findings_for_rule(code, "YAML001", filename="loader.py")
+        assert findings != [], \
+            "PY302/YAML001 should still fire for bare yaml.load() without Loader"
 
 
 # ===========================================================================
