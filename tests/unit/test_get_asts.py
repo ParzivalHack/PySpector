@@ -50,8 +50,9 @@ class TestGetPythonFileAsts(unittest.TestCase):
         # because the warning is ignored and parsing proceeds.
         self.assertEqual(len(results), 2)
         filenames = [r["file_path"] for r in results]
-        self.assertIn("valid.py", filenames)
-        self.assertIn("warning_err.py", filenames)
+        # file_path is absolute and canonical since #56
+        self.assertIn(str(self.valid_file.resolve()), filenames)
+        self.assertIn(str(self.warning_syntax.resolve()), filenames)
 
     def test_get_python_file_asts_handling_enabled(self):
         """Test that when enabled, SyntaxWarnings are treated as errors and files are excluded."""
@@ -61,7 +62,7 @@ class TestGetPythonFileAsts(unittest.TestCase):
         # We expect ONLY the valid python file to be in the result
         # because the warning_err.py triggers an exception and is caught.
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["file_path"], "valid.py")
+        self.assertEqual(results[0]["file_path"], str(self.valid_file.resolve()))
         self.assertEqual(results[0]["content"], "x = 10")
         self.assertIn("ast_json", results[0])
 

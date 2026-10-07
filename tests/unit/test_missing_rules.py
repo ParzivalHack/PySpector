@@ -167,7 +167,9 @@ class TestDESER726:
 class TestTLS001:
     def test_verify_false_fires(self):
         code = "resp = requests.get(url, verify=False)"
-        assert fires(code, "TLS001"), "TLS001 must fire: requests verify=False"
+        # G405 shares CWE-295 and wins the CWE-aware dedup (#56) on rule_id order
+        assert fires(code, "TLS001") or fires(code, "G405"), \
+            "TLS001/G405 must fire: requests verify=False"
 
     def test_disable_warnings_fires(self):
         code = "urllib3.disable_warnings(InsecureRequestWarning)"
@@ -389,7 +391,14 @@ class TestFileContentExclude:
     def test_pyyaml_unsafe_fires(self):
         # Plain PyYAML import with unsafe load — must fire
         code = "import yaml\nyaml.load(data)"
-        assert fires(code, "PY302"), "PY302 must fire for PyYAML yaml.load() without Loader"
+        # YAML001 (Critical) shares CWE-502 and wins the CWE-aware dedup (#56)
+        assert fires(code, "PY302") or fires(code, "YAML001"), \
+            "PY302/YAML001 must fire for PyYAML yaml.load() without Loader"
+
+    def test_ruamel_yaml_round_trip_not_flagged_yaml001(self):
+        # YAML001 shares CWE-502 with PY302 and must honour the same ruamel exclusion
+        code = "from ruamel.yaml import YAML\nyaml = YAML()\nyaml.load(stream)"
+        assert not_fires(code, "YAML001"), "YAML001 must NOT fire for ruamel YAML() round-trip"
 
     def test_ruamel_yaml_suppressed(self, tmp_path):
         # ruamel.yaml with YAML() round-trip is safe — must NOT fire
