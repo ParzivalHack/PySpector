@@ -56,6 +56,16 @@ def _clean(obj):
             if v is not None
         }
 
+    # sarif_om classes are attrs classes whose field names are snake_case;
+    # the SARIF spec name (e.g. "ruleId", "$schema") lives in field metadata.
+    attrs_fields = getattr(type(obj), "__attrs_attrs__", None)
+    if attrs_fields is not None:
+        return {
+            f.metadata.get("schema_property_name", f.name): _clean(getattr(obj, f.name))
+            for f in attrs_fields
+            if getattr(obj, f.name) is not None
+        }
+
     if hasattr(obj, "__dict__"):
         return {
             k: _clean(v)

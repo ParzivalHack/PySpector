@@ -81,7 +81,7 @@ class TestReporter(unittest.TestCase):
         # Check top level SARIF fields
         self.assertEqual(output_json.get("version"), "2.1.0")
         self.assertEqual(
-            output_json.get("schema_uri"),
+            output_json.get("$schema"),
             "https://raw.githubusercontent.com/oasis-tcs/"
             "sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         )
@@ -104,7 +104,7 @@ class TestReporter(unittest.TestCase):
         result = run["results"][0]
 
         # Check rule id
-        self.assertEqual(result.get("rule_id"), self.test_issue.rule_id)
+        self.assertEqual(result.get("ruleId"), self.test_issue.rule_id)
         
         # Check description
         self.assertIn("message", result)
@@ -114,15 +114,15 @@ class TestReporter(unittest.TestCase):
         self.assertIn("locations", result)
         self.assertIsInstance(result["locations"], list)
         location = result["locations"][0]
-        self.assertIn("physical_location", location)
-        physical = location["physical_location"]
-        self.assertIn("artifact_location", physical)
-        artifact = physical["artifact_location"]
+        self.assertIn("physicalLocation", location)
+        physical = location["physicalLocation"]
+        self.assertIn("artifactLocation", physical)
+        artifact = physical["artifactLocation"]
         self.assertEqual(artifact.get("uri"), self.test_issue.file_path)
 
     def test_to_sarif_result_has_level_field(self):
         reporter = Reporter([self.test_issue], "sarif")
-        output_json = json.loads(reporter.to_json())
+        output_json = json.loads(reporter.to_sarif())
         result = output_json["runs"][0]["results"][0]
         self.assertIn("level", result)
         # HIGH severity maps to "error" in SARIF
@@ -130,15 +130,36 @@ class TestReporter(unittest.TestCase):
 
     def test_to_sarif_result_has_rule_index(self):
         reporter = Reporter([self.test_issue], "sarif")
-        output_json = json.loads(reporter.to_json())
+        output_json = json.loads(reporter.to_sarif())
         result = output_json["runs"][0]["results"][0]
         self.assertIn("ruleIndex", result)
         self.assertIsInstance(result["ruleIndex"], int)
 
+    def test_to_sarif_uses_spec_property_names(self):
+        reporter = Reporter([self.test_issue], "sarif")
+        output_json = json.loads(reporter.to_sarif())
+
+        def keys(obj):
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    yield k
+                    yield from keys(v)
+            elif isinstance(obj, list):
+                for item in obj:
+                    yield from keys(item)
+
+        # SARIF 2.1.0 property names are camelCase, never snake_case
+        snake_case = [k for k in keys(output_json) if "_" in k]
+        self.assertEqual(snake_case, [])
+        region = output_json["runs"][0]["results"][0]["locations"][0][
+            "physicalLocation"
+        ]["region"]
+        self.assertEqual(region["startLine"], self.test_issue.line_number)
+
     def test_to_sarif_rules_contain_external_cwe_tag(self):
         issue = _make_issue(cwe="CWE-78")
         reporter = Reporter([issue], "sarif")
-        output_json = json.loads(reporter.to_json())
+        output_json = json.loads(reporter.to_sarif())
         rules = output_json["runs"][0]["tool"]["driver"]["rules"]
         self.assertEqual(len(rules), 1)
         rule = rules[0]
@@ -149,7 +170,7 @@ class TestReporter(unittest.TestCase):
     def test_to_sarif_rule_without_cwe_has_no_tags_property(self):
         issue = _make_issue(cwe=None)
         reporter = Reporter([issue], "sarif")
-        output_json = json.loads(reporter.to_json())
+        output_json = json.loads(reporter.to_sarif())
         rules = output_json["runs"][0]["tool"]["driver"]["rules"]
         rule = rules[0]
         # properties should be None (cleaned up by _clean)
@@ -162,7 +183,7 @@ class TestReporter(unittest.TestCase):
             _make_issue(rule_id="PY002"),
         ]
         reporter = Reporter(issues, "sarif")
-        output_json = json.loads(reporter.to_json())
+        output_json = json.loads(reporter.to_sarif())
         rules = output_json["runs"][0]["tool"]["driver"]["rules"]
         # Should only have 2 unique rules
         self.assertEqual(len(rules), 2)
@@ -179,7 +200,7 @@ class TestReporter(unittest.TestCase):
         for sev, expected_level in cases:
             issue = _make_issue(severity=sev)
             reporter = Reporter([issue], "sarif")
-            output_json = json.loads(reporter.to_json())
+            output_json = json.loads(reporter.to_sarif())
             result = output_json["runs"][0]["results"][0]
             self.assertEqual(
                 result["level"],
