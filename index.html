@@ -843,7 +843,7 @@ footer.site-footer { border-top: 1px solid var(--g1); background: var(--bg1); pa
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="3.7" data-decimals="1" data-suffix="×">3.7×</em> faster</span><span class="proof-label">than Semgrep</span></div>
         <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em id="star-count">145+</em></span><span class="proof-label">GitHub stars</span></a></div>
         <div class="proof-item"><span class="proof-num"><em class="count" data-count="3">3</em></span><span class="proof-label">analysis engines</span></div>
-        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="40000" data-suffix="+">40,000+</em></span><span class="proof-label">downloads</span></a></div>
+        <div class="proof-item"><a href="https://pepy.tech/projects/pyspector" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="50000" data-suffix="+">50,000+</em></span><span class="proof-label">downloads</span></a></div>
         <div class="proof-item"><a href="https://github.com/ParzivalHack/PySpector/graphs/contributors?all=1" target="_blank" rel="noopener" class="proof-link"><span class="proof-num"><em class="count" data-count="20" data-suffix="+">20+</em></span><span class="proof-label">unique contributors</span></a></div>
       </div>
     </div>
@@ -1646,7 +1646,21 @@ mypy src/">Copy</button></div>
       <article class="doc-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
         <h4 style="margin-top: 0;">How to report</h4>
         <p>All security issues must be reported <strong>privately</strong> through <a href="https://github.com/ParzivalHack/PySpector/security/advisories/new" target="_blank" rel="noopener">GitHub Security Advisories</a>. This keeps disclosure private until a fix ships, enables direct collaboration with maintainers, and lets us formally request a CVE for you. If you can't use GitHub Advisories, email <a href="mailto:pyspector@protonmail.com">pyspector@protonmail.com</a> (responses may be slower).</p>
-        <p>A strong report includes: a concise descriptive title, a summary of the flaw and its impact, a non-simulated PoC (Python, Bash, or Rust preferred), a CVSS v3.1 vector string, the most applicable CWE identifier(s), and the affected version range (ecosystem <code>pip</code>, package <code>pyspector</code>). We aim to <strong>acknowledge within 48 hours</strong> and provide a <strong>status update within 7 days</strong>.</p>
+        <p>Before submitting, please read the <a href="#sec-threat-model">threat model</a>, the <a href="#sec-scope">scope</a>, and the report requirements below. A strong report includes: a concise descriptive title, a summary of the flaw and its impact, a non-simulated PoC (Python, Bash, or Rust preferred) that works against a supported component on the latest release, a CVSS v4.0 vector string, the most applicable CWE identifier(s), and the affected version range (ecosystem <code>pip</code>, package <code>pyspector</code>). We aim to <strong>acknowledge within 48 hours</strong> and provide a <strong>status update within 7 days</strong>.</p>
+
+        <h4>Report requirements &amp; spam policy</h4>
+        <p>To keep triage fast and fair for everyone, every report must meet the following requirements:</p>
+        <ol>
+          <li><strong>One vulnerability per advisory.</strong> If you found several issues, submit each one separately.</li>
+          <li><strong>Reproducible on the latest release</strong> published on PyPI, against a <strong>supported component</strong>, with a working, non-simulated PoC.</li>
+          <li><strong>A CVSS v4.0 vector string and a CWE</strong> selected by you. A report without a valid severity is considered incomplete.</li>
+          <li><strong>Verified by a human.</strong> AI-assisted reports are welcome only if you have personally reproduced and validated every claim in them. You are responsible for the accuracy of what you submit.</li>
+          <li><strong>Consistent with this policy.</strong> Your report must respect the <a href="#sec-threat-model">threat model</a> and must not target anything listed as <a href="#sec-scope">out of scope</a>.</li>
+        </ol>
+        <div class="callout warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span><strong>Reports that bundle multiple issues, omit a valid severity, target out-of-scope components, ignore the threat model, or contain unverified AI-generated content will be closed as Spam without a detailed response</strong>, and are not eligible for credit, a CVE request, or Hall of Fame listing.</span>
+        </div>
 
         <h4>Recognition & incentives</h4>
         <ul>
@@ -1656,22 +1670,39 @@ mypy src/">Copy</button></div>
         </ul>
         <p>Anonymous submissions are processed equally and respected. Duplicate or low-impact findings may receive private acknowledgement only and are not eligible for CVE requests.</p>
 
-        <h4>Scope</h4>
+        <h4 id="sec-threat-model">Threat model</h4>
+        <p>PySpector is a <strong>local command-line tool</strong>, run by a developer on their own machine or CI runner against code they choose.</p>
+        <ul>
+          <li><strong>The person running the CLI is trusted</strong>, including every argument, flag, and configuration file they provide (for example <code>--url</code> and <code>-o</code>).</li>
+          <li><strong>The content of the scanned target is untrusted</strong>: source files, file names, repository contents, and any configuration or rule files bundled inside it.</li>
+          <li>A valid vulnerability is one where <strong>untrusted data crosses that boundary</strong> and lets an attacker affect the machine running PySpector.</li>
+          <li>The <code>--url</code> option only accepts <code>github.com</code> and <code>gitlab.com</code> repositories.</li>
+        </ul>
+        <p>A report that requires the victim to type an attacker-chosen payload into their own terminal does not cross this boundary, because the attacker and the victim are the same person.</p>
+
+        <h4 id="sec-scope">Scope</h4>
+        <p>We consider valid reports for security-relevant flaws in supported components that fit the threat model above.</p>
         <div class="scope-grid">
           <div class="scope-card in">
             <h5><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> In scope</h5>
             <ul>
-              <li>Command injection (CWE-77/78): e.g. unsanitized input reaching <code>subprocess</code> via <code>--url</code> git clone</li>
+              <li>Command injection (CWE-77/78): untrusted content in a scanned target (file names, repository contents, bundled config or rule files) reaching <code>subprocess</code> and running attacker-controlled commands</li>
               <li>Arbitrary code execution via malicious <code>.toml</code> rulesets or scan targets (CWE-94)</li>
-              <li>Path traversal & arbitrary file write (CWE-22/73)</li>
+              <li>Path traversal & arbitrary file write (CWE-22/73) triggered by crafted scanned content, such as symlinks or malicious paths inside a repository or archive</li>
               <li>Rust core memory corruption, UAF, buffer or integer overflow (CWE-119/416/190)</li>
               <li>Supply chain: tampered PyPI package, dependency confusion (CWE-494/829)</li>
-              <li>Information disclosure via output or error messages (CWE-200/532)</li>
+              <li>Information disclosure via error messages or logs (CWE-200/532). Flagged code lines and detected secrets shown to the user who ran the scan are intended output, not a vulnerability</li>
             </ul>
           </div>
           <div class="scope-card out">
             <h5><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 9-6 6M9 9l6 6"/><circle cx="12" cy="12" r="10"/></svg> Out of scope</h5>
             <ul>
+              <li><strong>The legacy REST API server</strong> (the <code>/scan</code> HTTP endpoint): an unsupported development and testing component, not a production deployment, and scheduled for removal from the repository. Issues in it, including SSRF, missing authentication, path handling, and information disclosure, are out of scope</li>
+              <li><strong>Arguments supplied by the local user</strong> (<code>--url</code>, <code>-o</code>, and so on). The person running the CLI is trusted, so reports that require a victim to enter an attacker-chosen payload into their own terminal are out of scope</li>
+              <li>Behavior of <code>git</code> itself, or issues that only appear on outdated or unsupported versions of git, Python, or the operating system</li>
+              <li>Intended output: flagged source lines, including detected secrets, displayed in scan reports</li>
+              <li>Non-product code: <code>tests/</code>, <code>benchmarks/</code>, examples, unreleased branches, or anything not shipped in the latest PyPI release</li>
+              <li>Hardening suggestions and missing best practices without a demonstrable security impact on a supported component</li>
               <li>Third-party dependency issues not directly exploitable through PySpector</li>
               <li>Vulnerabilities in code analyzed <em>by</em> PySpector (your own scanned codebase)</li>
               <li>False negatives / false positives in detection rules: quality issues, not vulns (open an issue instead)</li>
@@ -1686,7 +1717,7 @@ mypy src/">Copy</button></div>
 
         <h4>Disclosure timeline</h4>
         <ol>
-          <li><strong>Private triage</strong>: report received via GitHub Advisory, validated, and acknowledged.</li>
+          <li><strong>Private triage</strong>: report received via GitHub Advisory, checked against this policy, validated, and acknowledged.</li>
           <li><strong>Coordination</strong>: fix developed in a private branch; you may be invited to verify the patch.</li>
           <li><strong>Release</strong>: a patched version is published on PyPI and GitHub.</li>
           <li><strong>CVE request</strong>: formally requested through GitHub's CNA on your behalf.</li>
