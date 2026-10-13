@@ -432,6 +432,9 @@ def _fmt_watch_issue(issue, tag: str, tag_color: str) -> str:
               help="Enable or disable the rotating contact message shown below the "
                    "banner (--msg=True / --msg=False). The setting persists across "
                    "future runs until changed again, so it only needs to be set once.")
+@click.option('--relative-path', type=bool, default=False, show_default=True,
+              help="Show scan finding paths relative to the scanned directory or a "
+                   "single file's parent (--relative-path=True). False shows absolute paths.")
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -446,6 +449,7 @@ def cli(
     debug: bool,
     wizard: bool,
     show_msg: Optional[bool],
+    relative_path: bool,
 ):
     """
     PySpector: A high-performance, security-focused static analysis tool
@@ -465,6 +469,7 @@ def cli(
             'debug':          debug,
             'wizard':         wizard,
             'show_msg':       show_msg,
+            'relative_path':  relative_path,
         },
         'watch': {
             'ai_scan':        ai_scan,
@@ -588,6 +593,9 @@ def run_wizard():
               help="Enable or disable the rotating contact message shown below the "
                    "banner (--msg=True / --msg=False). The setting persists across "
                    "future runs until changed again, so it only needs to be set once.")
+@click.option('--relative-path', type=bool, default=False, show_default=True,
+              help="Show finding paths relative to the scanned directory or a "
+                   "single file's parent (--relative-path=True). False shows absolute paths.")
 def run_scan_command(
     path:             Optional[Path],
     repo_url:         Optional[str],
@@ -602,6 +610,7 @@ def run_scan_command(
     show_stats:       bool,
     debug:            bool,
     show_msg:         Optional[bool],
+    relative_path:    bool,
 ):
     """The main scan command with stats support."""
 
@@ -640,6 +649,7 @@ def run_scan_command(
                     syntax_warnings=params["syntax_warnings"],
                     show_stats=params["show_stats"],
                     debug=params["debug"],
+                    relative_path=relative_path,
                 )
         else:
             _execute_scan(
@@ -653,6 +663,7 @@ def run_scan_command(
                 syntax_warnings=params["syntax_warnings"],
                 show_stats=params["show_stats"],
                 debug=params["debug"],
+                relative_path=relative_path,
             )
         return
 
@@ -685,6 +696,7 @@ def run_scan_command(
                     report_format, severity_level, ai_scan,
                     supply_chain,
                     syntax_warnings, show_stats, debug,
+                    relative_path=relative_path,
                 )
             except subprocess.CalledProcessError as e:
                 click.echo(
@@ -708,6 +720,7 @@ def run_scan_command(
             report_format, severity_level, ai_scan,
             supply_chain,
             syntax_warnings, show_stats, debug,
+            relative_path=relative_path,
         )
 
 
@@ -722,6 +735,7 @@ def _execute_scan(
     syntax_warnings:   bool   = False,
     show_stats:        bool   = False,
     debug:             bool   = False,
+    relative_path:     bool   = False,
 ):
     """
     Core scan orchestrator.
@@ -738,6 +752,8 @@ def _execute_scan(
         stats.start()
 
     start_time = time.time()
+    report_base = (scan_path if scan_path.is_dir() else scan_path.parent).resolve()
+    path_formatter = Reporter([], report_format, relative_path=relative_path, base_path=report_base)
 
     config          = load_config(config_path)
     rules_toml_str  = get_default_rules(ai_scan)
@@ -825,7 +841,7 @@ def _execute_scan(
                         f"{vuln['dependency']} @ {vuln['version']}"
                     )
                     click.echo(f"    Vulnerability: {vuln['vulnerability_id']}")
-                    click.echo(f"    File: {vuln['file']}")
+                    click.echo(f"    File: {path_formatter.format_path(vuln['file'])}")
                     click.echo(f"    Summary: {vuln['summary'][:100]}...")
                     if vuln.get('fixed_version'):
                         click.echo(f"    Fixed in: {vuln['fixed_version']}")
@@ -914,7 +930,9 @@ def _execute_scan(
         )
 
     # ── Generate Report ────────────────────────────────────────────────────
-    reporter = Reporter(final_issues, report_format)
+    reporter = Reporter(
+        final_issues, report_format, relative_path=relative_path, base_path=report_base
+    )
     output   = reporter.generate()
 
     if output_file:
