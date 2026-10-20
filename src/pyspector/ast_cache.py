@@ -29,12 +29,14 @@ import zlib
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from ._ast_encode import AstEncoder, encode_node  # noqa: F401  (re-exported for tests)
+from ._ast_encode import AstEncoder, Problem, describe_problem, encode_node  # noqa: F401  (AstEncoder re-exported for tests)
+from ._parallel import parallel_map
 
-# v1 used pickle (security risk); v2 uses JSON + base64
-CACHE_VERSION = 2
+# v1 used pickle (security risk); v2 uses JSON + base64;
+# v3: the AST JSON no longer contains expr_context (Load/Store/Del) nodes
+CACHE_VERSION = 3
 _ZLIB_LEVEL = 3          # favour speed over ratio for ephemeral cache data
 MAX_L1_ENTRIES: int = 512
 
@@ -60,6 +62,16 @@ class FileCacheEntry:
     full_ast_json_z: bytes   # zlib-compressed full AST JSON string
     chunks: Dict[str, AstChunk]
     version: int = CACHE_VERSION
+
+
+class _Probe(NamedTuple):
+    """Result of looking a file up in the cache (see IncrementalAstCache._probe)."""
+    entry: Optional[FileCacheEntry]  # a cache hit, or None when the AST must be built
+    path: Path                       # resolved path (the cache key)
+    key: str
+    mtime: float
+    file_hash: str                   # "" after an L1 mtime hit (not computed)
+    old_chunks: Dict[str, AstChunk]  # L1 chunks of a stale entry, reused when rebuilding
 
 
 # ── Chunking helpers ─────────────────────────────────────────────────────────
@@ -335,7 +347,9 @@ class IncrementalAstCache:
         while len(self._l1) > self._max_l1:
             self._l1.popitem(last=False)  # evict least-recently-used
 
-    def _get_entry(self, file_path: Path, content: str) -> FileCacheEntry:
+    def _probe(self, file_path: Path, content: str) -> _Probe:
+        """Look *file_path* up in L1 then L2. A hit comes back in ``entry`` (and L1 is refreshed);
+        a miss has ``entry=None`` plus everything needed to build the entry."""
         # Resolve once: L1 key and L2 hash must both use the canonical path.
         file_path = file_path.resolve()
         key = str(file_path)
@@ -348,7 +362,7 @@ class IncrementalAstCache:
         # L1 – mtime guard (cheapest check: dict lookup + float compare)
         l1 = self._l1_get(key)
         if l1 and l1.mtime == mtime and l1.version == CACHE_VERSION:
-            return l1
+            return _Probe(l1, file_path, key, mtime, "", {})
 
         file_hash = hashlib.sha256(content.encode()).hexdigest()
 
@@ -356,23 +370,105 @@ class IncrementalAstCache:
         if l1 and l1.file_hash == file_hash and l1.version == CACHE_VERSION:
             updated = dataclasses.replace(l1, mtime=mtime)
             self._l1_put(key, updated)
-            return updated
+            return _Probe(updated, file_path, key, mtime, file_hash, {})
 
         # L2 – disk (survive across process restarts)
         l2 = self._disk_load(file_path, file_hash)
         if l2:
             updated_l2 = dataclasses.replace(l2, mtime=mtime)
             self._l1_put(key, updated_l2)
-            return updated_l2
+            return _Probe(updated_l2, file_path, key, mtime, file_hash, {})
 
-        # L3 – build with chunk-level subtree reuse
+        # Miss: L3 reuses the chunks of a stale in-memory entry when rebuilding.
         old_chunks: Dict[str, AstChunk] = (
             l1.chunks if (l1 and l1.version == CACHE_VERSION) else {}
         )
-        entry = self._build(file_path, content, file_hash, mtime, old_chunks)
-        self._l1_put(key, entry)
+        return _Probe(None, file_path, key, mtime, file_hash, old_chunks)
+
+    def _get_entry(self, file_path: Path, content: str) -> FileCacheEntry:
+        probe = self._probe(file_path, content)
+        if probe.entry is not None:
+            return probe.entry
+
+        # L3 – build with chunk-level subtree reuse
+        entry = self._build(probe.path, content, probe.file_hash, probe.mtime, probe.old_chunks)
+        self._l1_put(probe.key, entry)
         self._disk_save(entry)
         return entry
+
+    @staticmethod
+    def _decode(entry: FileCacheEntry) -> Union[str, Problem]:
+        """The entry's AST JSON, or a Problem if its compressed payload is unreadable."""
+        try:
+            return zlib.decompress(entry.full_ast_json_z).decode()
+        except Exception as e:
+            return describe_problem(e)
+
+    def _build_one(self, probe: _Probe, content: str) -> Union[str, Problem]:
+        """Build, cache and encode one file in this process (the steps of _get_entry)."""
+        try:
+            entry = self._build(probe.path, content, probe.file_hash, probe.mtime, probe.old_chunks)
+            self._l1_put(probe.key, entry)
+            self._disk_save(entry)
+        except Exception as e:
+            return describe_problem(e)
+        return self._decode(entry)
+
+    def get_ast_json_batch(
+        self,
+        items: List[Tuple[Path, str]],
+        *,
+        parallel: bool = False,
+        on_note: Optional[Callable[[str], None]] = None,
+    ) -> List[Union[str, Problem]]:
+        """AST JSON for many files at once, one outcome per ``(path, content)`` item, in order.
+
+        An outcome is the JSON string, or a ``Problem`` tuple when that file could not be parsed
+        (unlike `get_ast_json`, per-file problems are returned, not raised).
+
+        Cache hits are resolved here, which is cheap. Files that must be built go to worker
+        processes when *parallel* is true and there is enough work to amortise starting them (see
+        ``_parallel.parallel_map``); the workers also write the disk cache. Everything else, and
+        any file that already has a stale in-memory entry (so that chunk reuse keeps working in
+        watch mode), is built in this process. *on_note* is told if the pool fails.
+        """
+        outcomes: List[Any] = [None] * len(items)
+        misses: List[Tuple[int, _Probe, str]] = []
+
+        for i, (file_path, content) in enumerate(items):
+            try:
+                probe = self._probe(file_path, content)
+            except Exception as e:
+                outcomes[i] = describe_problem(e)
+                continue
+            if probe.entry is not None:
+                outcomes[i] = self._decode(probe.entry)
+            else:
+                misses.append((i, probe, content))
+
+        pooled: Dict[int, Any] = {}
+        if parallel and misses:
+            fresh = [(i, probe, content) for i, probe, content in misses if not probe.old_chunks]
+            cache_dir = str(self._cache_dir) if self._cache_dir else None
+            built = parallel_map(
+                _build_entry_task,
+                [(str(p.path), c, p.file_hash, p.mtime, cache_dir) for _, p, c in fresh],
+                costs=[len(c) for _, _, c in fresh],
+                on_note=on_note,
+            )
+            if built is not None:
+                pooled = {i: result for (i, _, _), result in zip(fresh, built)}
+
+        for i, probe, content in misses:
+            result = pooled.get(i)
+            if result is None:
+                outcomes[i] = self._build_one(probe, content)
+            elif result[0] == "ok":
+                self._l1_put(probe.key, result[1])
+                outcomes[i] = self._decode(result[1])
+            else:
+                outcomes[i] = result  # a Problem reported by the worker
+        return outcomes
 
     def _build(
         self,
@@ -442,6 +538,33 @@ class IncrementalAstCache:
                 tmp.unlink(missing_ok=True)
             except OSError:
                 pass
+
+
+# ── Worker-process entry point ────────────────────────────────────────────────
+
+# Cache object used by pool workers, created on first use in each worker process.
+_worker_cache: Optional[IncrementalAstCache] = None
+_worker_cache_dir: Optional[str] = None
+
+
+def _build_entry_task(task: Tuple[str, str, str, float, Optional[str]]) -> Any:
+    """Process-pool entry point: build and persist one cache entry. Never raises.
+
+    *task* is ``(resolved path, content, content hash, mtime, cache dir or None)``. Returns
+    ``("ok", FileCacheEntry)`` or a ``Problem``. The disk write happens here, in the worker, so
+    the serialisation and file I/O are parallelised together with the parse and the encoding.
+    """
+    global _worker_cache, _worker_cache_dir
+    path_str, content, file_hash, mtime, cache_dir = task
+    try:
+        if _worker_cache is None or _worker_cache_dir != cache_dir:
+            _worker_cache = IncrementalAstCache(cache_dir=Path(cache_dir) if cache_dir else None)
+            _worker_cache_dir = cache_dir
+        entry = _worker_cache._build(Path(path_str), content, file_hash, mtime, {})
+        _worker_cache._disk_save(entry)
+        return ("ok", entry)
+    except Exception as e:
+        return describe_problem(e)
 
 
 # ── Process-level singleton ───────────────────────────────────────────────────

@@ -63,7 +63,7 @@ pub fn build_call_graph(py_files: &[PythonFile]) -> CallGraph {
         .filter(|f| !is_test_file(&f.file_path))
         .collect();
 
-    println!("[*] Building call graph from {}/{} files (test files excluded from taint analysis)",
+    vprintln!("[*] Building call graph from {}/{} files (test files excluded from taint analysis)",
              production_files.len(), py_files.len());
 
     let mut call_graph = CallGraph::default();
@@ -87,7 +87,7 @@ pub fn build_call_graph(py_files: &[PythonFile]) -> CallGraph {
     }
 
     call_graph.functions = all_funcs;
-    println!("[+] Found {} total functions", call_graph.functions.len());
+    vprintln!("[+] Found {} total functions", call_graph.functions.len());
 
     // Build a name index: bare_function_name → [func_id, ...] for O(1) call resolution.
     // Without this index, Pass 2 is O(functions × call_sites × functions) — O(n²).

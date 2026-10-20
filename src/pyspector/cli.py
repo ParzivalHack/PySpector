@@ -2,20 +2,19 @@ from __future__ import annotations
 import click
 import time
 import json
-import ast
-import contextlib
-import os
 import subprocess
 import tempfile
 import sys
 import threading
-import warnings
+from dataclasses import dataclass
 from importlib.metadata import version as _pkg_version, PackageNotFoundError
 from pathlib import Path
 from typing import Optional, Dict, Any, List, cast
 
 from .ast_cache import IncrementalAstCache, get_cache
-from ._ast_encode import AstEncoder
+from ._ast_encode import AstEncoder  # noqa: F401  (tests import it from here)
+from ._ast_encode import Problem, describe_problem, parse_and_encode_task
+from ._parallel import parallel_map
 from .config import load_config, get_default_rules
 from .reporting import Reporter
 from .triage import run_triage_tui
@@ -95,31 +94,6 @@ _SEV_COLOR: Dict[str, str] = {
     "MEDIUM":   "yellow",
     "LOW":      "blue",
 }
-
-
-@contextlib.contextmanager
-def _silence_fd1(active: bool):
-    """Redirect file descriptor 1 (stdout) to /dev/null when *active* is True.
-
-    Used to swallow ``println!`` output emitted by the Rust core during a scan
-    when --debug is not set. Python-side ``click.echo`` calls inside the block
-    are also suppressed; do not place user-facing output (findings, errors)
-    inside this context.
-    """
-    if not active:
-        yield
-        return
-    sys.stdout.flush()
-    saved_fd = os.dup(1)
-    devnull_fd = os.open(os.devnull, os.O_WRONLY)
-    try:
-        os.dup2(devnull_fd, 1)
-        yield
-    finally:
-        sys.stdout.flush()
-        os.dup2(saved_fd, 1)
-        os.close(saved_fd)
-        os.close(devnull_fd)
 
 
 def _get_version() -> str:
@@ -205,6 +179,53 @@ def _resolves_outside_root(file_path: Path, root: Path) -> bool:
     return real_path != real_root and real_root not in real_path.parents
 
 
+@dataclass
+class _AstRecord:
+    """One Python file on its way through get_python_file_asts."""
+    py_file: Path
+    display_path: Any
+    content: Optional[str] = None
+    ast_json: Optional[str] = None
+    skipped: bool = False
+    problem: Optional[Problem] = None
+
+
+def _report_ast_problem(problem: Problem, display_path: Any) -> None:
+    """Print the user-facing message for a file that could not be read or parsed."""
+    kind, msg, lineno = problem
+    if kind == "warning":
+        text = f"SyntaxWarning: there is a syntax warning in {display_path} - {msg} (line {lineno})"
+        color = "yellow"
+    elif kind == "syntax":
+        text = f"SyntaxError: Could not parse {display_path} - {msg} (line {lineno})"
+        color = "red"
+    elif kind == "unicode":
+        text = f"Warning: Could not read {display_path} - Invalid UTF-8 encoding ({msg})"
+        color = "yellow"
+    else:
+        text = f"Warning: Could not read {display_path} - {msg}"
+        color = "yellow"
+    click.echo(click.style(text, fg=color))
+
+
+def _encode_asts(
+    records: List[_AstRecord],
+    warnings_as_errors: bool,
+    parallel: bool,
+    on_note: Any,
+) -> List[Any]:
+    """Parse and encode *records* without a cache: the AST JSON, or a Problem, for each."""
+    tasks = [(str(r.py_file), r.content or "", warnings_as_errors) for r in records]
+    results = None
+    if parallel:
+        results = parallel_map(
+            parse_and_encode_task, tasks, costs=[len(t[1]) for t in tasks], on_note=on_note
+        )
+    if results is None:
+        results = [parse_and_encode_task(t) for t in tasks]
+    return results
+
+
 def get_python_file_asts(
     path: Path,
     enable_syntax_warnings: bool = False,
@@ -212,12 +233,18 @@ def get_python_file_asts(
     debug: bool = False,
     exclude: Optional[List[str]] = None,
     cache: Optional[IncrementalAstCache] = None,
+    parallel: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Recursively finds Python files and returns their content and AST.
 
     Args:
         path: File or directory to scan.
+        parallel: When True, files whose AST is not already cached are parsed
+            and encoded in worker processes (only when there is enough work to
+            pay for starting them; see ``_parallel.parallel_map``). Off by
+            default so embedding hosts (e.g. the API server) never spawn
+            processes; the CLI turns it on.
         enable_syntax_warnings: When True, SyntaxWarning is treated as an
             error and the offending file is excluded from results.
         _stats_meta: Optional dict that will be populated with
@@ -234,7 +261,6 @@ def get_python_file_asts(
         _stats_meta['skipped'] = 0
         _stats_meta['errors']  = 0
 
-    results = []
     exclude_patterns = list(exclude or [])
     root = path if path.is_dir() else path.parent
     if path.is_dir():
@@ -253,81 +279,68 @@ def get_python_file_asts(
     else:
         files_to_scan = [path]
 
-    with warnings.catch_warnings():
-        if not enable_syntax_warnings:
-            warnings.filterwarnings('ignore', category=SyntaxWarning)
+    # Phase 1: read every source file, in file order. Skipped files and read errors are kept as
+    # records too, so that all the messages below come out in file order.
+    records: List[_AstRecord] = []
+    for py_file in files_to_scan:
+        if not py_file.is_file():
+            continue
+        display_path = py_file.relative_to(path) if path.is_dir() else py_file.name
+        if should_skip_file(py_file):
+            records.append(_AstRecord(py_file, display_path, skipped=True))
+            continue
+        try:
+            content = py_file.read_text(encoding="utf-8")
+        except Exception as e:
+            records.append(_AstRecord(py_file, display_path, problem=describe_problem(e)))
+            continue
+        records.append(_AstRecord(py_file, display_path, content=content))
+
+    # Phase 2: get the AST JSON for every file that was read (cache hits are cheap; the rest is
+    # the expensive part and is spread over worker processes when `parallel` is set).
+    pending = [r for r in records if r.content is not None]
+    if pending:
+        def on_note(msg: str) -> None:
+            _dbg(debug, msg, fg="blue")
+
+        outcomes: List[Any]
+        if cache is not None and not enable_syntax_warnings:
+            outcomes = cache.get_ast_json_batch(
+                [(r.py_file, r.content or "") for r in pending],
+                parallel=parallel,
+                on_note=on_note,
+            )
         else:
-            warnings.filterwarnings('error', category=SyntaxWarning)
+            outcomes = _encode_asts(pending, enable_syntax_warnings, parallel, on_note)
+        for record, outcome in zip(pending, outcomes):
+            if isinstance(outcome, str):
+                record.ast_json = outcome
+            else:
+                record.problem = outcome
 
-        for py_file in files_to_scan:
-            if py_file.is_file():
-                display_path = (
-                    py_file.relative_to(path) if path.is_dir() else py_file.name
-                )
-
-                if should_skip_file(py_file):
-                    _dbg(
-                        debug,
-                        f"Info: Skipped {display_path} (test file or fixture)",
-                        fg="blue",
-                    )
-                    if _stats_meta is not None:
-                        _stats_meta['skipped'] += 1
-                    continue
-
-                try:
-                    content = py_file.read_text(encoding="utf-8")
-                    if cache is not None and not enable_syntax_warnings:
-                        ast_json = cache.get_ast_json(py_file, content)
-                    else:
-                        parsed_ast = ast.parse(content, filename=str(py_file))
-                        ast_json = json.dumps(parsed_ast, cls=AstEncoder)
-                    results.append(
-                        {
-                            "file_path": str(py_file.resolve()),
-                            "content": content,
-                            "ast_json": ast_json,
-                        }
-                    )
-                except SyntaxWarning as e:
-                    click.echo(
-                        click.style(
-                            f"SyntaxWarning: there is a syntax warning in "
-                            f"{display_path} - {e.msg} (line {e.lineno})",
-                            fg="yellow",
-                        )
-                    )
-                    if _stats_meta is not None:
-                        _stats_meta['errors'] += 1
-                except SyntaxError as e:
-                    click.echo(
-                        click.style(
-                            f"SyntaxError: Could not parse {display_path} "
-                            f"- {e.msg} (line {e.lineno})",
-                            fg="red",
-                        )
-                    )
-                    if _stats_meta is not None:
-                        _stats_meta['errors'] += 1
-                except UnicodeDecodeError as e:
-                    click.echo(
-                        click.style(
-                            f"Warning: Could not read {display_path} "
-                            f"- Invalid UTF-8 encoding ({e.reason})",
-                            fg="yellow",
-                        )
-                    )
-                    if _stats_meta is not None:
-                        _stats_meta['errors'] += 1
-                except Exception as e:
-                    click.echo(
-                        click.style(
-                            f"Warning: Could not read {display_path} - {e}",
-                            fg="yellow",
-                        )
-                    )
-                    if _stats_meta is not None:
-                        _stats_meta['errors'] += 1
+    # Phase 3: report, and collect the results, in file order.
+    results: List[Dict[str, Any]] = []
+    for record in records:
+        if record.skipped:
+            _dbg(
+                debug,
+                f"Info: Skipped {record.display_path} (test file or fixture)",
+                fg="blue",
+            )
+            if _stats_meta is not None:
+                _stats_meta['skipped'] += 1
+        elif record.problem is not None:
+            _report_ast_problem(record.problem, record.display_path)
+            if _stats_meta is not None:
+                _stats_meta['errors'] += 1
+        else:
+            results.append(
+                {
+                    "file_path": str(record.py_file.resolve()),
+                    "content": record.content,
+                    "ast_json": record.ast_json,
+                }
+            )
 
     return results
 
@@ -369,12 +382,13 @@ def _scan_to_issues(
         debug=debug,
         exclude=list(config.get("exclude", [])),
         cache=cache,
+        parallel=True,
     )
 
-    with _silence_fd1(not debug):
-        raw_issues = run_scan(
-            str(scan_path.resolve()), rules_toml_str, config, python_files_data
-        )
+    raw_issues = run_scan(
+        str(scan_path.resolve()), rules_toml_str, config, python_files_data,
+        verbose=debug,
+    )
 
     severity_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
     min_sev = severity_map[severity_level.upper()]
@@ -788,6 +802,7 @@ def _execute_scan(
         debug=debug,
         exclude=list(config.get("exclude", [])),
         cache=cache,
+        parallel=True,
     )
     _dbg(debug, f"[*] Successfully parsed {len(python_files_data)} Python files in {time.time()-t_parse:.2f}s")
 
@@ -803,8 +818,7 @@ def _execute_scan(
         try:
             from pyspector._rust_core import scan_supply_chain
             _dbg(debug, "\n[*] Scanning dependencies for known vulnerabilities...")
-            with _silence_fd1(not debug):
-                dep_vulns = scan_supply_chain(str(scan_path.resolve()))
+            dep_vulns = scan_supply_chain(str(scan_path.resolve()), verbose=debug)
 
             if dep_vulns:
                 click.echo(f"\n{'='*60}")
@@ -845,10 +859,10 @@ def _execute_scan(
     # ── Run Scan (Rust core) ───────────────────────────────────────────────
     t_rust = time.time()
     try:
-        with _silence_fd1(not debug):
-            raw_issues = run_scan(
-                str(scan_path.resolve()), rules_toml_str, config, python_files_data
-            )
+        raw_issues = run_scan(
+            str(scan_path.resolve()), rules_toml_str, config, python_files_data,
+            verbose=debug,
+        )
         _dbg(debug, f"[*] Rust core scan: {time.time()-t_rust:.2f}s")
     except ValueError as e:
         click.echo(

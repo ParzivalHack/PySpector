@@ -1,6 +1,39 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use rayon::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Whether the core may print progress/diagnostic lines to stdout.
+///
+/// Python passes `verbose=True` (the CLI's `--debug`) into `run_scan` and `scan_supply_chain`.
+/// This replaces silencing the core by redirecting file descriptor 1 from Python, which on
+/// Windows consoles invalidated the console handle Click had cached and made every later
+/// `click.echo` fail with "Windows error: 6".
+///
+/// The flag is process-wide. If several scans with different settings run concurrently (the
+/// embedded API), the worst case is that one scan's diagnostics are printed or suppressed by
+/// another scan's setting; results are never affected.
+static VERBOSE: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn set_verbose(on: bool) {
+    VERBOSE.store(on, Ordering::Relaxed);
+}
+
+pub(crate) fn verbose_enabled() -> bool {
+    VERBOSE.load(Ordering::Relaxed)
+}
+
+/// `println!` that only prints when `verbose` was requested. Must be defined before the `mod`
+/// declarations below so that every module can use it. When the flag is off it costs one
+/// relaxed atomic load and never formats or takes the stdout lock, which also matters in the
+/// rayon-parallel taint loops.
+macro_rules! vprintln {
+    ($($arg:tt)*) => {
+        if $crate::verbose_enabled() {
+            println!($($arg)*);
+        }
+    };
+}
 
 mod ast_parser;
 mod graph;
@@ -15,15 +48,20 @@ use analysis::{run_analysis, AnalysisContext};
 use ast_parser::PythonFile;
 
 #[pyfunction]
-#[pyo3(name = "run_scan")]
+#[pyo3(
+    name = "run_scan",
+    signature = (path, rules_toml_str, config, python_files_data, verbose=false)
+)]
 fn run_scan_py<'py>(
     py: Python<'py>,
     path: String,
     rules_toml_str: String,
     config: &Bound<'py, PyDict>,
     python_files_data: &Bound<'py, PyList>,
+    verbose: bool,
 ) -> PyResult<Bound<'py, PyList>> {
-    
+    set_verbose(verbose);
+
     let exclusions: Vec<String> = config.get_item("exclude")?.map_or(Ok(Vec::new()), |v| v.extract())?;
 
     let mut ruleset: RuleSet = toml::from_str(&rules_toml_str).map_err(|e| {
@@ -76,11 +114,14 @@ fn run_scan_py<'py>(
 }
 
 #[pyfunction]
-#[pyo3(name = "scan_supply_chain")]
+#[pyo3(name = "scan_supply_chain", signature = (project_path, verbose=false))]
 fn scan_supply_chain_py<'py>(
     py: Python<'py>,
     project_path: String,
+    verbose: bool,
 ) -> PyResult<Bound<'py, PyList>> {
+    set_verbose(verbose);
+
     // PyO3 renamed `allow_threads` to `detach`
     let vulnerabilities = py.detach(|| {
         supply_chain::scan_dependencies(&project_path)

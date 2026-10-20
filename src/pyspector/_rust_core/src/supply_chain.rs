@@ -472,8 +472,8 @@ fn raw_query_osv(client: &reqwest::blocking::Client, name: &str, version: &str, 
                  match serde_json::from_str::<OsvResponse>(&text) {
                      Ok(osv_resp) => osv_resp.vulns,
                      Err(e) => {
-                         println!("DEBUG ERROR parsing JSON: {}", e);
-                         println!("DEBUG TEXT: {}", text);
+                         vprintln!("DEBUG ERROR parsing JSON: {}", e);
+                         vprintln!("DEBUG TEXT: {}", text);
                          vec![]
                      }
                  }

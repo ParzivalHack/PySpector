@@ -140,16 +140,16 @@ impl TaintContext {
 // Main entry point for inter-procedural taint analysis
 pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> Vec<Issue> {
     let t0 = std::time::Instant::now();
-    println!("[*] Starting inter-procedural taint analysis with {} functions", call_graph.functions.len());
+    vprintln!("[*] Starting inter-procedural taint analysis with {} functions", call_graph.functions.len());
 
     // Pre-build all CFGs once — reuse across convergence iterations and final pass.
     // Parallel build using Rayon: each function's CFG is independent.
-    println!("[*] Pre-building CFGs for {} functions (parallel)...", call_graph.functions.len());
+    vprintln!("[*] Pre-building CFGs for {} functions (parallel)...", call_graph.functions.len());
     let cfg_cache: HashMap<String, ControlFlowGraph> = call_graph.functions
         .par_iter()
         .map(|(func_id, func_node)| (func_id.clone(), build_cfg(func_node)))
         .collect();
-    println!("[*] CFG pre-build: {:.2}s", t0.elapsed().as_secs_f64());
+    vprintln!("[*] CFG pre-build: {:.2}s", t0.elapsed().as_secs_f64());
 
     let mut global_ctx = GlobalTaintContext {
         summaries: HashMap::new(),
@@ -194,7 +194,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
         .map(|(path, _)| path.as_str())
         .collect();
 
-    println!("[*] Taint-active files: {}/{} ({:.0}% of total)",
+    vprintln!("[*] Taint-active files: {}/{} ({:.0}% of total)",
              taint_active_files.len(),
              call_graph.file_contents.len(),
              100.0 * taint_active_files.len() as f64 / call_graph.file_contents.len().max(1) as f64);
@@ -272,19 +272,19 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
             }
             if let Some(old_summary) = global_ctx.summaries.get(&func_id) {
                 if &new_summary != old_summary {
-                    println!("[*] Summary changed for {}", func_id);
+                    vprintln!("[*] Summary changed for {}", func_id);
                     global_ctx.summaries.insert(func_id.clone(), new_summary);
                     summaries_changed = true;
                 }
             }
         }
 
-        println!("[*] Iteration {} done in {:.2}s", iterations, t_iter.elapsed().as_secs_f64());
+        vprintln!("[*] Iteration {} done in {:.2}s", iterations, t_iter.elapsed().as_secs_f64());
         if !summaries_changed || iterations >= MAX_GLOBAL_ITERATIONS {
             if summaries_changed {
-                println!("[!] Warning: Max global iterations reached without convergence");
+                vprintln!("[!] Warning: Max global iterations reached without convergence");
             } else {
-                println!("[+] Global convergence reached after {} iterations in {:.2}s total",
+                vprintln!("[+] Global convergence reached after {} iterations in {:.2}s total",
                          iterations, t_convergence.elapsed().as_secs_f64());
             }
             break;
@@ -321,7 +321,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
                 false
             })
             .collect();
-        println!("[*] Final pass (parallel+filter): {}/{} functions ({}% filtered out)",
+        vprintln!("[*] Final pass (parallel+filter): {}/{} functions ({}% filtered out)",
                  final_func_ids.len(), call_graph.functions.len(),
                  100 - 100 * final_func_ids.len() / call_graph.functions.len().max(1));
         final_func_ids
@@ -343,7 +343,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
             .collect()
     } else {
         let t_final = t_final_start;
-        println!("[*] Final pass (parallel): {} functions...", call_graph.functions.len());
+        vprintln!("[*] Final pass (parallel): {} functions...", call_graph.functions.len());
         let result = call_graph.functions
             .par_iter()
             .map(|(func_id, func_node)| {
@@ -361,13 +361,13 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
                 issues
             })
             .collect();
-        println!("[*] Final pass done in {:.2}s", t_final.elapsed().as_secs_f64());
+        vprintln!("[*] Final pass done in {:.2}s", t_final.elapsed().as_secs_f64());
         result
     };
     for issues in parallel_issues {
         all_issues.extend(issues);
     }
-    println!("[*] Total taint analysis: {:.2}s", t0.elapsed().as_secs_f64());
+    vprintln!("[*] Total taint analysis: {:.2}s", t0.elapsed().as_secs_f64());
 
     // Deduplicate issues
     let mut unique_issues = Vec::new();
@@ -380,7 +380,7 @@ pub fn analyze_program_for_taint(call_graph: &CallGraph, ruleset: &RuleSet) -> V
         }
     }
 
-    println!("[+] Found {} unique taint issues", unique_issues.len());
+    vprintln!("[+] Found {} unique taint issues", unique_issues.len());
     unique_issues
 }
 
@@ -1522,7 +1522,7 @@ fn check_sink_and_report(
         }
 
         if found_taint {
-            println!("[!] VULNERABILITY: Tainted variable flows to sink '{}'", call_name);
+            vprintln!("[!] VULNERABILITY: Tainted variable flows to sink '{}'", call_name);
             report_issue(ruleset, &sink.vulnerability_id, file_path, call_node, content, issues);
         }
         // Note: found_taint is true only when is_attacker_controlled() returned true

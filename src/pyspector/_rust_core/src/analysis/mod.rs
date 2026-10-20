@@ -39,10 +39,10 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         context.ruleset.rules.retain(|r| !disabled.contains(r.id.as_str()));
         let removed = before - context.ruleset.rules.len();
         if removed > 0 {
-            println!("[*] Disabled {} rules via [defaults].disabled_rule_ids", removed);
+            vprintln!("[*] Disabled {} rules via [defaults].disabled_rule_ids", removed);
         }
     }
-    println!("[*] Starting analysis with {} rules", context.ruleset.rules.len());
+    vprintln!("[*] Starting analysis with {} rules", context.ruleset.rules.len());
     
     let root_path = Path::new(&context.root_path);
     let mut files_to_scan: Vec<String> = Vec::new();
@@ -71,7 +71,7 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
         }
     }
     
-    println!("[+] Found {} files to scan ({} non-Python)", files_to_scan.len(),
+    vprintln!("[+] Found {} files to scan ({} non-Python)", files_to_scan.len(),
              files_to_scan.iter().filter(|f| !f.ends_with(".py")).count());
 
     // Scan all files with regex patterns
@@ -86,7 +86,7 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
             }
         })
         .collect();
-    println!("[*] Pattern/config scan: {:.2}s → {} issues", t_config.elapsed().as_secs_f64(), issues.len());
+    vprintln!("[*] Pattern/config scan: {:.2}s → {} issues", t_config.elapsed().as_secs_f64(), issues.len());
 
     // Process Python files with AST analysis
     let t_ast = std::time::Instant::now();
@@ -104,15 +104,15 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
             findings
         })
         .collect();
-    println!("[*] AST analysis: {:.2}s → {} issues", t_ast.elapsed().as_secs_f64(), python_issues.len());
+    vprintln!("[*] AST analysis: {:.2}s → {} issues", t_ast.elapsed().as_secs_f64(), python_issues.len());
     issues.extend(python_issues);
 
     // Build the call graph and run taint analysis
     let t_callgraph = std::time::Instant::now();
     let call_graph = call_graph_builder::build_call_graph(context.py_files);
-    println!("[*] Call graph build: {:.2}s", t_callgraph.elapsed().as_secs_f64());
+    vprintln!("[*] Call graph build: {:.2}s", t_callgraph.elapsed().as_secs_f64());
     let taint_issues = taint_analysis::analyze_program_for_taint(&call_graph, &context.ruleset);
-    println!("[+] Found {} issues from taint analysis", taint_issues.len());
+    vprintln!("[+] Found {} issues from taint analysis", taint_issues.len());
     issues.extend(taint_issues);
     
     let mut seen = HashSet::new();
@@ -149,12 +149,12 @@ pub fn run_analysis(mut context: AnalysisContext) -> Vec<Issue> {
 
     let untagged = issues.len() - merged;
     if untagged > 0 {
-        println!(
+        vprintln!(
             "[*] Total issues after deduplication: {} (CWE-tagged: {}, untagged: {})",
             issues.len(), merged, untagged
         );
     } else {
-        println!("[*] Total issues after deduplication: {}", issues.len());
+        vprintln!("[*] Total issues after deduplication: {}", issues.len());
     }
     issues
 }
