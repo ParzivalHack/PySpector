@@ -1,7 +1,7 @@
 """
 Rotating contact/outreach messages shown below the startup banner.
 
-Enabled by default; persists a single on/off preference in a per-user file
+Enabled by default; shares a per-user preferences file with path reporting
 (``~/.pyspector/preferences.json``) so `--msg=False` needs to be passed only
 once and stays off across future runs and projects.
 """
@@ -64,9 +64,23 @@ def messages_enabled() -> bool:
 
 def set_messages_enabled(enabled: bool) -> None:
     """Persist the on/off preference so it survives future, unrelated runs."""
+    _set_preference("show_messages", enabled)
+
+
+def relative_paths_enabled() -> bool:
+    """Whether scan finding paths should be relative. Absolute by default."""
+    return bool(_load_preferences().get("relative_path", False))
+
+
+def set_relative_paths_enabled(enabled: bool) -> None:
+    """Persist the path preference independently of the scanned project."""
+    _set_preference("relative_path", enabled)
+
+
+def _set_preference(key: str, enabled: bool) -> None:
     path = _preferences_path()
     prefs = _load_preferences()
-    prefs["show_messages"] = enabled
+    prefs[key] = enabled
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as f:

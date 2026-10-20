@@ -10,6 +10,9 @@ from textual.containers import Vertical # type: ignore
 
 # Helper to create a unique, stable fingerprint for an issue
 def create_fingerprint(issue: Dict[str, Any]) -> str:
+    # New reports retain the scanner identity even when file_path is relative.
+    if issue.get("fingerprint"):
+        return issue["fingerprint"]
     # Use rule ID, file path relative to a potential project root, and the line content
     # This makes the fingerprint stable across different checkout directories
     unique_string = f"{issue.get('rule_id', '')}|{issue.get('file_path', '')}|{issue.get('line_number', '')}|{issue.get('code', '').strip()}"

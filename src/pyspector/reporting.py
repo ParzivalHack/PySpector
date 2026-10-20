@@ -1,23 +1,27 @@
-import json
+import hashlib
 import html as html_module
 import importlib.metadata
+import json
+import os
+from pathlib import Path
+from typing import Optional
+from urllib.parse import quote
 
 from sarif_om import (
+    ArtifactLocation,
+    Location,
+    Message,
+    MultiformatMessageString,
+    PhysicalLocation,
+    Region,
+    ReportingConfiguration,
+    ReportingDescriptor,
+    Result,
+    Run,
     SarifLog,
     Tool,
     ToolComponent,
-    Run,
-    ReportingDescriptor,
-    ReportingConfiguration,
-    MultiformatMessageString,
-    Result,
-    ArtifactLocation,
-    Location,
-    PhysicalLocation,
-    Region,
-    Message,
 )
-
 
 # Maps internal severity levels to SARIF-compliant level strings.
 _SEVERITY_TO_SARIF_LEVEL = {
@@ -42,6 +46,14 @@ _PYSPECTOR_VERSION = _get_version()
 def _severity_key(issue) -> str:
     """Normalize enum-like severity values."""
     return str(issue.severity).split(".")[-1].upper()
+
+
+def _issue_fingerprint(issue) -> str:
+    """Keep the scanner's identity; support legacy Python-only issue objects."""
+    if hasattr(issue, "get_fingerprint"):
+        return issue.get_fingerprint()
+    identity = f"{issue.rule_id}|{issue.file_path}|{issue.line_number}|{issue.code.strip()}"
+    return hashlib.sha1(identity.encode("utf-8")).hexdigest()
 
 
 def _clean(obj):
@@ -77,9 +89,35 @@ def _clean(obj):
 
 
 class Reporter:
-    def __init__(self, issues: list, report_format: str):
+    def __init__(
+        self,
+        issues: list,
+        report_format: str,
+        *,
+        relative_path: bool = False,
+        base_path: Optional[Path] = None,
+    ):
         self.issues = issues
         self.format = report_format
+        self.relative_path = relative_path
+        self.base_path = base_path.absolute() if base_path is not None else None
+
+    def format_path(self, file_path: str) -> str:
+        """Format a finding path without changing the scanner's source identity.
+
+        Relative engine paths are relative to the working directory. Callers
+        without a scan base retain their existing display paths by default.
+        """
+        if self.base_path is None and not self.relative_path:
+            return file_path
+        absolute_path = os.path.abspath(file_path)
+        if self.relative_path:
+            try:
+                return os.path.relpath(absolute_path, self.base_path or Path.cwd())
+            except ValueError:
+                # Windows paths on different drives have no relative spelling.
+                return absolute_path
+        return absolute_path
 
     def generate(self) -> str:
         if self.format == "json":
@@ -122,7 +160,7 @@ class Reporter:
                 output.append(
                     f"\n[+] Rule ID: {issue.rule_id}\n"
                     f"    Description: {issue.description}\n"
-                    f"    File: {issue.file_path}:{issue.line_number}\n"
+                    f"    File: {self.format_path(issue.file_path)}:{issue.line_number}\n"
                     f"    Code: `{issue.code.strip()}`"
                 )
 
@@ -140,7 +178,8 @@ class Reporter:
                     "rule_id": issue.rule_id,
                     "cwe": issue.cwe,
                     "description": issue.description,
-                    "file_path": issue.file_path,
+                    "file_path": self.format_path(issue.file_path),
+                    "fingerprint": _issue_fingerprint(issue),
                     "line_number": issue.line_number,
                     "code": issue.code,
                     "severity": str(issue.severity).split(".")[-1],
@@ -204,6 +243,7 @@ class Reporter:
         tool = Tool(driver=driver)
 
         results: list[Result] = []
+        uri_bases = {}
 
         for issue in self.issues:
 
@@ -220,12 +260,19 @@ class Reporter:
                 ),
             )
 
+            path = Path(self.format_path(issue.file_path))
+            if path.is_absolute():
+                artifact = ArtifactLocation(uri=path.as_uri())
+            else:
+                artifact = ArtifactLocation(
+                    uri=quote(path.as_posix(), safe="/"), uri_base_id="%SRCROOT%"
+                )
+                base = self.base_path or Path.cwd()
+                uri_bases["%SRCROOT%"] = ArtifactLocation(uri=base.as_uri().rstrip("/") + "/")
+
             location = Location(
                 physical_location=PhysicalLocation(
-                    artifact_location=ArtifactLocation(
-                        uri=issue.file_path,
-                        uri_base_id="%SRCROOT%",
-                    ),
+                    artifact_location=artifact,
                     region=region,
                 )
             )
@@ -240,7 +287,7 @@ class Reporter:
 
             results.append(result)
 
-        run = Run(tool=tool, results=results)
+        run = Run(tool=tool, results=results, original_uri_base_ids=uri_bases or None)
 
         log = SarifLog(
             version="2.1.0",
@@ -277,7 +324,7 @@ class Reporter:
         for issue in self.issues:
             html += f"""
             <tr>
-                <td style='padding: 8px;'>{html_module.escape(issue.file_path)}</td>
+                <td style='padding: 8px;'>{html_module.escape(self.format_path(issue.file_path))}</td>
                 <td style='padding: 8px;'>{issue.line_number}</td>
                 <td style='padding: 8px;'>{html_module.escape(str(issue.severity))}</td>
                 <td style='padding: 8px;'>{html_module.escape(issue.description)}</td>

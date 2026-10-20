@@ -195,6 +195,26 @@ pyspector scan /path/to/your/project
 pyspector scan /path/to/your/project -o report.html -f html
 ```
 
+- **Show finding paths relative to the scanned directory:**
+
+```bash
+pyspector scan /path/to/your/project --relative-path=True
+```
+
+Finding paths are absolute when no preference has been saved. Set
+`--relative-path=True` once to keep relative paths across future scans and
+projects, or `--relative-path=False` to restore absolute paths now and on later
+runs. Omitting the option uses the saved value in
+`~/.pyspector/preferences.json`, shared with the independent `--msg` setting.
+With `True`, paths are relative to the scanned directory, or the scanned file's parent for a
+single-file scan. The option applies to console, JSON, SARIF, and HTML reports
+and supply-chain finding paths. It can also be placed before `scan` and used
+with `--wizard`. JSON reports preserve the original fingerprint for triage;
+SARIF uses encoded file URIs or relative URIs with the scan base.
+If supplied both before and after `scan`, the scan-command value wins and is
+saved. Saving is best effort: an unwritable preferences file does not stop the
+scan, and an explicit value still applies to that run.
+
 - **Scan a public GitHub repository:**
 
 ```bash
