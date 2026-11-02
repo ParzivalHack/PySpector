@@ -1,7 +1,7 @@
 # src/pyspector/triage.py
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import hashlib
 
 from textual.app import App, ComposeResult # type: ignore
@@ -14,6 +14,23 @@ def create_fingerprint(issue: Dict[str, Any]) -> str:
     # This makes the fingerprint stable across different checkout directories
     unique_string = f"{issue.get('rule_id', '')}|{issue.get('file_path', '')}|{issue.get('line_number', '')}|{issue.get('code', '').strip()}"
     return hashlib.sha1(unique_string.encode('utf-8')).hexdigest()
+
+
+def resolve_baseline_path(report_file: Path, scan_root: Optional[str] = None) -> Path:
+    """Return the baseline path used by scans of the report's project.
+
+    Scans load ``.pyspector_baseline.json`` from the scanned directory (or
+    from a scanned file's parent). Triage must write the baseline there, not
+    next to the report: ``-o report.json`` may put the report anywhere.
+    """
+    if scan_root:
+        root = Path(scan_root)
+        if root.is_file():
+            root = root.parent
+        if root.is_dir():
+            return root / ".pyspector_baseline.json"
+    return report_file.parent / ".pyspector_baseline.json"
+
 
 class PySpectorTriage(App):
     """An interactive TUI for triaging PySpector findings."""

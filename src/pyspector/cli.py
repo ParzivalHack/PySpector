@@ -17,7 +17,7 @@ from ._ast_encode import Problem, describe_problem, parse_and_encode_task
 from ._parallel import parallel_map
 from .config import load_config, get_default_rules
 from .reporting import Reporter
-from .triage import run_triage_tui
+from .triage import run_triage_tui, resolve_baseline_path
 from .stats import StatsCollector
 from .messages import handle_msg_flag
 import requests
@@ -928,7 +928,7 @@ def _execute_scan(
         )
 
     # ── Generate Report ────────────────────────────────────────────────────
-    reporter = Reporter(final_issues, report_format)
+    reporter = Reporter(final_issues, report_format, scan_root=scan_path.resolve())
     output   = reporter.generate()
 
     if output_file:
@@ -986,7 +986,9 @@ def triage_command(report_file: Path):
         with report_file.open('r', encoding='utf-8') as f:
             issues_data = json.load(f)
 
-        baseline_path = report_file.parent / ".pyspector_baseline.json"
+        baseline_path = resolve_baseline_path(
+            report_file, issues_data.get("scan_root")
+        )
         run_triage_tui(issues_data.get("issues", []), baseline_path)
 
     except (json.JSONDecodeError, IOError) as e:
