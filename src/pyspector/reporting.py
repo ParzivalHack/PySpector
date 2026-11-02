@@ -77,9 +77,10 @@ def _clean(obj):
 
 
 class Reporter:
-    def __init__(self, issues: list, report_format: str):
+    def __init__(self, issues: list, report_format: str, scan_root=None):
         self.issues = issues
         self.format = report_format
+        self.scan_root = scan_root
 
     def generate(self) -> str:
         if self.format == "json":
@@ -149,6 +150,8 @@ class Reporter:
                 for issue in self.issues
             ],
         }
+        if self.scan_root is not None:
+            report["scan_root"] = str(self.scan_root)
 
         return json.dumps(report, indent=2)
 

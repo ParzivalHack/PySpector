@@ -62,6 +62,16 @@ class TestReporter(unittest.TestCase):
         self.assertEqual(output_json["summary"]["issue_count"], 5)
         self.assertEqual(len(output_json["issues"]), 5)
 
+    def test_to_json_includes_scan_root(self):
+        reporter = Reporter([self.test_issue], "json", scan_root="C:/work/project")
+        output_json = json.loads(reporter.to_json())
+        self.assertEqual(output_json["scan_root"], "C:/work/project")
+
+    def test_to_json_omits_scan_root_when_not_given(self):
+        reporter = Reporter([self.test_issue], "json")
+        output_json = json.loads(reporter.to_json())
+        self.assertNotIn("scan_root", output_json)
+
     def test_to_json_includes_cwe_field(self):
         issue = _make_issue(cwe="CWE-78")
         reporter = Reporter([issue], "json")
